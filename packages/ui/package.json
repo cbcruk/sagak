@@ -1,0 +1,25 @@
+{
+  "name": "@sagak/ui",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./styles": "./src/styles/index.css"
+  },
+  "scripts": {
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@sagak/core": "workspace:*",
+    "preact": "^10.27.2",
+    "@preact/signals": "^2.5.1"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4",
+    "jsdom": "^27.0.1"
+  }
+}
