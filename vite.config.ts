@@ -1,6 +1,6 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
-import { createSagakAliases } from './vite.shared'
 
 export default defineConfig({
   plugins: [preact()],
@@ -8,7 +8,7 @@ export default defineConfig({
     alias: {
       react: 'preact/compat',
       'react-dom': 'preact/compat',
-      ...createSagakAliases(import.meta.url),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 })

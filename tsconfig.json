@@ -7,6 +7,10 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
+    /* JSX */
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -14,13 +18,10 @@
     "moduleDetection": "force",
     "emitDeclarationOnly": true,
 
-    /* Path mappings for internal packages */
+    /* Path alias */
     "baseUrl": ".",
     "paths": {
-      "@sagak/core/*": ["./packages/core/src/*"],
-      "@sagak/editor/*": ["./packages/editor/src/*"],
-      "@sagak/plugins/*": ["./packages/plugins/src/*"],
-      "@sagak/ui/*": ["./packages/ui/src/*"]
+      "@/*": ["./src/*"]
     },
 
     /* Linting */
@@ -31,15 +32,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    /* Enable declaration generation for composite projects */
+    /* Enable declaration generation */
     "declaration": true,
     "declarationMap": true
   },
-  "files": [],
-  "references": [
-    { "path": "./packages/core" },
-    { "path": "./packages/editor" },
-    { "path": "./packages/plugins" },
-    { "path": "./packages/ui" }
-  ]
+  "include": ["src/**/*", "test/**/*"]
 }

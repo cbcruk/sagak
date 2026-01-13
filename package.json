@@ -1,20 +1,20 @@
 {
-  "name": "sagak",
+  "name": "sagak-monorepo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm -F @sagak/demo dev",
-    "build": "pnpm -F @sagak/demo build",
-    "preview": "pnpm -F @sagak/demo preview",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "dev": "pnpm --filter sagak-editor dev",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter sagak-core test",
+    "test:ui": "pnpm --filter sagak-core test:ui",
     "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "storybook": "pnpm --filter sagak-editor storybook"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.2",
+    "@preact/signals": "^2.5.1",
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
@@ -24,13 +24,10 @@
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "playwright": "^1.57.0",
+    "preact": "^10.27.2",
     "prettier": "^3.6.2",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vitest": "^3.2.4"
-  },
-  "dependencies": {
-    "@preact/signals": "^2.5.1",
-    "preact": "^10.27.2"
   }
 }
