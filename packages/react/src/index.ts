@@ -12,5 +12,5 @@ export type {
   UseHistoryStateReturn,
 } from './hooks'
 
-export { EditingArea } from './components'
+export { EditingArea, Toolbar } from './components'
 export type { EditingAreaProps } from './components'
