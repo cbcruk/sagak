@@ -415,6 +415,7 @@ export class EditorCore {
 
     document.addEventListener('selectionchange', updateFormattingState)
     this.eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateFormattingState)
+    this.eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateFormattingState)
     updateFormattingState()
   }
 

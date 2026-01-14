@@ -4,6 +4,7 @@ import { useFormattingState, useHistoryState } from '../../hooks'
 import { FontFamilySelect } from '../font-family-select/font-family-select'
 import { FontSizeSelect } from '../font-size-select/font-size-select'
 import { HeadingSelect } from '../heading-select/heading-select'
+import { LinkDialog } from '../link-dialog/link-dialog'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -94,6 +95,10 @@ export function Toolbar(): ReactNode {
       >
         S
       </Toggle>
+
+      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+
+      <LinkDialog />
     </div>
   )
 }

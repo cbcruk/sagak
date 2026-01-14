@@ -47,9 +47,9 @@
 
 ### 2.2 Dropdown 기반 컴포넌트
 
-- [ ] Font Family
-- [ ] Font Size
-- [ ] Heading
+- [x] Font Family
+- [x] Font Size
+- [x] Heading
 
 ### 2.3 Dialog 기반 컴포넌트
 
