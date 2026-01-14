@@ -3,3 +3,4 @@ export type { EditingAreaProps } from './editing-area/editing-area'
 
 export { Toolbar } from './toolbar/toolbar'
 export { FontFamilySelect } from './font-family-select/font-family-select'
+export { FontSizeSelect } from './font-size-select/font-size-select'

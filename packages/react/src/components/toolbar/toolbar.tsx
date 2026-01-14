@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Toggle } from '@base-ui/react/toggle'
 import { useFormattingState, useHistoryState } from '../../hooks'
 import { FontFamilySelect } from '../font-family-select/font-family-select'
+import { FontSizeSelect } from '../font-size-select/font-size-select'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -59,6 +60,7 @@ export function Toolbar(): ReactNode {
       <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
 
       <FontFamilySelect />
+      <FontSizeSelect />
 
       <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
 
