@@ -42,8 +42,8 @@
 
 ### 2.1 History (Undo/Redo)
 
-- [ ] useHistoryState 연동
-- [ ] Undo/Redo 버튼 추가
+- [x] useHistoryState 연동
+- [x] Undo/Redo 버튼 추가
 
 ### 2.2 Dropdown 기반 컴포넌트
 

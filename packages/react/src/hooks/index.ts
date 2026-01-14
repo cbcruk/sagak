@@ -13,3 +13,6 @@ export type {
   HistoryActions,
   UseHistoryStateReturn,
 } from './use-history-state'
+
+export { useFontState } from './use-font-state'
+export type { FontState, UseFontStateReturn } from './use-font-state'

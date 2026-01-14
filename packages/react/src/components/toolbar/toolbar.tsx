@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Toggle } from '@base-ui/react/toggle'
-import { useFormattingState } from '../../hooks'
+import { useFormattingState, useHistoryState } from '../../hooks'
+import { FontFamilySelect } from '../font-family-select/font-family-select'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -9,6 +10,16 @@ const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   background: pressed ? '#333' : '#fff',
   color: pressed ? '#fff' : '#333',
   cursor: 'pointer',
+  marginRight: 4,
+})
+
+const actionButtonStyle = (disabled: boolean): React.CSSProperties => ({
+  padding: '6px 12px',
+  border: '1px solid #ccc',
+  borderRadius: 4,
+  background: '#fff',
+  color: disabled ? '#ccc' : '#333',
+  cursor: disabled ? 'not-allowed' : 'pointer',
   marginRight: 4,
 })
 
@@ -24,8 +35,33 @@ export function Toolbar(): ReactNode {
     toggleStrikeThrough,
   } = useFormattingState()
 
+  const { canUndo, canRedo, undo, redo } = useHistoryState()
+
   return (
-    <div style={{ marginBottom: 8, display: 'flex' }}>
+    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+      <button
+        type="button"
+        onClick={undo}
+        disabled={!canUndo}
+        style={actionButtonStyle(!canUndo)}
+      >
+        ↩
+      </button>
+      <button
+        type="button"
+        onClick={redo}
+        disabled={!canRedo}
+        style={actionButtonStyle(!canRedo)}
+      >
+        ↪
+      </button>
+
+      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+
+      <FontFamilySelect />
+
+      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+
       <Toggle
         pressed={isBold}
         onPressedChange={toggleBold}
