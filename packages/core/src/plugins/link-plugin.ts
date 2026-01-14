@@ -228,6 +228,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
             return false
           }
 
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('createLink', false, url)
 
           if (result) {
@@ -282,6 +283,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       const unsubUnlinkOn = eventBus.on(unlinkEventName, 'on', () => {
         try {
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('unlink', false)
 
           if (result) {

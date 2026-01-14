@@ -150,6 +150,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
             return false
           }
 
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand(
             'formatBlock',
             false,

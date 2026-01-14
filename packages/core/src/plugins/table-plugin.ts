@@ -344,6 +344,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
               width: defaultWidth,
             })
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             const table = createTable(rows, cols, { border, width })
 
             const selection = window.getSelection()
@@ -421,6 +422,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             if (!table) return false
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             const position = extractPosition(data, 'below')
             const currentRow = cell.parentElement as HTMLTableRowElement
             const rowIndex = getRowIndex(cell)
@@ -517,6 +519,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
             return false
           }
 
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           const rowIndex = getRowIndex(cell)
 
           row.remove()
@@ -581,6 +584,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             if (!table) return false
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             const position = extractPosition(data, 'right')
             const colIndex = getColumnIndex(cell)
 
@@ -682,6 +686,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
               return false
             }
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             const tbody = table.querySelector('tbody')
 
             if (!tbody) return false
@@ -747,6 +752,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
           if (!table) return false
 
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           table.remove()
 
           eventBus.emit(CoreEvents.STYLE_CHANGED, {

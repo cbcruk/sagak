@@ -145,6 +145,7 @@ export const createBackgroundColorPlugin =
               return false
             }
 
+            emit(CoreEvents.CAPTURE_SNAPSHOT)
             const result = document.execCommand('backColor', false, color)
 
             if (result) {

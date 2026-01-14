@@ -338,6 +338,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
               return false
             }
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             const img = document.createElement('img')
             img.src = data.src
 
@@ -458,6 +459,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
               return false
             }
 
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             if (data.src !== undefined) {
               img.src = data.src
             }
@@ -526,6 +528,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             return false
           }
 
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           img.remove()
 
           eventBus.emit(CoreEvents.STYLE_CHANGED, {

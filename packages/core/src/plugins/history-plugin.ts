@@ -157,6 +157,67 @@ export function createHistoryPlugin(
       })
 
       /**
+       * 스냅샷 캡처 요청 핸들러
+       *
+       * 스타일 명령(Bold, Italic 등) 실행 전에 플러그인들이 이 이벤트를 발행합니다.
+       * 항상 현재 상태를 캡처하여 스타일 적용 전 상태를 보존합니다.
+       *
+       * **핵심 로직:**
+       * - 디바운스 타이머가 있으면 취소 (중복 캡처 방지)
+       * - 항상 현재 상태를 캡처 (동일 컨텐츠는 HistoryManager에서 무시됨)
+       *
+       * **시나리오 1:** 텍스트 입력 후 스타일 적용
+       * 1. 텍스트 입력 → 디바운스 대기 중
+       * 2. Bold 클릭 → CAPTURE_SNAPSHOT → 입력 상태 저장 (타이머 취소)
+       * 3. Undo → Bold 적용 전 상태로 복원
+       *
+       * **시나리오 2:** 기존 텍스트 선택 후 스타일 적용
+       * 1. 기존 텍스트 선택 (입력 없음, 디바운스 타이머 없음)
+       * 2. Bold 클릭 → CAPTURE_SNAPSHOT → 현재 상태 저장
+       * 3. Undo → Bold 적용 전 상태로 복원
+       */
+      const unsubCaptureSnapshot = eventBus.on(
+        CoreEvents.CAPTURE_SNAPSHOT,
+        'on',
+        () => {
+          if (debounceTimer !== null) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+          }
+          captureSnapshot(element)
+        }
+      )
+
+      unsubscribers.push(unsubCaptureSnapshot)
+
+      /**
+       * 스타일 변경 이벤트 핸들러
+       *
+       * 스타일 명령(Bold, Italic 등) 실행 후 발행되는 이벤트를 감지합니다.
+       * 스타일 적용 후 상태를 즉시 캡처하여, Undo 시 스타일만 제거되도록 합니다.
+       *
+       * **동작 시나리오:**
+       * 1. 텍스트 입력 → debounce 대기 중
+       * 2. Bold 클릭 → CAPTURE_SNAPSHOT으로 입력 상태 저장
+       * 3. execCommand 실행 → DOM 변경
+       * 4. STYLE_CHANGED 발행 → 스타일 적용 후 상태 저장
+       * 5. Undo → 스타일 적용 전 상태(텍스트만 있는 상태)로 복원
+       */
+      const unsubStyleChanged = eventBus.on(
+        CoreEvents.STYLE_CHANGED,
+        'on',
+        () => {
+          if (debounceTimer !== null) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+          }
+          captureSnapshot(element)
+        }
+      )
+
+      unsubscribers.push(unsubStyleChanged)
+
+      /**
        * Undo 이벤트 핸들러
        *
        * **동작 과정:**

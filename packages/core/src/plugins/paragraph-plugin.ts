@@ -54,6 +54,7 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
       // `ON` 단계: 단락 형식화 실행
       on: ({ emit }) => {
         try {
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('formatBlock', false, '<p>')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'paragraph' })

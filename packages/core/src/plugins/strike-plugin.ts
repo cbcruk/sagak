@@ -54,6 +54,7 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
       // `ON` 단계: 취소선 명령 실행
       on: ({ emit }) => {
         try {
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('strikeThrough', false)
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'strike' })

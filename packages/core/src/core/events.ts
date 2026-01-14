@@ -21,6 +21,12 @@ export const CoreEvents = {
    * 콘텐츠가 `undo`/`redo`를 통해 복원됨
    */
   CONTENT_RESTORED: 'CONTENT_RESTORED',
+
+  /**
+   * 히스토리 스냅샷 캡처 요청
+   * 스타일 적용 등 즉시 스냅샷이 필요할 때 발행
+   */
+  CAPTURE_SNAPSHOT: 'CAPTURE_SNAPSHOT',
 } as const
 
 /**

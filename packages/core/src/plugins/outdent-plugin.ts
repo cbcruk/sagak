@@ -54,6 +54,7 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
       // `ON` 단계: 내어쓰기 명령 실행
       on: ({ emit }) => {
         try {
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('outdent', false)
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'outdent' })

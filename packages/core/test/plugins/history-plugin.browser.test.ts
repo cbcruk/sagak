@@ -490,6 +490,83 @@ describe('History Plugin', () => {
     })
   })
 
+  describe('스타일 적용 후 Undo', () => {
+    it('텍스트 입력 후 스타일 적용 시 Undo하면 스타일만 제거되어야 함', () => {
+      // Given: 초기화된 플러그인
+      const plugin = createHistoryPlugin({ debounceDelay: 500 })
+      plugin.initialize(context)
+
+      const inputHandler = (element.addEventListener as any).mock.calls.find(
+        (call: any) => call[0] === 'input'
+      )?.[1]
+
+      // When: 텍스트 입력 (디바운스 대기 중)
+      element.innerHTML = '<p>Hello</p>'
+      inputHandler()
+
+      // 디바운스 완료 전에 스타일 적용 시뮬레이션
+      // 1. CAPTURE_SNAPSHOT 발행 (스타일 명령 실행 전)
+      eventBus.emit('CAPTURE_SNAPSHOT')
+
+      // 2. 스타일 적용 (execCommand 시뮬레이션)
+      element.innerHTML = '<p><b>Hello</b></p>'
+
+      // 3. STYLE_CHANGED 발행 (스타일 명령 실행 후)
+      eventBus.emit('STYLE_CHANGED', { style: 'bold' })
+
+      // Then: Undo 시 텍스트는 유지되고 스타일만 제거됨
+      eventBus.emit('UNDO')
+      expect(element.innerHTML).toBe('<p>Hello</p>')
+    })
+
+    it('스타일 적용 후 바로 Undo해도 텍스트가 사라지지 않아야 함', () => {
+      // Given: 초기화된 플러그인
+      const plugin = createHistoryPlugin({ debounceDelay: 500 })
+      plugin.initialize(context)
+
+      const inputHandler = (element.addEventListener as any).mock.calls.find(
+        (call: any) => call[0] === 'input'
+      )?.[1]
+
+      // When: 텍스트 입력
+      element.innerHTML = '<p>Hello World</p>'
+      inputHandler()
+
+      // 바로 스타일 적용 (디바운스 완료 전)
+      eventBus.emit('CAPTURE_SNAPSHOT')
+      element.innerHTML = '<p><i>Hello World</i></p>'
+      eventBus.emit('STYLE_CHANGED', { style: 'italic' })
+
+      // Then: 두 번 Undo해도 텍스트가 존재해야 함
+      eventBus.emit('UNDO') // Bold 제거
+      expect(element.innerHTML).toBe('<p>Hello World</p>')
+
+      eventBus.emit('UNDO') // 초기 상태로
+      expect(element.innerHTML).toBe('<p>Initial content</p>')
+    })
+
+    it('STYLE_CHANGED 이벤트 발행 시 스냅샷이 캡처되어야 함', () => {
+      // Given: 초기화된 플러그인
+      const plugin = createHistoryPlugin({ debounceDelay: 500 })
+      plugin.initialize(context)
+
+      const stateChanges: any[] = []
+      eventBus.on('HISTORY_STATE_CHANGED', 'after', (data: any) => {
+        stateChanges.push(data)
+      })
+
+      const initialCount = stateChanges.length
+
+      // When: 스타일 변경 이벤트 발행
+      element.innerHTML = '<p>Styled content</p>'
+      eventBus.emit('STYLE_CHANGED', { style: 'bold' })
+
+      // Then: 스냅샷이 캡처됨
+      expect(stateChanges.length).toBe(initialCount + 1)
+      expect(stateChanges[stateChanges.length - 1].canUndo).toBe(true)
+    })
+  })
+
   describe('커스텀 옵션', () => {
     it('커스텀 이벤트 이름을 사용할 수 있어야 함', () => {
       // Given: 커스텀 이벤트 이름으로 플러그인 생성

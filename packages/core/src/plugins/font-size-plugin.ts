@@ -122,6 +122,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
             return false
           }
 
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const sizeStr = String(fontSize)
           const result = document.execCommand('fontSize', false, sizeStr)
 

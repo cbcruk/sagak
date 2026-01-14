@@ -140,6 +140,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
             return false
           }
 
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('foreColor', false, color)
 
           if (result) {
