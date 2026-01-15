@@ -6,6 +6,7 @@ import { FontSizeSelect } from '../font-size-select/font-size-select'
 import { HeadingSelect } from '../heading-select/heading-select'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
+import { TableDialog } from '../table-dialog/table-dialog'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -101,6 +102,7 @@ export function Toolbar(): ReactNode {
 
       <LinkDialog />
       <ImageDialog />
+      <TableDialog />
     </div>
   )
 }
