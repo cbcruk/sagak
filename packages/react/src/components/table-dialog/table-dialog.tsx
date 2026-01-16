@@ -196,33 +196,163 @@ export function TableDialog(): ReactNode {
           )}
 
           {hasTable && (
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Dialog.Close
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ccc',
-                  borderRadius: 4,
-                  background: '#fff',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </Dialog.Close>
-              <button
-                type="button"
-                onClick={handleDelete}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #dc3545',
-                  borderRadius: 4,
-                  background: '#dc3545',
-                  color: '#fff',
-                  cursor: 'pointer',
-                }}
-              >
-                Delete Table
-              </button>
-            </div>
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>Row</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_INSERT_ROW, { position: 'above' })
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #ccc',
+                      borderRadius: 4,
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Above
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_INSERT_ROW, { position: 'below' })
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #ccc',
+                      borderRadius: 4,
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Below
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_DELETE_ROW)
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #dc3545',
+                      borderRadius: 4,
+                      background: '#fff',
+                      color: '#dc3545',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>Column</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position: 'left' })
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #ccc',
+                      borderRadius: 4,
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Left
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position: 'right' })
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #ccc',
+                      borderRadius: 4,
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Right
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      requestAnimationFrame(() => {
+                        selectionManager?.restoreSelection()
+                        eventBus.emit(ContentEvents.TABLE_DELETE_COLUMN)
+                      })
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #dc3545',
+                      borderRadius: 4,
+                      background: '#fff',
+                      color: '#dc3545',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #eee', paddingTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <Dialog.Close
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #ccc',
+                    borderRadius: 4,
+                    background: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </Dialog.Close>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #dc3545',
+                    borderRadius: 4,
+                    background: '#dc3545',
+                    color: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete Table
+                </button>
+              </div>
+            </>
           )}
         </Dialog.Popup>
       </Dialog.Portal>

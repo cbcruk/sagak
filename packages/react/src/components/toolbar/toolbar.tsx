@@ -7,6 +7,10 @@ import { HeadingSelect } from '../heading-select/heading-select'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
+import { ColorPicker } from '../color-picker/color-picker'
+import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
+import { IndentButtons } from '../indent-buttons/indent-buttons'
+import { ListButtons } from '../list-buttons/list-buttons'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -28,22 +32,33 @@ const actionButtonStyle = (disabled: boolean): React.CSSProperties => ({
   marginRight: 4,
 })
 
+const dividerStyle: React.CSSProperties = {
+  width: 1,
+  height: 24,
+  background: '#ccc',
+  margin: '0 8px',
+}
+
 export function Toolbar(): ReactNode {
   const {
     isBold,
     isItalic,
     isUnderline,
     isStrikeThrough,
+    isSubscript,
+    isSuperscript,
     toggleBold,
     toggleItalic,
     toggleUnderline,
     toggleStrikeThrough,
+    toggleSubscript,
+    toggleSuperscript,
   } = useFormattingState()
 
   const { canUndo, canRedo, undo, redo } = useHistoryState()
 
   return (
-    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 0' }}>
       <button
         type="button"
         onClick={undo}
@@ -61,13 +76,13 @@ export function Toolbar(): ReactNode {
         ↪
       </button>
 
-      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+      <div style={dividerStyle} />
 
       <HeadingSelect />
       <FontFamilySelect />
       <FontSizeSelect />
 
-      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+      <div style={dividerStyle} />
 
       <Toggle
         pressed={isBold}
@@ -97,8 +112,36 @@ export function Toolbar(): ReactNode {
       >
         S
       </Toggle>
+      <Toggle
+        pressed={isSubscript}
+        onPressedChange={toggleSubscript}
+        style={buttonStyle(isSubscript)}
+      >
+        X<sub>2</sub>
+      </Toggle>
+      <Toggle
+        pressed={isSuperscript}
+        onPressedChange={toggleSuperscript}
+        style={buttonStyle(isSuperscript)}
+      >
+        X<sup>2</sup>
+      </Toggle>
 
-      <div style={{ width: 1, height: 24, background: '#ccc', margin: '0 8px' }} />
+      <div style={dividerStyle} />
+
+      <ColorPicker type="text" />
+      <ColorPicker type="background" label="H" />
+
+      <div style={dividerStyle} />
+
+      <AlignmentButtons />
+
+      <div style={dividerStyle} />
+
+      <IndentButtons />
+      <ListButtons />
+
+      <div style={dividerStyle} />
 
       <LinkDialog />
       <ImageDialog />

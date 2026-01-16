@@ -53,9 +53,58 @@
 
 ### 2.3 Dialog 기반 컴포넌트
 
-- [ ] Link
-- [ ] Image
-- [ ] Table
+- [x] Link
+- [x] Image
+- [x] Table
+
+---
+
+## Phase 3: 추가 Toolbar 기능
+
+### 3.1 색상
+
+- [x] Text Color Picker
+- [x] Background Color Picker
+
+### 3.2 정렬
+
+- [x] Align Left / Center / Right / Justify 버튼
+
+### 3.3 들여쓰기
+
+- [x] Indent / Outdent 버튼
+
+### 3.4 리스트
+
+- [x] Ordered List 버튼
+- [x] Unordered List 버튼
+
+### 3.5 Table 고급 기능
+
+- [x] 행 추가/삭제 버튼
+- [x] 열 추가/삭제 버튼
+- [ ] 테이블 크기 조절
+
+### 3.6 기타 텍스트 스타일
+
+- [x] Subscript 버튼
+- [x] Superscript 버튼
+
+---
+
+## Phase 4: 고급 기능 (예정)
+
+### 4.1 찾기/바꾸기
+
+- [ ] Find & Replace Dialog
+
+### 4.2 키보드 단축키
+
+- [ ] 주요 명령어 키보드 단축키 지원
+
+### 4.3 Toolbar 커스터마이징
+
+- [ ] 사용자 정의 Toolbar 구성 지원
 
 ---
 
