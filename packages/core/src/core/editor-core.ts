@@ -1,7 +1,7 @@
 import { EventBus } from './event-bus'
 import { PluginManager } from './plugin-manager'
 import { SelectionManager } from './selection-manager'
-import { CoreEvents } from './events'
+import { CoreEvents, WysiwygEvents } from './events'
 import type {
   Plugin,
   EditorContext,
@@ -388,6 +388,42 @@ export class EditorCore {
   private setupFormattingStateTracking(): void {
     let rafId: number | null = null
 
+    const emptyFormattingState = {
+      isBold: false,
+      isItalic: false,
+      isUnderline: false,
+      isStrikeThrough: false,
+      isSubscript: false,
+      isSuperscript: false,
+    }
+
+    const isContentEmpty = (): boolean => {
+      const element = this.context.element
+      if (!element) return true
+
+      const textContent = element.textContent || ''
+      return textContent.trim().length === 0
+    }
+
+    const cleanupEmptyFormatting = (): void => {
+      const element = this.context.element
+      if (!element) return
+
+      element.innerHTML = '<p><br></p>'
+
+      const selection = window.getSelection()
+      if (selection) {
+        const p = element.querySelector('p')
+        if (p) {
+          const range = document.createRange()
+          range.setStart(p, 0)
+          range.collapse(true)
+          selection.removeAllRanges()
+          selection.addRange(range)
+        }
+      }
+    }
+
     const updateFormattingState = () => {
       if (this.selectionManager?.getIsComposing()) {
         return
@@ -399,6 +435,12 @@ export class EditorCore {
 
       rafId = requestAnimationFrame(() => {
         rafId = null
+
+        if (isContentEmpty()) {
+          cleanupEmptyFormatting()
+          this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, emptyFormattingState)
+          return
+        }
 
         const formattingState = {
           isBold: document.queryCommandState('bold'),
@@ -416,6 +458,7 @@ export class EditorCore {
     document.addEventListener('selectionchange', updateFormattingState)
     this.eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateFormattingState)
     this.eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateFormattingState)
+    this.eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', updateFormattingState)
     updateFormattingState()
   }
 
