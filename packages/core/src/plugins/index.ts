@@ -86,3 +86,12 @@ export type {
 
 export { createHistoryPlugin } from './history-plugin'
 export type { HistoryPluginOptions } from './history-plugin'
+
+export {
+  createKeyboardShortcutsPlugin,
+  KeyboardShortcutsPlugin,
+} from './keyboard-shortcuts-plugin'
+export type {
+  KeyboardShortcutsPluginOptions,
+  ShortcutDefinition,
+} from './keyboard-shortcuts-plugin'
