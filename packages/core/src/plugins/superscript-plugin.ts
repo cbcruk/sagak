@@ -1,4 +1,4 @@
-import { definePlugin, CoreEvents } from '@/core'
+import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -36,12 +36,12 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
   name: 'text-style:superscript',
 
   defaultOptions: {
-    eventName: 'SUPERSCRIPT_CLICKED',
+    eventName: TextStyleEvents.TOGGLE_SUPERSCRIPT,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? 'SUPERSCRIPT_CLICKED']: {
+    [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: {
       // `BEFORE` 단계: 위 첨자 서식 적용 가능 여부 확인
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {

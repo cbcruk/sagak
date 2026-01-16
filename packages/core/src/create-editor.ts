@@ -5,6 +5,8 @@ import { createBoldPlugin } from './plugins/bold-plugin'
 import { createItalicPlugin } from './plugins/italic-plugin'
 import { createUnderlinePlugin } from './plugins/underline-plugin'
 import { createStrikePlugin } from './plugins/strike-plugin'
+import { createSubscriptPlugin } from './plugins/subscript-plugin'
+import { createSuperscriptPlugin } from './plugins/superscript-plugin'
 import { createFontFamilyPlugin } from './plugins/font-family-plugin'
 import { createFontSizePlugin } from './plugins/font-size-plugin'
 import { createTextColorPlugin } from './plugins/text-color-plugin'
@@ -30,6 +32,8 @@ const defaultPlugins: Plugin[] = [
   createItalicPlugin(),
   createUnderlinePlugin(),
   createStrikePlugin(),
+  createSubscriptPlugin(),
+  createSuperscriptPlugin(),
   createFontFamilyPlugin(),
   createFontSizePlugin(),
   createTextColorPlugin(),
