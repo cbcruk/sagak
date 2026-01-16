@@ -92,11 +92,11 @@
 
 ---
 
-## Phase 4: 고급 기능 (예정)
+## Phase 4: 고급 기능
 
 ### 4.1 찾기/바꾸기
 
-- [ ] Find & Replace Dialog
+- [x] Find & Replace Dialog
 
 ### 4.2 키보드 단축키
 
