@@ -11,6 +11,7 @@ import { ColorPicker } from '../color-picker/color-picker'
 import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
 import { IndentButtons } from '../indent-buttons/indent-buttons'
 import { ListButtons } from '../list-buttons/list-buttons'
+import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 
 const buttonStyle = (pressed: boolean): React.CSSProperties => ({
   padding: '6px 12px',
@@ -146,6 +147,10 @@ export function Toolbar(): ReactNode {
       <LinkDialog />
       <ImageDialog />
       <TableDialog />
+
+      <div style={dividerStyle} />
+
+      <FindReplaceDialog />
     </div>
   )
 }
