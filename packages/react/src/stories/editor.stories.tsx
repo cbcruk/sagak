@@ -503,3 +503,62 @@ export const ImageUploadTest: Story = {
     },
   },
 }
+
+const exportContent = `
+<h1>Export Test Document</h1>
+<p>This editor demonstrates the <strong>export functionality</strong>.</p>
+<h2>Supported Formats</h2>
+<ul>
+  <li><strong>HTML</strong> - Full formatting preserved</li>
+  <li><strong>Markdown</strong> - Portable text format</li>
+  <li><strong>Plain Text</strong> - No formatting</li>
+</ul>
+<p>Click the <em>download icon</em> in the toolbar to export this content.</p>
+<h2>Sample Table</h2>
+<table>
+  <tr><th>Format</th><th>Extension</th></tr>
+  <tr><td>HTML</td><td>.html</td></tr>
+  <tr><td>Markdown</td><td>.md</td></tr>
+  <tr><td>Text</td><td>.txt</td></tr>
+</table>
+<blockquote>This is a blockquote that will be converted to Markdown format.</blockquote>
+`.trim()
+
+function ExportTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: exportContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Export</strong> - Click the download icon to export as HTML, Markdown, or Text
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const ExportTest: Story = {
+  render: () => <ExportTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with export functionality. Click the download icon in the toolbar to export content as HTML, Markdown, or plain text. The Markdown converter handles headings, lists, tables, links, and inline formatting.',
+      },
+    },
+  },
+}

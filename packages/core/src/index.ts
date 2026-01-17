@@ -99,3 +99,14 @@ export {
   ImageUploadEvents,
 } from './plugins/image-upload-plugin'
 export type { ImageUploadPluginOptions } from './plugins/image-upload-plugin'
+export {
+  createExportPlugin,
+  ExportEvents,
+  htmlToMarkdown,
+  htmlToText,
+} from './plugins/export-plugin'
+export type {
+  ExportPluginOptions,
+  ExportFormat,
+  ExportDownloadData,
+} from './plugins/export-plugin'

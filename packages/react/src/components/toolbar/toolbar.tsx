@@ -24,6 +24,7 @@ import { LineHeightSelect } from '../line-height-select/line-height-select'
 import { LetterSpacingSelect } from '../letter-spacing-select/letter-spacing-select'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { MoreMenu } from '../more-menu/more-menu'
+import { ExportMenu } from '../export-menu/export-menu'
 
 const ICON_SIZE = 16
 
@@ -187,8 +188,11 @@ export function Toolbar(): ReactNode {
 
         <div style={dividerStyle} data-part="separator" />
 
-        {/* Find */}
-        <FindReplaceDialog />
+        {/* Find & Export */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <FindReplaceDialog />
+          <ExportMenu />
+        </div>
       </div>
 
       {/* More Menu - visible on mobile */}

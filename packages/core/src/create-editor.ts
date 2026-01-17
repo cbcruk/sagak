@@ -32,6 +32,7 @@ import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
 import { createImageResizePlugin } from './plugins/image-resize-plugin'
 import { createImageUploadPlugin } from './plugins/image-upload-plugin'
+import { createExportPlugin } from './plugins/export-plugin'
 import {
   createAutoSavePlugin,
   type AutoSavePluginOptions,
@@ -72,6 +73,7 @@ const defaultPlugins: Plugin[] = [
   createTableResizePlugin(),
   createImageResizePlugin(),
   createImageUploadPlugin(),
+  createExportPlugin(),
 ]
 
 /**
