@@ -37,7 +37,8 @@ jobs:
         run: pnpm install
 
       - name: Build Storybook
-        run: pnpm --filter sagak-editor build-storybook
+        working-directory: packages/react
+        run: pnpm build-storybook
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
