@@ -161,13 +161,13 @@
 
 ### 6.1 텍스트 서식
 
-- [ ] 줄 간격 (Line Height) 설정
-- [ ] 자간 (Letter Spacing) 설정
+- [x] 줄 간격 (Line Height) 설정
+- [x] 자간 (Letter Spacing) 설정
 
 ### 6.2 특수 기능
 
 - [ ] 특수 문자 삽입 Dialog
-- [ ] 가로줄 (Horizontal Rule) 삽입
+- [x] 가로줄 (Horizontal Rule) 삽입
 
 ### 6.3 고급 기능 (선택)
 

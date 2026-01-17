@@ -26,6 +26,7 @@ import { createHistoryPlugin } from './plugins/history-plugin'
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
 import { createHorizontalRulePlugin } from './plugins/horizontal-rule-plugin'
 import { createLineHeightPlugin } from './plugins/line-height-plugin'
+import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
 
 /**
  * Default plugins included in the editor
@@ -56,6 +57,7 @@ const defaultPlugins: Plugin[] = [
   createKeyboardShortcutsPlugin(),
   createHorizontalRulePlugin(),
   createLineHeightPlugin(),
+  createLetterSpacingPlugin(),
 ]
 
 /**

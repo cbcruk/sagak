@@ -107,3 +107,9 @@ export {
   LineHeightPlugin,
 } from './line-height-plugin'
 export type { LineHeightPluginOptions } from './line-height-plugin'
+
+export {
+  createLetterSpacingPlugin,
+  LetterSpacingPlugin,
+} from './letter-spacing-plugin'
+export type { LetterSpacingPluginOptions } from './letter-spacing-plugin'

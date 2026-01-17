@@ -21,6 +21,7 @@ import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { HorizontalRuleButton } from '../horizontal-rule-button/horizontal-rule-button'
 import { LineHeightSelect } from '../line-height-select/line-height-select'
+import { LetterSpacingSelect } from '../letter-spacing-select/letter-spacing-select'
 
 const ICON_SIZE = 16
 
@@ -151,10 +152,11 @@ export function Toolbar(): ReactNode {
 
       <div style={dividerStyle} />
 
-      {/* Font Family, Size & Line Height */}
+      {/* Font Family, Size, Line Height & Letter Spacing */}
       <FontFamilySelect />
       <FontSizeSelect />
       <LineHeightSelect />
+      <LetterSpacingSelect />
 
       <div style={dividerStyle} />
 
