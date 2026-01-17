@@ -619,3 +619,211 @@ export const AccessibilityTest: Story = {
     },
   },
 }
+
+const fullDemoContent = `
+<h1>Sagak Editor Demo</h1>
+<p>Welcome to Sagak Editor - a modern, feature-rich WYSIWYG editor for React.</p>
+
+<h2>Text Formatting</h2>
+<p>This editor supports <strong>bold</strong>, <em>italic</em>, <u>underline</u>, and <s>strikethrough</s> text. You can also use <sub>subscript</sub> and <sup>superscript</sup>.</p>
+
+<h2>Lists</h2>
+<p>Ordered and unordered lists are fully supported:</p>
+<ul>
+  <li>Bullet point one</li>
+  <li>Bullet point two</li>
+  <li>Bullet point three</li>
+</ul>
+<ol>
+  <li>First numbered item</li>
+  <li>Second numbered item</li>
+  <li>Third numbered item</li>
+</ol>
+
+<h2>Tables</h2>
+<p>Create and edit tables with resizable columns:</p>
+<table>
+  <tr>
+    <th>Feature</th>
+    <th>Description</th>
+    <th>Status</th>
+  </tr>
+  <tr>
+    <td>Text Formatting</td>
+    <td>Bold, italic, underline, etc.</td>
+    <td>✓ Complete</td>
+  </tr>
+  <tr>
+    <td>Tables</td>
+    <td>Resizable columns</td>
+    <td>✓ Complete</td>
+  </tr>
+  <tr>
+    <td>Images</td>
+    <td>Upload, resize, drag-drop</td>
+    <td>✓ Complete</td>
+  </tr>
+</table>
+
+<h2>More Features</h2>
+<p>Try out all the features in the toolbar above:</p>
+<ul>
+  <li><strong>Undo/Redo</strong> - Full history support</li>
+  <li><strong>Headings</strong> - H1 through H6</li>
+  <li><strong>Colors</strong> - Text and background colors</li>
+  <li><strong>Alignment</strong> - Left, center, right, justify</li>
+  <li><strong>Links</strong> - Insert and edit hyperlinks</li>
+  <li><strong>Images</strong> - URL or file upload</li>
+  <li><strong>Find &amp; Replace</strong> - Search and replace text</li>
+  <li><strong>Special Characters</strong> - Insert symbols</li>
+  <li><strong>Export</strong> - Download as HTML, Markdown, or Text</li>
+</ul>
+
+<blockquote>
+This editor auto-saves your content to localStorage. Look for the save indicator in the top-right corner!
+</blockquote>
+
+<hr />
+<p style="text-align: center; color: #666;">Built with ❤️ using React and TypeScript</p>
+`.trim()
+
+function FullDemoEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: fullDemoContent,
+    autoSave: {
+      storageKey: 'sagak-editor-full-demo',
+      debounceMs: 1500,
+      restoreOnInit: true,
+    },
+  })
+
+  return (
+    <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottom: '1px solid #e5e5e5',
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Sagak Editor</h1>
+          <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>
+            A modern WYSIWYG editor for React
+          </p>
+        </div>
+        {ready && editor && (
+          <EditorProvider context={editor.context}>
+            <AutoSaveIndicator showTime />
+          </EditorProvider>
+        )}
+      </div>
+
+      {error && (
+        <div style={{
+          color: '#dc3545',
+          padding: 16,
+          background: '#f8d7da',
+          borderRadius: 8,
+          marginBottom: 16,
+        }}>
+          Error: {error.message}
+        </div>
+      )}
+
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+          style={{ minHeight: 400 }}
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Editor content"
+        />
+      </EditorContainer>
+
+      <div style={{
+        marginTop: 24,
+        padding: 16,
+        background: '#f9fafb',
+        borderRadius: 8,
+        fontSize: 13,
+        color: '#666',
+      }}>
+        <strong>Keyboard Shortcuts:</strong>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+          <span>⌘B - Bold</span>
+          <span>⌘I - Italic</span>
+          <span>⌘U - Underline</span>
+          <span>⌘Z - Undo</span>
+          <span>⌘⇧Z - Redo</span>
+          <span>⌘K - Link</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export const FullDemo: Story = {
+  render: () => <FullDemoEditor />,
+  parameters: {
+    layout: 'fullscreen',
+    docs: {
+      description: {
+        story: `
+# Sagak Editor - Full Demo
+
+This is a complete demonstration of all editor features:
+
+## Features
+- **Text Formatting**: Bold, italic, underline, strikethrough, subscript, superscript
+- **Headings**: H1 through H6 with paragraph option
+- **Lists**: Ordered and unordered lists
+- **Tables**: Create, edit, and resize columns
+- **Images**: Upload, drag-drop, paste, and resize
+- **Links**: Insert and edit hyperlinks
+- **Colors**: Text and background color pickers
+- **Alignment**: Left, center, right, justify
+- **Find & Replace**: Search and replace text
+- **Special Characters**: Insert symbols and emojis
+- **Export**: Download as HTML, Markdown, or plain text
+- **Auto-save**: Automatic saving to localStorage
+- **Accessibility**: Full keyboard navigation and screen reader support
+
+## Usage
+
+\`\`\`tsx
+import { useEditor, EditorProvider, Toolbar, EditorContainer } from 'sagak-react'
+import 'sagak-react/styles'
+
+function MyEditor() {
+  const { containerRef, editor, ready } = useEditor({
+    initialContent: '<p>Hello World</p>',
+    autoSave: { storageKey: 'my-editor', restoreOnInit: true },
+  })
+
+  return (
+    <EditorContainer>
+      {ready && editor && (
+        <EditorProvider context={editor.context}>
+          <Toolbar />
+        </EditorProvider>
+      )}
+      <div ref={containerRef} data-scope="editing-area" data-part="wysiwyg" />
+    </EditorContainer>
+  )
+}
+\`\`\`
+        `,
+      },
+    },
+  },
+}
