@@ -621,3 +621,101 @@
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Accessibility - Focus Visible Styles */
+[data-scope='toolbar'] button:focus-visible,
+[data-scope='toolbar'] [role='button']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+[data-scope='dropdown'] [data-part='trigger']:focus-visible,
+[data-scope='color-picker'] [data-part='trigger']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+[data-scope='dropdown'] [data-part='item']:focus-visible,
+[data-scope='color-picker'] [data-part='item']:focus-visible,
+[data-scope='more-menu'] [data-part='item']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: -2px;
+  background: #f0f0f0;
+}
+
+[data-scope='autocomplete'][data-part='item']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: -2px;
+}
+
+/* Dialog Focus Styles */
+[data-scope='dialog'] [data-part='input']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 0;
+  border-color: #007AFF;
+}
+
+[data-scope='dialog'] [data-part='cancel-button']:focus-visible,
+[data-scope='dialog'] [data-part='confirm-button']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Skip Link for Screen Readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #007AFF;
+  color: white;
+  padding: 8px 16px;
+  z-index: 10000;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  [data-scope='toolbar'] button,
+  [data-scope='dropdown'] [data-part='trigger'] {
+    border: 2px solid currentColor;
+  }
+
+  [data-scope='toolbar'] button:focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keyboard Focus Indicator for Editing Area */
+[data-scope='editing-area'][data-part='wysiwyg']:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: -2px;
+}

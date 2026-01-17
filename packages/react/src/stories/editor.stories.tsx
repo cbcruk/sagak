@@ -562,3 +562,60 @@ export const ExportTest: Story = {
     },
   },
 }
+
+const accessibilityContent = `
+<h1>Accessibility Test</h1>
+<p>This editor includes accessibility improvements for keyboard and screen reader users.</p>
+<h2>Keyboard Navigation</h2>
+<ul>
+  <li><strong>Tab</strong> - Move between toolbar buttons</li>
+  <li><strong>Enter/Space</strong> - Activate buttons</li>
+  <li><strong>Arrow keys</strong> - Navigate within menus</li>
+  <li><strong>Escape</strong> - Close dialogs and menus</li>
+</ul>
+<h2>Screen Reader Support</h2>
+<p>All toolbar buttons have <em>aria-label</em> attributes and proper role assignments.</p>
+<p>Try using Tab to navigate through the toolbar and observe the focus indicators.</p>
+`.trim()
+
+function AccessibilityTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: accessibilityContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Accessibility</strong> - Use Tab to navigate, observe focus indicators
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Editor content"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const AccessibilityTest: Story = {
+  render: () => <AccessibilityTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with accessibility improvements. Includes focus-visible styles, ARIA attributes, keyboard navigation, high contrast mode support, and reduced motion support.',
+      },
+    },
+  },
+}
