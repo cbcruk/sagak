@@ -23,6 +23,7 @@ import { HorizontalRuleButton } from '../horizontal-rule-button/horizontal-rule-
 import { LineHeightSelect } from '../line-height-select/line-height-select'
 import { LetterSpacingSelect } from '../letter-spacing-select/letter-spacing-select'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
+import { MoreMenu } from '../more-menu/more-menu'
 
 const ICON_SIZE = 16
 
@@ -104,12 +105,12 @@ export function Toolbar(): ReactNode {
         </button>
       </div>
 
-      <div style={dividerStyle} />
+      <div style={dividerStyle} data-part="separator" />
 
       {/* Heading/Paragraph */}
       <HeadingSelect />
 
-      <div style={dividerStyle} />
+      <div style={dividerStyle} data-part="separator" />
 
       {/* Text Style: B I U S */}
       <div style={segmentGroupStyle}>
@@ -151,39 +152,47 @@ export function Toolbar(): ReactNode {
       <ColorPicker type="text" />
       <ColorPicker type="background" />
 
-      <div style={dividerStyle} />
+      <div style={dividerStyle} data-part="separator" />
 
-      {/* Font Family, Size, Line Height & Letter Spacing */}
+      {/* Font Family, Size - always visible */}
       <FontFamilySelect />
       <FontSizeSelect />
-      <LineHeightSelect />
-      <LetterSpacingSelect />
 
-      <div style={dividerStyle} />
+      {/* Line Height & Letter Spacing - hidden on mobile */}
+      <div data-part="mobile-hidden" style={{ display: 'contents' }}>
+        <LineHeightSelect />
+        <LetterSpacingSelect />
+      </div>
+
+      <div style={dividerStyle} data-part="separator" />
 
       {/* Alignment */}
       <AlignmentButtons />
 
-      <div style={dividerStyle} />
+      <div style={dividerStyle} data-part="separator" />
 
       {/* Lists */}
       <ListButtons />
 
-      <div style={dividerStyle} />
+      {/* Link, Image, Table, HR, Special Characters - hidden on mobile */}
+      <div data-part="mobile-hidden" style={{ display: 'contents' }}>
+        <div style={dividerStyle} data-part="separator" />
+        <div style={{ display: 'flex', gap: 4 }}>
+          <LinkDialog />
+          <ImageDialog />
+          <TableDialog />
+          <HorizontalRuleButton />
+          <SpecialCharacterDialog />
+        </div>
 
-      {/* Link, Image, Table, HR, Special Characters */}
-      <div style={{ display: 'flex', gap: 4 }}>
-        <LinkDialog />
-        <ImageDialog />
-        <TableDialog />
-        <HorizontalRuleButton />
-        <SpecialCharacterDialog />
+        <div style={dividerStyle} data-part="separator" />
+
+        {/* Find */}
+        <FindReplaceDialog />
       </div>
 
-      <div style={dividerStyle} />
-
-      {/* Find */}
-      <FindReplaceDialog />
+      {/* More Menu - visible on mobile */}
+      <MoreMenu />
     </div>
   )
 }

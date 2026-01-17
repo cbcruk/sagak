@@ -240,3 +240,87 @@ export const AutocompleteTest: Story = {
     },
   },
 }
+
+function MobileViewEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: '<p>Resize the viewport to see responsive toolbar behavior.</p><p>On mobile (< 768px), the toolbar adapts with larger touch targets and a "More" menu for overflow items.</p>',
+  })
+
+  return (
+    <div style={{ padding: 20, maxWidth: 375 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Mobile View</strong> - Simulated 375px width (iPhone)
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+function TabletViewEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: '<p>This is a tablet view simulation (768px width).</p><p>The toolbar shows most items but hides some advanced options in the More menu.</p>',
+  })
+
+  return (
+    <div style={{ padding: 20, maxWidth: 768 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Tablet View</strong> - Simulated 768px width (iPad)
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const MobileView: Story = {
+  render: () => <MobileViewEditor />,
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile1',
+    },
+    docs: {
+      description: {
+        story: 'Editor optimized for mobile devices. Toolbar items are larger for touch targets and less-used features are moved to the More menu.',
+      },
+    },
+  },
+}
+
+export const TabletView: Story = {
+  render: () => <TabletViewEditor />,
+  parameters: {
+    viewport: {
+      defaultViewport: 'tablet',
+    },
+    docs: {
+      description: {
+        story: 'Editor view for tablet-sized screens. Some toolbar features are hidden and accessible via the More menu.',
+      },
+    },
+  },
+}
