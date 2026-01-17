@@ -7,6 +7,12 @@
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-scope='editor-container'][data-part='root']:focus-within {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
 /* Toolbar */
@@ -359,4 +365,31 @@
 [data-scope='editing-area'][data-part='html']:focus,
 [data-scope='editing-area'][data-part='text']:focus {
   background: #ffffff;
+}
+
+/* Scrollbar styling */
+.modern-wysiwyg-area::-webkit-scrollbar,
+[data-scope='editing-area'][data-part='html']::-webkit-scrollbar,
+[data-scope='editing-area'][data-part='text']::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modern-wysiwyg-area::-webkit-scrollbar-track,
+[data-scope='editing-area'][data-part='html']::-webkit-scrollbar-track,
+[data-scope='editing-area'][data-part='text']::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-wysiwyg-area::-webkit-scrollbar-thumb,
+[data-scope='editing-area'][data-part='html']::-webkit-scrollbar-thumb,
+[data-scope='editing-area'][data-part='text']::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.modern-wysiwyg-area::-webkit-scrollbar-thumb:hover,
+[data-scope='editing-area'][data-part='html']::-webkit-scrollbar-thumb:hover,
+[data-scope='editing-area'][data-part='text']::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
 }
