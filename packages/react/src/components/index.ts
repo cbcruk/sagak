@@ -24,3 +24,5 @@ export { LetterSpacingSelect } from './letter-spacing-select/letter-spacing-sele
 export { SpecialCharacterDialog } from './special-character-dialog/special-character-dialog'
 export { AutocompletePopover } from './autocomplete-popover/autocomplete-popover'
 export { MoreMenu } from './more-menu/more-menu'
+export { AutoSaveIndicator } from './auto-save-indicator/auto-save-indicator'
+export type { AutoSaveIndicatorProps } from './auto-save-indicator/auto-save-indicator'

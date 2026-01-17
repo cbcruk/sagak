@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useEditor } from '../hooks'
 import { EditorProvider } from '../context/editor-context'
-import { Toolbar, EditorContainer, AutocompletePopover } from '../components'
+import { Toolbar, EditorContainer, AutocompletePopover, AutoSaveIndicator } from '../components'
 import '../styles/index.css'
 
 function BasicEditor(): React.ReactNode {
@@ -384,6 +384,68 @@ export const TableResizeTest: Story = {
     docs: {
       description: {
         story: 'Editor with table column resize functionality. Hover over column borders to see the resize cursor, then drag to adjust column widths.',
+      },
+    },
+  },
+}
+
+const autoSaveContent = `
+<h1>Auto Save Test</h1>
+<p>This editor has auto-save enabled with localStorage persistence.</p>
+<p>Start typing and watch the status indicator in the top-right corner:</p>
+<ul>
+  <li><strong>Unsaved changes</strong> - Content has changed since last save</li>
+  <li><strong>Saving...</strong> - Currently saving to localStorage</li>
+  <li><strong>Saved at HH:MM</strong> - Content successfully saved</li>
+</ul>
+<p>Try editing this content and refresh the page - your changes will be restored!</p>
+`.trim()
+
+function AutoSaveTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: autoSaveContent,
+    autoSave: {
+      storageKey: 'sagak-editor-storybook-test',
+      debounceMs: 1000,
+    },
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ color: '#666' }}>
+          <strong>Auto Save</strong> - Edit content to see save status
+        </span>
+        {ready && editor && (
+          <EditorProvider context={editor.context}>
+            <AutoSaveIndicator showTime />
+          </EditorProvider>
+        )}
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const AutoSaveTest: Story = {
+  render: () => <AutoSaveTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with auto-save functionality. Content is automatically saved to localStorage after a short debounce period. The status indicator shows the current save state.',
       },
     },
   },

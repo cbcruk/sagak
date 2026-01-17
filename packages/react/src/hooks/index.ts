@@ -19,3 +19,6 @@ export type { FontState, UseFontStateReturn } from './use-font-state'
 
 export { useRecentColors } from './use-recent-colors'
 export type { UseRecentColorsReturn } from './use-recent-colors'
+
+export { useAutoSave } from './use-auto-save'
+export type { UseAutoSaveReturn } from './use-auto-save'

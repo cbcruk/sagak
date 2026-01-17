@@ -30,6 +30,10 @@ import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
 import { createSpecialCharacterPlugin } from './plugins/special-character-plugin'
 import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
+import {
+  createAutoSavePlugin,
+  type AutoSavePluginOptions,
+} from './plugins/auto-save-plugin'
 
 /**
  * Default plugins included in the editor
@@ -109,6 +113,11 @@ export interface CreateEditorOptions {
    * Replace default plugins entirely
    */
   replaceDefaultPlugins?: boolean
+
+  /**
+   * Auto-save configuration (false to disable, true for defaults, or options object)
+   */
+  autoSave?: boolean | AutoSavePluginOptions
 }
 
 /**
@@ -187,11 +196,18 @@ export function createEditor(options: CreateEditorOptions): Editor {
     spellCheck,
     plugins = [],
     replaceDefaultPlugins = false,
+    autoSave = false,
   } = options
 
   const allPlugins = replaceDefaultPlugins
     ? plugins
     : [...defaultPlugins, ...plugins]
+
+  if (autoSave) {
+    const autoSaveOptions =
+      typeof autoSave === 'object' ? autoSave : undefined
+    allPlugins.push(createAutoSavePlugin(autoSaveOptions))
+  }
 
   const core = new EditorCore({
     editingAreaContainer: container,

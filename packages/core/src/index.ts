@@ -80,3 +80,12 @@ export type {
 } from './plugins/autocomplete-plugin'
 export { createTableResizePlugin } from './plugins/table-resize-plugin'
 export type { TableResizePluginOptions } from './plugins/table-resize-plugin'
+export {
+  createAutoSavePlugin,
+  AutoSaveEvents,
+} from './plugins/auto-save-plugin'
+export type {
+  AutoSavePluginOptions,
+  AutoSaveStatus,
+  AutoSaveEventData,
+} from './plugins/auto-save-plugin'
