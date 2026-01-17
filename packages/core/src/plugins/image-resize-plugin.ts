@@ -59,6 +59,8 @@ export function createImageResizePlugin(
     overlay.className = 'sagak-image-resize-overlay'
     overlay.style.cssText = `
       position: absolute;
+      top: 0;
+      left: 0;
       pointer-events: none;
       border: 2px solid #007AFF;
       box-sizing: border-box;
@@ -106,44 +108,38 @@ export function createImageResizePlugin(
   }
 
   function positionOverlay(img: HTMLImageElement, overlay: HTMLDivElement): void {
-    const rect = img.getBoundingClientRect()
-    const containerRect = img.offsetParent?.getBoundingClientRect() || {
-      left: 0,
-      top: 0,
-    }
-
-    overlay.style.left = `${rect.left - containerRect.left}px`
-    overlay.style.top = `${rect.top - containerRect.top}px`
-    overlay.style.width = `${rect.width}px`
-    overlay.style.height = `${rect.height}px`
+    overlay.style.width = `${img.offsetWidth}px`
+    overlay.style.height = `${img.offsetHeight}px`
   }
 
-  function showResizeHandles(img: HTMLImageElement, container: HTMLElement): void {
+  function showResizeHandles(img: HTMLImageElement): void {
     hideResizeHandles()
 
     selectedImage = img
     resizeOverlay = createResizeOverlay()
 
-    const wrapper = document.createElement('div')
+    // Wrap the image with a position-relative container for the overlay
+    const wrapper = document.createElement('span')
     wrapper.className = 'sagak-image-resize-wrapper'
     wrapper.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
+      display: inline-block;
+      position: relative;
+      line-height: 0;
     `
+
+    // Insert wrapper before image, then move image into wrapper
+    img.parentNode?.insertBefore(wrapper, img)
+    wrapper.appendChild(img)
     wrapper.appendChild(resizeOverlay)
-    container.style.position = 'relative'
-    container.appendChild(wrapper)
 
     positionOverlay(img, resizeOverlay)
   }
 
   function hideResizeHandles(): void {
     const wrapper = document.querySelector('.sagak-image-resize-wrapper')
-    if (wrapper) {
+    if (wrapper && selectedImage) {
+      // Move image back out of wrapper
+      wrapper.parentNode?.insertBefore(selectedImage, wrapper)
       wrapper.remove()
     }
     selectedImage = null
@@ -240,7 +236,7 @@ export function createImageResizePlugin(
 
         if (target.tagName === 'IMG') {
           eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          showResizeHandles(target as HTMLImageElement, element)
+          showResizeHandles(target as HTMLImageElement)
           eventBus.emit(ImageResizeEvents.IMAGE_RESIZE_START, { image: target })
         } else if (
           !target.classList.contains('sagak-resize-handle') &&
