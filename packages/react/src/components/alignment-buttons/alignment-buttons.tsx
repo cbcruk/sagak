@@ -1,18 +1,34 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
 import { ParagraphEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
 type AlignmentType = 'left' | 'center' | 'right' | 'justify'
 
-function getButtonStyle(isActive: boolean): React.CSSProperties {
+const ICON_SIZE = 16
+
+const segmentGroupStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
+  overflow: 'hidden',
+  background: '#fff',
+}
+
+function getButtonStyle(isActive: boolean, isLast?: boolean): React.CSSProperties {
   return {
-    padding: '6px 10px',
-    border: '1px solid #ccc',
-    borderRadius: 4,
-    background: isActive ? '#333' : '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 26,
+    border: 'none',
+    borderRight: isLast ? 'none' : '1px solid #d4d4d4',
+    background: isActive ? '#007AFF' : 'transparent',
     color: isActive ? '#fff' : '#333',
     cursor: 'pointer',
-    marginRight: 2,
+    padding: 0,
   }
 }
 
@@ -63,19 +79,14 @@ export function AlignmentButtons(): ReactNode {
   }
 
   return (
-    <>
+    <div style={segmentGroupStyle}>
       <button
         type="button"
         onClick={() => handleAlignment('left')}
         style={getButtonStyle(currentAlign === 'left')}
         title="Align Left"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '70%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '50%' }} />
-        </span>
+        <AlignLeft size={ICON_SIZE} />
       </button>
       <button
         type="button"
@@ -83,12 +94,7 @@ export function AlignmentButtons(): ReactNode {
         style={getButtonStyle(currentAlign === 'center')}
         title="Align Center"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2, marginLeft: 'auto', marginRight: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '70%', marginBottom: 2, marginLeft: 'auto', marginRight: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2, marginLeft: 'auto', marginRight: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '50%', marginLeft: 'auto', marginRight: 'auto' }} />
-        </span>
+        <AlignCenter size={ICON_SIZE} />
       </button>
       <button
         type="button"
@@ -96,26 +102,16 @@ export function AlignmentButtons(): ReactNode {
         style={getButtonStyle(currentAlign === 'right')}
         title="Align Right"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2, marginLeft: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '70%', marginBottom: 2, marginLeft: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2, marginLeft: 'auto' }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '50%', marginLeft: 'auto' }} />
-        </span>
+        <AlignRight size={ICON_SIZE} />
       </button>
       <button
         type="button"
         onClick={() => handleAlignment('justify')}
-        style={getButtonStyle(currentAlign === 'justify')}
+        style={getButtonStyle(currentAlign === 'justify', true)}
         title="Justify"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'block', borderBottom: '2px solid currentColor', width: '100%' }} />
-        </span>
+        <AlignJustify size={ICON_SIZE} />
       </button>
-    </>
+    </div>
   )
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useState, useRef, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -21,9 +22,9 @@ const popoverStyle: React.CSSProperties = {
   marginTop: 4,
   padding: 8,
   background: '#fff',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
   zIndex: 1000,
   width: 220,
 }
@@ -38,37 +39,16 @@ const colorSwatchStyle = (color: string, isSelected: boolean): React.CSSProperti
   width: 18,
   height: 18,
   background: color,
-  border: isSelected ? '2px solid #333' : '1px solid #ccc',
+  border: isSelected ? '2px solid #007AFF' : '1px solid #e5e5e5',
   borderRadius: 2,
   cursor: 'pointer',
-})
-
-const triggerButtonStyle: React.CSSProperties = {
-  padding: '6px 8px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: '#fff',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  marginRight: 4,
-}
-
-const colorIndicatorStyle = (color: string): React.CSSProperties => ({
-  width: 16,
-  height: 16,
-  background: color,
-  border: '1px solid #ccc',
-  borderRadius: 2,
 })
 
 export interface ColorPickerProps {
   type: 'text' | 'background'
-  label?: string
 }
 
-export function ColorPicker({ type, label }: ColorPickerProps): ReactNode {
+export function ColorPicker({ type }: ColorPickerProps): ReactNode {
   const editorContext = useEditorContext()
   const [isOpen, setIsOpen] = useState(false)
   const [currentColor, setCurrentColor] = useState(type === 'text' ? '#000000' : '#ffff00')
@@ -101,22 +81,75 @@ export function ColorPicker({ type, label }: ColorPickerProps): ReactNode {
     editorContext.eventBus.emit(eventName, { color })
   }
 
-  const displayLabel = label ?? (type === 'text' ? 'A' : 'H')
+  function handleRemoveColor(): void {
+    setIsOpen(false)
+    const eventName = type === 'text'
+      ? FontEvents.TEXT_COLOR_CHANGED
+      : FontEvents.BACKGROUND_COLOR_CHANGED
+    editorContext.eventBus.emit(eventName, { color: type === 'text' ? '#000000' : 'transparent' })
+    setCurrentColor(type === 'text' ? '#000000' : '#ffff00')
+  }
+
+  const isTextColor = type === 'text'
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        style={triggerButtonStyle}
-        title={type === 'text' ? 'Text Color' : 'Background Color'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 26,
+          height: 26,
+          border: '1px solid #d4d4d4',
+          borderRadius: 4,
+          background: '#fff',
+          cursor: 'pointer',
+          padding: 2,
+        }}
+        title={isTextColor ? 'Text Color' : 'Highlight Color'}
       >
-        <span style={{ fontWeight: 'bold' }}>{displayLabel}</span>
-        <div style={colorIndicatorStyle(currentColor)} />
+        {isTextColor ? (
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              background: currentColor,
+              borderRadius: 2,
+              border: currentColor === '#ffffff' ? '1px solid #d4d4d4' : 'none',
+            }}
+          />
+        ) : (
+          <div style={{ position: 'relative', width: 16, height: 16 }}>
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                background: currentColor,
+                borderRadius: 2,
+                border: '1px solid #d4d4d4',
+              }}
+            />
+            <X
+              size={10}
+              style={{
+                position: 'absolute',
+                top: 3,
+                left: 3,
+                color: '#666',
+              }}
+            />
+          </div>
+        )}
       </button>
 
       {isOpen && (
         <div style={popoverStyle}>
+          <div style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
+            {isTextColor ? 'Text Color' : 'Highlight Color'}
+          </div>
           <div style={colorGridStyle}>
             {PRESET_COLORS.map((color) => (
               <button
@@ -128,6 +161,29 @@ export function ColorPicker({ type, label }: ColorPickerProps): ReactNode {
               />
             ))}
           </div>
+          {!isTextColor && (
+            <button
+              type="button"
+              onClick={handleRemoveColor}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                width: '100%',
+                marginTop: 8,
+                padding: '6px 8px',
+                border: '1px solid #d4d4d4',
+                borderRadius: 4,
+                background: '#fff',
+                cursor: 'pointer',
+                fontSize: 12,
+                color: '#666',
+              }}
+            >
+              <X size={12} />
+              Remove Highlight
+            </button>
+          )}
         </div>
       )}
     </div>

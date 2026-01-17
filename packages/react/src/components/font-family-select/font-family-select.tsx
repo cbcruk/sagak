@@ -1,16 +1,48 @@
 import type { ReactNode } from 'react'
 import { Select } from '@base-ui/react/select'
+import { ChevronDown } from 'lucide-react'
 import { useEditorContext } from '../../context/editor-context'
 import { useFontState } from '../../hooks'
 
 const fonts = [
-  { label: 'Font', value: null },
-  { label: 'Arial', value: 'Arial' },
-  { label: 'Georgia', value: 'Georgia' },
-  { label: 'Times New Roman', value: 'Times New Roman' },
-  { label: 'Courier New', value: 'Courier New' },
-  { label: 'Verdana', value: 'Verdana' },
+  { label: 'Helvetica', value: 'Helvetica, Arial, sans-serif' },
+  { label: 'Arial', value: 'Arial, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times', value: 'Times New Roman, serif' },
+  { label: 'Courier', value: 'Courier New, monospace' },
+  { label: 'Verdana', value: 'Verdana, sans-serif' },
 ]
+
+const triggerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '4px 8px',
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
+  background: '#fff',
+  cursor: 'pointer',
+  fontSize: 13,
+  minWidth: 90,
+  justifyContent: 'space-between',
+}
+
+const popupStyle: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+  padding: 4,
+  minWidth: 140,
+}
+
+const itemStyle = (fontFamily?: string): React.CSSProperties => ({
+  padding: '6px 12px',
+  cursor: 'pointer',
+  borderRadius: 4,
+  fontSize: 13,
+  fontFamily: fontFamily,
+})
 
 export function FontFamilySelect(): ReactNode {
   const { selectionManager } = useEditorContext()
@@ -30,7 +62,7 @@ export function FontFamilySelect(): ReactNode {
 
   const currentValue = fonts.some((f) => f.value === fontFamily)
     ? fontFamily
-    : null
+    : fonts[0].value
 
   return (
     <Select.Root
@@ -39,46 +71,19 @@ export function FontFamilySelect(): ReactNode {
       onValueChange={handleChange}
       onOpenChange={handleOpenChange}
     >
-      <Select.Trigger
-        style={{
-          padding: '6px 12px',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          background: '#fff',
-          cursor: 'pointer',
-          marginRight: 4,
-          minWidth: 120,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <Select.Trigger style={triggerStyle} title="Font Family">
         <Select.Value />
-        <Select.Icon>▼</Select.Icon>
+        <ChevronDown size={14} color="#666" />
       </Select.Trigger>
       <Select.Portal>
         <Select.Positioner sideOffset={4}>
-          <Select.Popup
-            style={{
-              background: '#fff',
-              border: '1px solid #ccc',
-              borderRadius: 4,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              padding: 4,
-              minWidth: 120,
-            }}
-          >
+          <Select.Popup style={popupStyle}>
             <Select.List>
               {fonts.map(({ label, value }) => (
                 <Select.Item
                   key={label}
                   value={value}
-                  style={{
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    borderRadius: 2,
-                    fontFamily: value ?? undefined,
-                  }}
+                  style={itemStyle(value)}
                 >
                   <Select.ItemText>{label}</Select.ItemText>
                 </Select.Item>

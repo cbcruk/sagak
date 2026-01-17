@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Dialog } from '@base-ui/react/dialog'
+import { Search } from 'lucide-react'
 import { FindReplaceEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+
+const ICON_SIZE = 18
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -145,15 +148,20 @@ export function FindReplaceDialog(): ReactNode {
     }}>
       <Dialog.Trigger
         style={{
-          padding: '6px 12px',
-          border: '1px solid #ccc',
-          borderRadius: 4,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 28,
+          height: 26,
+          border: '1px solid #d4d4d4',
+          borderRadius: 6,
           background: '#fff',
+          color: '#333',
           cursor: 'pointer',
-          marginRight: 4,
         }}
+        title="Find & Replace"
       >
-        Find
+        <Search size={ICON_SIZE} />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop

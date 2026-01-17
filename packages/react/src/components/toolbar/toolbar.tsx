@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react'
 import { Toggle } from '@base-ui/react/toggle'
+import {
+  Undo2,
+  Redo2,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+} from 'lucide-react'
 import { useFormattingState, useHistoryState } from '../../hooks'
 import { FontFamilySelect } from '../font-family-select/font-family-select'
 import { FontSizeSelect } from '../font-size-select/font-size-select'
@@ -9,35 +17,49 @@ import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
 import { ColorPicker } from '../color-picker/color-picker'
 import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
-import { IndentButtons } from '../indent-buttons/indent-buttons'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 
-const buttonStyle = (pressed: boolean): React.CSSProperties => ({
-  padding: '6px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  background: pressed ? '#333' : '#fff',
-  color: pressed ? '#fff' : '#333',
+const ICON_SIZE = 16
+
+const segmentGroupStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+}
+
+const segmentButtonStyle = (isActive: boolean, isFirst?: boolean, isLast?: boolean): React.CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 26,
+  border: '1px solid #d4d4d4',
+  borderLeft: isFirst ? '1px solid #d4d4d4' : 'none',
+  borderRadius: isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0,
+  background: isActive ? '#007AFF' : '#fff',
+  color: isActive ? '#fff' : '#333',
   cursor: 'pointer',
-  marginRight: 4,
+  padding: 0,
 })
 
 const actionButtonStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: '6px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 26,
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
   background: '#fff',
   color: disabled ? '#ccc' : '#333',
   cursor: disabled ? 'not-allowed' : 'pointer',
-  marginRight: 4,
 })
 
 const dividerStyle: React.CSSProperties = {
   width: 1,
-  height: 24,
-  background: '#ccc',
-  margin: '0 8px',
+  height: 20,
+  background: '#e5e5e5',
+  margin: '0 4px',
 }
 
 export function Toolbar(): ReactNode {
@@ -46,110 +68,113 @@ export function Toolbar(): ReactNode {
     isItalic,
     isUnderline,
     isStrikeThrough,
-    isSubscript,
-    isSuperscript,
     toggleBold,
     toggleItalic,
     toggleUnderline,
     toggleStrikeThrough,
-    toggleSubscript,
-    toggleSuperscript,
   } = useFormattingState()
 
   const { canUndo, canRedo, undo, redo } = useHistoryState()
 
   return (
-    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 0' }}>
-      <button
-        type="button"
-        onClick={undo}
-        disabled={!canUndo}
-        style={actionButtonStyle(!canUndo)}
-      >
-        ↩
-      </button>
-      <button
-        type="button"
-        onClick={redo}
-        disabled={!canRedo}
-        style={actionButtonStyle(!canRedo)}
-      >
-        ↪
-      </button>
+    <div data-scope="toolbar" data-part="root">
+      {/* Undo/Redo */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          style={actionButtonStyle(!canUndo)}
+          title="Undo (⌘Z)"
+        >
+          <Undo2 size={ICON_SIZE} />
+        </button>
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          style={actionButtonStyle(!canRedo)}
+          title="Redo (⌘⇧Z)"
+        >
+          <Redo2 size={ICON_SIZE} />
+        </button>
+      </div>
 
       <div style={dividerStyle} />
 
+      {/* Heading/Paragraph */}
       <HeadingSelect />
+
+      <div style={dividerStyle} />
+
+      {/* Text Style: B I U S */}
+      <div style={segmentGroupStyle}>
+        <Toggle
+          pressed={isBold}
+          onPressedChange={toggleBold}
+          style={segmentButtonStyle(isBold, true)}
+          title="Bold (⌘B)"
+        >
+          <Bold size={ICON_SIZE} strokeWidth={2.5} />
+        </Toggle>
+        <Toggle
+          pressed={isItalic}
+          onPressedChange={toggleItalic}
+          style={segmentButtonStyle(isItalic)}
+          title="Italic (⌘I)"
+        >
+          <Italic size={ICON_SIZE} />
+        </Toggle>
+        <Toggle
+          pressed={isUnderline}
+          onPressedChange={toggleUnderline}
+          style={segmentButtonStyle(isUnderline)}
+          title="Underline (⌘U)"
+        >
+          <Underline size={ICON_SIZE} />
+        </Toggle>
+        <Toggle
+          pressed={isStrikeThrough}
+          onPressedChange={toggleStrikeThrough}
+          style={segmentButtonStyle(isStrikeThrough, false, true)}
+          title="Strikethrough"
+        >
+          <Strikethrough size={ICON_SIZE} />
+        </Toggle>
+      </div>
+
+      {/* Colors */}
+      <ColorPicker type="text" />
+      <ColorPicker type="background" />
+
+      <div style={dividerStyle} />
+
+      {/* Font Family & Size */}
       <FontFamilySelect />
       <FontSizeSelect />
 
       <div style={dividerStyle} />
 
-      <Toggle
-        pressed={isBold}
-        onPressedChange={toggleBold}
-        style={{ ...buttonStyle(isBold), fontWeight: 'bold' }}
-      >
-        B
-      </Toggle>
-      <Toggle
-        pressed={isItalic}
-        onPressedChange={toggleItalic}
-        style={{ ...buttonStyle(isItalic), fontStyle: 'italic' }}
-      >
-        I
-      </Toggle>
-      <Toggle
-        pressed={isUnderline}
-        onPressedChange={toggleUnderline}
-        style={{ ...buttonStyle(isUnderline), textDecoration: 'underline' }}
-      >
-        U
-      </Toggle>
-      <Toggle
-        pressed={isStrikeThrough}
-        onPressedChange={toggleStrikeThrough}
-        style={{ ...buttonStyle(isStrikeThrough), textDecoration: 'line-through' }}
-      >
-        S
-      </Toggle>
-      <Toggle
-        pressed={isSubscript}
-        onPressedChange={toggleSubscript}
-        style={buttonStyle(isSubscript)}
-      >
-        X<sub>2</sub>
-      </Toggle>
-      <Toggle
-        pressed={isSuperscript}
-        onPressedChange={toggleSuperscript}
-        style={buttonStyle(isSuperscript)}
-      >
-        X<sup>2</sup>
-      </Toggle>
-
-      <div style={dividerStyle} />
-
-      <ColorPicker type="text" />
-      <ColorPicker type="background" label="H" />
-
-      <div style={dividerStyle} />
-
+      {/* Alignment */}
       <AlignmentButtons />
 
       <div style={dividerStyle} />
 
-      <IndentButtons />
+      {/* Lists */}
       <ListButtons />
 
       <div style={dividerStyle} />
 
-      <LinkDialog />
-      <ImageDialog />
-      <TableDialog />
+      {/* Link, Image, Table */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <LinkDialog />
+        <ImageDialog />
+        <TableDialog />
+      </div>
 
       <div style={dividerStyle} />
 
+      {/* Find */}
       <FindReplaceDialog />
     </div>
   )

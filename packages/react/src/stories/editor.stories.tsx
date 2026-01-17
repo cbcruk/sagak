@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useEditor } from '../hooks'
 import { EditorProvider } from '../context/editor-context'
-import { Toolbar } from '../components'
+import { Toolbar, EditorContainer } from '../components'
 import '../styles/index.css'
 
 function BasicEditor(): React.ReactNode {
@@ -10,20 +10,20 @@ function BasicEditor(): React.ReactNode {
   })
 
   return (
-    <div>
+    <div style={{ padding: 20 }}>
       {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
-      {ready && editor ? (
-        <EditorProvider context={editor.context}>
-          <Toolbar />
-        </EditorProvider>
-      ) : null}
-      <div
-        ref={containerRef}
-        style={{
-          border: '1px solid #ccc',
-          minHeight: 300,
-        }}
-      />
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
     </div>
   )
 }

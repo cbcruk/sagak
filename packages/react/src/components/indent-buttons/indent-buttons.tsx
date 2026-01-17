@@ -1,14 +1,21 @@
 import type { ReactNode } from 'react'
+import { IndentDecrease, IndentIncrease } from 'lucide-react'
 import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
+const ICON_SIZE = 18
+
 const buttonStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  border: '1px solid #ccc',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  border: 'none',
   borderRadius: 4,
-  background: '#fff',
+  background: 'transparent',
+  color: '#333',
   cursor: 'pointer',
-  marginRight: 4,
 }
 
 export function IndentButtons(): ReactNode {
@@ -30,14 +37,7 @@ export function IndentButtons(): ReactNode {
         style={buttonStyle}
         title="Decrease Indent"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid #333', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-            <span style={{ marginRight: 2 }}>&larr;</span>
-            <span style={{ flex: 1, borderBottom: '2px solid #333' }} />
-          </span>
-          <span style={{ display: 'block', borderBottom: '2px solid #333', width: '100%' }} />
-        </span>
+        <IndentDecrease size={ICON_SIZE} />
       </button>
       <button
         type="button"
@@ -45,14 +45,7 @@ export function IndentButtons(): ReactNode {
         style={buttonStyle}
         title="Increase Indent"
       >
-        <span style={{ display: 'inline-block', width: 16 }}>
-          <span style={{ display: 'block', borderBottom: '2px solid #333', width: '100%', marginBottom: 2 }} />
-          <span style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-            <span style={{ marginRight: 2 }}>&rarr;</span>
-            <span style={{ flex: 1, borderBottom: '2px solid #333' }} />
-          </span>
-          <span style={{ display: 'block', borderBottom: '2px solid #333', width: '100%' }} />
-        </span>
+        <IndentIncrease size={ICON_SIZE} />
       </button>
     </>
   )

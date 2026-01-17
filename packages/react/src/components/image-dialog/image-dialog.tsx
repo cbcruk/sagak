@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Dialog } from '@base-ui/react/dialog'
+import { Image } from 'lucide-react'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+
+const ICON_SIZE = 18
 
 function getSelectedImage(): HTMLImageElement | null {
   const selection = window.getSelection()
@@ -167,16 +170,20 @@ export function ImageDialog(): ReactNode {
       <Dialog.Trigger
         onClick={handleOpen}
         style={{
-          padding: '6px 12px',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          background: hasImage ? '#333' : '#fff',
-          color: hasImage ? '#fff' : '#333',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 28,
+          height: 26,
+          border: '1px solid #d4d4d4',
+          borderRadius: 6,
+          background: hasImage ? '#e8f0fe' : '#fff',
+          color: '#333',
           cursor: 'pointer',
-          marginRight: 4,
         }}
+        title="Insert Image"
       >
-        Image
+        <Image size={ICON_SIZE} />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop
