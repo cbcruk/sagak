@@ -1,6 +1,5 @@
-import type { Preview } from '@storybook/react'
-
-const preview: Preview = {
+/** @type {import('@storybook/react').Preview} */
+const preview = {
   parameters: {
     controls: {
       matchers: {
@@ -11,4 +10,4 @@ const preview: Preview = {
   },
 }
 
-export default preview
+module.exports = preview
