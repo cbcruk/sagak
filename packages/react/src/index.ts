@@ -1,7 +1,14 @@
 export { EditorProvider, useEditorContext } from './context/editor-context'
 export type { EditorProviderProps } from './context/editor-context'
 
-export { useEditor, useFormattingState, useHistoryState } from './hooks'
+export {
+  useEditor,
+  useFormattingState,
+  useHistoryState,
+  useFontState,
+  useRecentColors,
+  useAutoSave,
+} from './hooks'
 export type {
   UseEditorOptions,
   UseEditorReturn,
@@ -10,7 +17,40 @@ export type {
   HistoryState,
   HistoryActions,
   UseHistoryStateReturn,
+  FontState,
+  UseFontStateReturn,
+  UseRecentColorsReturn,
+  UseAutoSaveReturn,
 } from './hooks'
 
-export { EditingArea, Toolbar } from './components'
-export type { EditingAreaProps } from './components'
+export {
+  EditingArea,
+  EditorContainer,
+  Toolbar,
+  FontFamilySelect,
+  FontSizeSelect,
+  HeadingSelect,
+  LinkDialog,
+  ImageDialog,
+  TableDialog,
+  ColorPicker,
+  AlignmentButtons,
+  IndentButtons,
+  ListButtons,
+  FindReplaceDialog,
+  HorizontalRuleButton,
+  LineHeightSelect,
+  LetterSpacingSelect,
+  SpecialCharacterDialog,
+  AutocompletePopover,
+  MoreMenu,
+  AutoSaveIndicator,
+  ExportMenu,
+} from './components'
+export type {
+  EditingAreaProps,
+  EditorContainerProps,
+  ColorPickerProps,
+  AutoSaveIndicatorProps,
+  ExportMenuProps,
+} from './components'

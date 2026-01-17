@@ -10,9 +10,13 @@
     "test:ui": "pnpm --filter sagak-core test:ui",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "storybook": "pnpm --filter sagak-editor storybook"
+    "storybook": "pnpm --filter sagak-editor storybook",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.8",
     "@preact/preset-vite": "^2.10.2",
     "@preact/signals": "^2.5.1",
     "@types/node": "^24.10.1",
