@@ -262,12 +262,22 @@ export function createAutoSavePlugin(
       })
 
       if (restoreOnInit && element) {
-        const savedContent = onLoad ? onLoad() : loadFromStorage()
+        // Delay restore to run after initialContent is set
+        setTimeout(() => {
+          void (async () => {
+            try {
+              const savedContent = onLoad ? await onLoad() : loadFromStorage()
 
-        if (savedContent && typeof savedContent === 'string') {
-          element.innerHTML = savedContent
-          lastSavedContent = savedContent
-        }
+              if (savedContent && typeof savedContent === 'string') {
+                element.innerHTML = savedContent
+                lastSavedContent = savedContent
+                eventBus.emit(CoreEvents.CONTENT_RESTORED)
+              }
+            } catch (e) {
+              console.error('Failed to restore content on init:', e)
+            }
+          })()
+        }, 0)
       }
 
       if (element) {

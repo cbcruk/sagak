@@ -407,6 +407,7 @@ function AutoSaveTestEditor(): React.ReactNode {
     autoSave: {
       storageKey: 'sagak-editor-storybook-test',
       debounceMs: 1000,
+      restoreOnInit: true,
     },
   })
 
