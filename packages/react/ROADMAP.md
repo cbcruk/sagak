@@ -140,7 +140,7 @@
   - [x] Find/Replace Dialog
 - [x] Color Picker 개선
   - [x] 프리셋 색상 팔레트
-  - [ ] 최근 사용 색상
+  - [x] 최근 사용 색상
 
 ### 5.3 편집 영역 스타일
 

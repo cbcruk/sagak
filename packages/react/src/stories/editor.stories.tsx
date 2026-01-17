@@ -93,3 +93,14 @@ export const Default: Story = {}
 export const ScrollbarTest: Story = {
   render: () => <ScrollbarTestEditor />,
 }
+
+export const ColorPickerTest: Story = {
+  render: () => <BasicEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test the ColorPicker with recent colors. Select a few colors and they will appear in the "Recent" section at the top of the color picker.',
+      },
+    },
+  },
+}

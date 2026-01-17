@@ -16,3 +16,6 @@ export type {
 
 export { useFontState } from './use-font-state'
 export type { FontState, UseFontStateReturn } from './use-font-state'
+
+export { useRecentColors } from './use-recent-colors'
+export type { UseRecentColorsReturn } from './use-recent-colors'

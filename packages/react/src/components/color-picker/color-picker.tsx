@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useRecentColors } from '../../hooks/use-recent-colors'
 
 const PRESET_COLORS = [
   '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
@@ -53,6 +54,7 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
   const [isOpen, setIsOpen] = useState(false)
   const [currentColor, setCurrentColor] = useState(type === 'text' ? '#000000' : '#ffff00')
   const containerRef = useRef<HTMLDivElement>(null)
+  const { recentColors, addRecentColor } = useRecentColors(type)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent): void {
@@ -73,6 +75,7 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
   function handleColorSelect(color: string): void {
     setCurrentColor(color)
     setIsOpen(false)
+    addRecentColor(color)
 
     const eventName = type === 'text'
       ? FontEvents.TEXT_COLOR_CHANGED
@@ -150,6 +153,26 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
           <div style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
             {isTextColor ? 'Text Color' : 'Highlight Color'}
           </div>
+
+          {recentColors.length > 0 && (
+            <>
+              <div style={{ marginBottom: 4, fontSize: 11, color: '#999' }}>
+                Recent
+              </div>
+              <div style={{ ...colorGridStyle, marginBottom: 8 }}>
+                {recentColors.map((color) => (
+                  <button
+                    key={`recent-${color}`}
+                    type="button"
+                    style={colorSwatchStyle(color, color === currentColor)}
+                    onClick={() => handleColorSelect(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
           <div style={colorGridStyle}>
             {PRESET_COLORS.map((color) => (
               <button
