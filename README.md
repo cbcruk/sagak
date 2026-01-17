@@ -2,47 +2,79 @@
 
 > 사각사각, 글을 씁니다
 
-TypeScript와 최신 웹 기술로 만든 WYSIWYG 에디터입니다.
+TypeScript와 React로 만든 WYSIWYG 에디터입니다.
 
-## 목표
+## 특징
 
 - **타입 안전성**: TypeScript로 개발자 경험 향상
-- **뷰 독립적**: UI 프레임워크에 독립적인 코어 로직
-- **이벤트 기반**: EventBus를 활용한 플러그인 아키텍처
+- **플러그인 아키텍처**: 필요한 기능만 선택적으로 사용
+- **React 통합**: 현대적인 React 컴포넌트 제공
+- **풍부한 기능**: 텍스트 스타일, 테이블, 이미지, 찾기/바꾸기 등
 
-## 구조
-
-```
-packages/
-├── core/          # EventBus, PluginManager, SelectionManager
-├── editor/        # 뷰 독립적 에디터 로직
-├── plugins/       # 기능 플러그인
-└── ui/            # UI 레이어 (Preact + Signals)
-```
-
-## 시작하기
+## 설치
 
 ```bash
-pnpm install   # 의존성 설치
-pnpm dev       # 개발 서버
-pnpm test      # 테스트 실행
-pnpm build     # 프로덕션 빌드
+npm install sagak-editor sagak-core
+# or
+pnpm add sagak-editor sagak-core
+```
+
+## 사용법
+
+```tsx
+import { Editor, Toolbar, EditorArea, useEditor } from 'sagak-editor'
+import 'sagak-editor/styles.css'
+
+function App() {
+  const editor = useEditor()
+
+  return (
+    <Editor editor={editor}>
+      <Toolbar />
+      <EditorArea />
+    </Editor>
+  )
+}
 ```
 
 ## 패키지
 
-각 패키지별 README에서 사용 예제를 확인할 수 있습니다:
+```
+packages/
+├── core/    # sagak-core: 에디터 코어 및 플러그인
+└── react/   # sagak-editor: React 컴포넌트
+```
 
-- [@sagak/core](packages/core/README.md) - EventBus, PluginManager, SelectionManager, EditorCore
-- [@sagak/plugins](packages/plugins/README.md) - 텍스트 스타일, 폰트, 문단, 콘텐츠 플러그인
-- [@sagak/editor](packages/editor/README.md) - 멀티모드 편집 (WYSIWYG, HTML, Text)
-- [@sagak/ui](packages/ui/README.md) - Preact 컴포넌트와 훅
+### sagak-core
 
-## 문서
+프레임워크 독립적인 에디터 코어 로직:
 
-- [개발 진행 상황](docs/PROGRESS.md) - 상태, 테스트 커버리지, 로드맵
-- [테스트 가이드](docs/TESTING_GUIDE.md) - Why/How 학습 전략, 테스트 패턴
-- [CJK 지원](docs/CJK_SUPPORT.md) - 한국어/일본어/중국어 입력 처리
+- `createEditor()` - 에디터 인스턴스 생성
+- `EventBus` - 이벤트 기반 통신
+- `PluginManager` - 플러그인 관리
+- 20+ 내장 플러그인 (Bold, Italic, Table, Image 등)
+
+### sagak-editor
+
+React 컴포넌트와 훅:
+
+- `<Editor>`, `<Toolbar>`, `<EditorArea>` - UI 컴포넌트
+- `useEditor()` - 에디터 인스턴스 훅
+- 다이얼로그, 드롭다운, 컬러피커 등 UI 요소
+
+## 개발
+
+```bash
+pnpm install      # 의존성 설치
+pnpm dev          # 개발 서버
+pnpm test         # 테스트 실행
+pnpm storybook    # Storybook 실행
+pnpm build        # 프로덕션 빌드
+```
+
+## 데모
+
+[Storybook 데모](https://user.github.io/sagak-editor)에서 에디터를 체험해보세요.
 
 ## 라이선스
 
