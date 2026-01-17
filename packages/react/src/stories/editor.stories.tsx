@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEditor } from '../hooks'
 import { EditorProvider } from '../context/editor-context'
 import { Toolbar, EditorContainer, AutocompletePopover, AutoSaveIndicator } from '../components'
