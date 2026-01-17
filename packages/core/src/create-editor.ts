@@ -92,6 +92,11 @@ export interface CreateEditorOptions {
   autoResize?: boolean
 
   /**
+   * Enable spell check (default: true)
+   */
+  spellCheck?: boolean
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -175,6 +180,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     initialContent,
     minHeight,
     autoResize,
+    spellCheck,
     plugins = [],
     replaceDefaultPlugins = false,
   } = options
@@ -188,6 +194,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     initialMode,
     minHeight,
     autoResize,
+    spellCheck,
     plugins: allPlugins,
   })
 

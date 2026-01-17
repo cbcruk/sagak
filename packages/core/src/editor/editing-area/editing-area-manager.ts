@@ -44,6 +44,11 @@ export interface EditingAreaManagerConfig {
    * 편집 영역의 자동 크기 조정 활성화
    */
   autoResize?: boolean
+
+  /**
+   * 맞춤법 검사 활성화 (기본값: true)
+   */
+  spellCheck?: boolean
 }
 
 export class EditingAreaManager {
@@ -68,6 +73,7 @@ export class EditingAreaManager {
       classNames: config.classNames || {},
       minHeight: config.minHeight,
       autoResize: config.autoResize,
+      spellCheck: config.spellCheck,
     }
   }
 
@@ -80,6 +86,7 @@ export class EditingAreaManager {
     }
     minHeight?: number
     autoResize?: boolean
+    spellCheck?: boolean
   }
 
   /**
@@ -251,6 +258,7 @@ export class EditingAreaManager {
           className: this.config.classNames.wysiwyg,
           minHeight: this.config.minHeight,
           autoResize: this.config.autoResize,
+          spellCheck: this.config.spellCheck,
           selectionManager: this.selectionManager,
           eventBus: this.eventBus,
         })

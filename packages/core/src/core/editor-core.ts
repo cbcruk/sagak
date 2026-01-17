@@ -57,6 +57,11 @@ export interface EditorCoreConfig extends EditorConfig {
    * 편집 영역의 자동 크기 조정 활성화
    */
   autoResize?: boolean
+
+  /**
+   * 맞춤법 검사 활성화 (기본값: true)
+   */
+  spellCheck?: boolean
 }
 
 /**
@@ -162,6 +167,7 @@ export class EditorCore {
         selectionManager: this.selectionManager,
         minHeight: this.config.minHeight,
         autoResize: this.config.autoResize,
+        spellCheck: this.config.spellCheck,
       })
 
       await this.editingAreaManager.initialize()

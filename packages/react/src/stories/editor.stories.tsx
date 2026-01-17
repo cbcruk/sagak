@@ -104,3 +104,88 @@ export const ColorPickerTest: Story = {
     },
   },
 }
+
+const misspelledContent = `
+<h1>Spell Check Test</h1>
+<p>This paragraph contains some misspeled words to demonstrate the spell check feature.</p>
+<p>The folowing words are intentionally misspelled: teh, recieve, occured, seperate, definately.</p>
+<p>When spell check is enabled, these words should be underlined with a red wavy line by the browser.</p>
+`.trim()
+
+function SpellCheckEnabledEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: misspelledContent,
+    spellCheck: true,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Spell Check: Enabled</strong> - Misspelled words should be underlined
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+function SpellCheckDisabledEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: misspelledContent,
+    spellCheck: false,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Spell Check: Disabled</strong> - No spell check underlining
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const SpellCheckEnabled: Story = {
+  render: () => <SpellCheckEnabledEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with browser spell check enabled. Misspelled words are underlined with red wavy lines.',
+      },
+    },
+  },
+}
+
+export const SpellCheckDisabled: Story = {
+  render: () => <SpellCheckDisabledEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with browser spell check disabled. No spell check underlining is shown.',
+      },
+    },
+  },
+}

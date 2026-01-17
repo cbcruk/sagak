@@ -37,6 +37,11 @@ export interface EditingAreaConfig {
    * 편집 영역의 CSS 클래스 이름
    */
   className?: string
+
+  /**
+   * 맞춤법 검사 활성화 (기본값: true)
+   */
+  spellCheck?: boolean
 }
 
 /**
@@ -84,6 +89,13 @@ export interface EditingArea {
    * @param enabled - 편집 활성화 여부
    */
   setEditable(enabled: boolean): void
+
+  /**
+   * 맞춤법 검사 활성화 여부를 설정합니다
+   *
+   * @param enabled - 맞춤법 검사 활성화 여부
+   */
+  setSpellCheck?(enabled: boolean): void
 
   /**
    * 변환 없이 원시 콘텐츠를 가져옵니다

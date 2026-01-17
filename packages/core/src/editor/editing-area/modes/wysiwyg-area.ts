@@ -47,6 +47,7 @@ export class WysiwygArea implements EditingArea {
     this.element.style.display = 'none'
 
     this.element.innerHTML = '<p><br></p>'
+    this.element.spellcheck = config.spellCheck !== false
 
     this.container.appendChild(this.element)
     this.initializeEventListeners()
@@ -119,6 +120,13 @@ export class WysiwygArea implements EditingArea {
    */
   setEditable(enabled: boolean): void {
     this.element.contentEditable = enabled ? 'true' : 'false'
+  }
+
+  /**
+   * 맞춤법 검사 활성화 여부를 설정합니다
+   */
+  setSpellCheck(enabled: boolean): void {
+    this.element.spellcheck = enabled
   }
 
   /**
