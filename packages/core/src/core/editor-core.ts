@@ -447,6 +447,19 @@ export class EditorCore {
       }
     }
 
+    const isSelectionInEditor = (): boolean => {
+      const element = this.context.element
+      if (!element) return false
+
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) return false
+
+      const anchorNode = selection.anchorNode
+      if (!anchorNode) return false
+
+      return element.contains(anchorNode)
+    }
+
     const updateFormattingState = () => {
       if (this.selectionManager?.getIsComposing()) {
         return
@@ -458,6 +471,11 @@ export class EditorCore {
 
       rafId = requestAnimationFrame(() => {
         rafId = null
+
+        // Skip update if selection is outside editor (e.g., in dropdown)
+        if (!isSelectionInEditor()) {
+          return
+        }
 
         if (isContentEmpty()) {
           cleanupEmptyFormatting()

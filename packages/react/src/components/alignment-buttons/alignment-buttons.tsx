@@ -55,12 +55,27 @@ function getCurrentAlignment(): AlignmentType {
 }
 
 export function AlignmentButtons(): ReactNode {
-  const { eventBus } = useEditorContext()
+  const context = useEditorContext()
+  const { eventBus } = context
   const [currentAlign, setCurrentAlign] = useState<AlignmentType>('left')
 
+  const isSelectionInEditor = useCallback((): boolean => {
+    const element = context.element
+    if (!element) return false
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+
+    const anchorNode = selection.anchorNode
+    if (!anchorNode) return false
+
+    return element.contains(anchorNode)
+  }, [context.element])
+
   const updateAlignment = useCallback((): void => {
+    if (!isSelectionInEditor()) return
     setCurrentAlign(getCurrentAlignment())
-  }, [])
+  }, [isSelectionInEditor])
 
   useEffect(() => {
     document.addEventListener('selectionchange', updateAlignment)

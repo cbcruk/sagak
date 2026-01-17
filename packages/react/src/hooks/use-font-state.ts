@@ -22,10 +22,26 @@ export interface UseFontStateReturn extends FontState {
 }
 
 export function useFontState(): UseFontStateReturn {
-  const { eventBus, selectionManager } = useEditorContext()
+  const context = useEditorContext()
+  const { eventBus, selectionManager } = context
   const [state, setState] = useState<FontState>(initialState)
 
+  const isSelectionInEditor = useCallback((): boolean => {
+    const element = context.element
+    if (!element) return false
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+
+    const anchorNode = selection.anchorNode
+    if (!anchorNode) return false
+
+    return element.contains(anchorNode)
+  }, [context.element])
+
   const updateFontState = useCallback(() => {
+    if (!isSelectionInEditor()) return
+
     const fontFamily = document.queryCommandValue('fontName')
     const fontSize = document.queryCommandValue('fontSize')
 
@@ -33,7 +49,7 @@ export function useFontState(): UseFontStateReturn {
       fontFamily: normalizeFontFamily(fontFamily),
       fontSize,
     })
-  }, [])
+  }, [isSelectionInEditor])
 
   useEffect(() => {
     const handleSelectionChange = (): void => {

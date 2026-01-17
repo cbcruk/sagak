@@ -68,13 +68,28 @@ function getCurrentListType(): ListType {
 }
 
 export function ListButtons(): ReactNode {
-  const { eventBus } = useEditorContext()
+  const context = useEditorContext()
+  const { eventBus } = context
   const [currentList, setCurrentList] = useState<ListType>('none')
   const [isOpen, setIsOpen] = useState(false)
 
+  const isSelectionInEditor = useCallback((): boolean => {
+    const element = context.element
+    if (!element) return false
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+
+    const anchorNode = selection.anchorNode
+    if (!anchorNode) return false
+
+    return element.contains(anchorNode)
+  }, [context.element])
+
   const updateListState = useCallback((): void => {
+    if (!isSelectionInEditor()) return
     setCurrentList(getCurrentListType())
-  }, [])
+  }, [isSelectionInEditor])
 
   useEffect(() => {
     document.addEventListener('selectionchange', updateListState)
