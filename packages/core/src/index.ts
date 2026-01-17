@@ -78,3 +78,5 @@ export type {
   AutocompleteSuggestion,
   AutocompletePluginOptions,
 } from './plugins/autocomplete-plugin'
+export { createTableResizePlugin } from './plugins/table-resize-plugin'
+export type { TableResizePluginOptions } from './plugins/table-resize-plugin'

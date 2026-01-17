@@ -29,6 +29,7 @@ import { createLineHeightPlugin } from './plugins/line-height-plugin'
 import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
 import { createSpecialCharacterPlugin } from './plugins/special-character-plugin'
 import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
+import { createTableResizePlugin } from './plugins/table-resize-plugin'
 
 /**
  * Default plugins included in the editor
@@ -62,6 +63,7 @@ const defaultPlugins: Plugin[] = [
   createLetterSpacingPlugin(),
   createSpecialCharacterPlugin(),
   createAutocompletePlugin(),
+  createTableResizePlugin(),
 ]
 
 /**

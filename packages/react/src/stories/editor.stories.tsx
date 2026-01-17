@@ -324,3 +324,67 @@ export const TabletView: Story = {
     },
   },
 }
+
+const tableContent = `
+<h1>Table Resize Test</h1>
+<p>The table below can be resized by dragging the column borders.</p>
+<table>
+  <tbody>
+    <tr>
+      <td>Column 1</td>
+      <td>Column 2</td>
+      <td>Column 3</td>
+    </tr>
+    <tr>
+      <td>Data A1</td>
+      <td>Data B1 - This cell has more content to demonstrate resizing</td>
+      <td>Data C1</td>
+    </tr>
+    <tr>
+      <td>Data A2</td>
+      <td>Data B2</td>
+      <td>Data C2 - Another cell with longer text content</td>
+    </tr>
+  </tbody>
+</table>
+<p>Hover over the border between columns to see the resize cursor, then drag to resize.</p>
+`.trim()
+
+function TableResizeTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: tableContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Table Resize</strong> - Drag column borders to resize
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const TableResizeTest: Story = {
+  render: () => <TableResizeTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with table column resize functionality. Hover over column borders to see the resize cursor, then drag to adjust column widths.',
+      },
+    },
+  },
+}

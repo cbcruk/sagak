@@ -565,3 +565,34 @@
   background: #e0f2fe;
   color: #007AFF;
 }
+
+/* Table Styling */
+.modern-wysiwyg-area table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+  table-layout: fixed;
+}
+
+.modern-wysiwyg-area table td,
+.modern-wysiwyg-area table th {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  vertical-align: top;
+  position: relative;
+}
+
+.modern-wysiwyg-area table th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.modern-wysiwyg-area table tr:hover td {
+  background: #f9fafb;
+}
+
+.modern-wysiwyg-area table td:focus-within,
+.modern-wysiwyg-area table th:focus-within {
+  outline: 2px solid #007AFF;
+  outline-offset: -2px;
+}
