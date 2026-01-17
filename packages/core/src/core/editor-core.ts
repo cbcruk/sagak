@@ -387,6 +387,14 @@ export class EditorCore {
    */
   private setupFormattingStateTracking(): void {
     let rafId: number | null = null
+    let lastFormattingState: {
+      isBold: boolean
+      isItalic: boolean
+      isUnderline: boolean
+      isStrikeThrough: boolean
+      isSubscript: boolean
+      isSuperscript: boolean
+    } | null = null
 
     const emptyFormattingState = {
       isBold: false,
@@ -395,6 +403,21 @@ export class EditorCore {
       isStrikeThrough: false,
       isSubscript: false,
       isSuperscript: false,
+    }
+
+    const isStateEqual = (
+      a: typeof emptyFormattingState,
+      b: typeof emptyFormattingState | null
+    ): boolean => {
+      if (!b) return false
+      return (
+        a.isBold === b.isBold &&
+        a.isItalic === b.isItalic &&
+        a.isUnderline === b.isUnderline &&
+        a.isStrikeThrough === b.isStrikeThrough &&
+        a.isSubscript === b.isSubscript &&
+        a.isSuperscript === b.isSuperscript
+      )
     }
 
     const isContentEmpty = (): boolean => {
@@ -438,7 +461,10 @@ export class EditorCore {
 
         if (isContentEmpty()) {
           cleanupEmptyFormatting()
-          this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, emptyFormattingState)
+          if (!isStateEqual(emptyFormattingState, lastFormattingState)) {
+            lastFormattingState = emptyFormattingState
+            this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, emptyFormattingState)
+          }
           return
         }
 
@@ -451,7 +477,10 @@ export class EditorCore {
           isSuperscript: document.queryCommandState('superscript'),
         }
 
-        this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, formattingState)
+        if (!isStateEqual(formattingState, lastFormattingState)) {
+          lastFormattingState = formattingState
+          this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, formattingState)
+        }
       })
     }
 
