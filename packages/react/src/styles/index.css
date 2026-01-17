@@ -293,6 +293,51 @@
   outline: none;
 }
 
+/* Editor content normalization */
+.modern-wysiwyg-area p {
+  margin: 0 0 0.5em 0;
+}
+
+.modern-wysiwyg-area p:last-child {
+  margin-bottom: 0;
+}
+
+.modern-wysiwyg-area ul,
+.modern-wysiwyg-area ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.modern-wysiwyg-area ul:last-child,
+.modern-wysiwyg-area ol:last-child {
+  margin-bottom: 0;
+}
+
+.modern-wysiwyg-area li {
+  margin: 0.25em 0;
+}
+
+.modern-wysiwyg-area h1,
+.modern-wysiwyg-area h2,
+.modern-wysiwyg-area h3,
+.modern-wysiwyg-area h4,
+.modern-wysiwyg-area h5,
+.modern-wysiwyg-area h6 {
+  margin: 0.5em 0 0.25em 0;
+}
+
+.modern-wysiwyg-area h1:first-child,
+.modern-wysiwyg-area h2:first-child,
+.modern-wysiwyg-area h3:first-child,
+.modern-wysiwyg-area h4:first-child,
+.modern-wysiwyg-area h5:first-child,
+.modern-wysiwyg-area h6:first-child,
+.modern-wysiwyg-area p:first-child,
+.modern-wysiwyg-area ul:first-child,
+.modern-wysiwyg-area ol:first-child {
+  margin-top: 0;
+}
+
 [data-scope='editing-area'][data-part='wysiwyg']:focus {
   outline: none;
 }

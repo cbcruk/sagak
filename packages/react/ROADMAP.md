@@ -114,38 +114,39 @@
 
 ### 5.1 Toolbar 디자인 개선
 
-- [ ] 아이콘 시스템 도입
-  - [ ] 아이콘 라이브러리 선택 (lucide-react 등)
-  - [ ] 텍스트 → 아이콘 버튼으로 교체
-- [ ] Toolbar 레이아웃 개선
-  - [ ] 버튼 그룹핑 및 구분선 정리
-  - [ ] 일관된 버튼 크기/간격
-- [ ] 상태 스타일링
-  - [ ] Hover 효과
-  - [ ] Active/Pressed 상태
-  - [ ] Disabled 상태
-- [ ] Tooltip 추가
-  - [ ] 버튼별 툴팁 (단축키 포함)
+- [x] 아이콘 시스템 도입
+  - [x] 아이콘 라이브러리 선택 (lucide-react)
+  - [x] 텍스트 → 아이콘 버튼으로 교체
+- [x] Toolbar 레이아웃 개선
+  - [x] 버튼 그룹핑 및 구분선 정리
+  - [x] 일관된 버튼 크기/간격
+- [x] 상태 스타일링
+  - [x] Hover 효과
+  - [x] Active/Pressed 상태 (#007AFF)
+  - [x] Disabled 상태
+- [x] Tooltip 추가
+  - [x] 버튼별 툴팁 (단축키 포함)
 
 ### 5.2 컴포넌트 스타일링
 
-- [ ] Dropdown 메뉴 스타일
-  - [ ] Font Family Select
-  - [ ] Font Size Select
-  - [ ] Heading Select
-- [ ] Dialog 스타일 통일
-  - [ ] Link Dialog
-  - [ ] Image Dialog
-  - [ ] Table Dialog
-  - [ ] Find/Replace Dialog
-- [ ] Color Picker 개선
-  - [ ] 프리셋 색상 팔레트
+- [x] Dropdown 메뉴 스타일
+  - [x] Font Family Select
+  - [x] Font Size Select
+  - [x] Heading Select
+- [x] Dialog 스타일 통일
+  - [x] Link Dialog
+  - [x] Image Dialog
+  - [x] Table Dialog
+  - [x] Find/Replace Dialog
+- [x] Color Picker 개선
+  - [x] 프리셋 색상 팔레트
   - [ ] 최근 사용 색상
 
 ### 5.3 편집 영역 스타일
 
-- [ ] 에디터 컨테이너 디자인
-- [ ] 편집 영역 기본 스타일
+- [x] 에디터 컨테이너 디자인 (EditorContainer 컴포넌트)
+- [x] 편집 영역 기본 스타일
+- [x] 콘텐츠 스타일 정규화 (p, ul, ol, h1-h6 margin)
 - [ ] 포커스 상태 표시
 - [ ] 스크롤바 스타일링
 
@@ -198,6 +199,37 @@
 - [ ] 이미지 업로드/리사이즈
 - [ ] 자동 저장
 - [ ] 콘텐츠 내보내기 (HTML, Markdown 등)
+
+---
+
+## Phase 8: 블록 기반 에디터 (장기)
+
+> contentEditable 대신 자체 렌더링 시스템으로 전환
+
+### 8.1 블록 아키텍처
+
+- [ ] 블록 데이터 모델 설계
+- [ ] 블록 렌더러 구현
+- [ ] 블록 간 간격/여백 시스템
+
+### 8.2 블록 타입 구현
+
+- [ ] Paragraph 블록
+- [ ] Heading 블록
+- [ ] List 블록 (ul, ol)
+- [ ] Image 블록
+- [ ] Table 블록
+
+### 8.3 블록 인터랙션
+
+- [ ] 블록 선택/포커스
+- [ ] 블록 드래그 앤 드롭
+- [ ] 블록 변환 (예: p → h1)
+
+### 8.4 고급 기능
+
+- [ ] 협업 편집 지원 (CRDT/OT)
+- [ ] 블록 히스토리 관리
 
 ---
 
