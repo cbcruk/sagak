@@ -24,6 +24,10 @@ packages/*/test/**/*.d.ts.map
 # Test artifacts
 packages/*/test/**/__screenshots__/
 *.png
+coverage/
+
+# Storybook
+storybook-static/
 
 # Playwright
 .playwright/
