@@ -24,6 +24,7 @@ import { createImagePlugin } from './plugins/image-plugin'
 import { createFindReplacePlugin } from './plugins/find-replace-plugin'
 import { createHistoryPlugin } from './plugins/history-plugin'
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
+import { createHorizontalRulePlugin } from './plugins/horizontal-rule-plugin'
 
 /**
  * Default plugins included in the editor
@@ -52,6 +53,7 @@ const defaultPlugins: Plugin[] = [
   createFindReplacePlugin(),
   createHistoryPlugin(),
   createKeyboardShortcutsPlugin(),
+  createHorizontalRulePlugin(),
 ]
 
 /**

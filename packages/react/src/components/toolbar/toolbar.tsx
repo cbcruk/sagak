@@ -19,6 +19,7 @@ import { ColorPicker } from '../color-picker/color-picker'
 import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
+import { HorizontalRuleButton } from '../horizontal-rule-button/horizontal-rule-button'
 
 const ICON_SIZE = 16
 
@@ -165,11 +166,12 @@ export function Toolbar(): ReactNode {
 
       <div style={dividerStyle} />
 
-      {/* Link, Image, Table */}
+      {/* Link, Image, Table, HR */}
       <div style={{ display: 'flex', gap: 4 }}>
         <LinkDialog />
         <ImageDialog />
         <TableDialog />
+        <HorizontalRuleButton />
       </div>
 
       <div style={dividerStyle} />

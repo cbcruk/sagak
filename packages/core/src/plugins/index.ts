@@ -95,3 +95,9 @@ export type {
   KeyboardShortcutsPluginOptions,
   ShortcutDefinition,
 } from './keyboard-shortcuts-plugin'
+
+export {
+  createHorizontalRulePlugin,
+  HorizontalRulePlugin,
+} from './horizontal-rule-plugin'
+export type { HorizontalRulePluginOptions } from './horizontal-rule-plugin'
