@@ -27,6 +27,7 @@ import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plug
 import { createHorizontalRulePlugin } from './plugins/horizontal-rule-plugin'
 import { createLineHeightPlugin } from './plugins/line-height-plugin'
 import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
+import { createSpecialCharacterPlugin } from './plugins/special-character-plugin'
 
 /**
  * Default plugins included in the editor
@@ -58,6 +59,7 @@ const defaultPlugins: Plugin[] = [
   createHorizontalRulePlugin(),
   createLineHeightPlugin(),
   createLetterSpacingPlugin(),
+  createSpecialCharacterPlugin(),
 ]
 
 /**

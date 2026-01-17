@@ -113,3 +113,9 @@ export {
   LetterSpacingPlugin,
 } from './letter-spacing-plugin'
 export type { LetterSpacingPluginOptions } from './letter-spacing-plugin'
+
+export {
+  createSpecialCharacterPlugin,
+  SpecialCharacterPlugin,
+} from './special-character-plugin'
+export type { SpecialCharacterPluginOptions } from './special-character-plugin'
