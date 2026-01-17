@@ -1,146 +1,81 @@
 # sagak-core
 
-Core library for Sagak Editor - a modern WYSIWYG editor.
+WYSIWYG 에디터의 코어 라이브러리입니다.
 
-## Installation
+## 설치
 
 ```bash
 npm install sagak-core
-# or
-pnpm add sagak-core
-# or
-yarn add sagak-core
 ```
 
-## Overview
-
-`sagak-core` provides the foundational building blocks for the Sagak Editor:
-
-- **EditorCore**: Main editor engine with plugin system
-- **EventBus**: Event-driven architecture for editor communication
-- **PluginManager**: Extensible plugin system
-- **SelectionManager**: Text selection and cursor management
-- **HistoryManager**: Undo/Redo functionality
-
-## Basic Usage
+## 사용법
 
 ```typescript
 import { createEditor } from 'sagak-core'
 
 const editor = createEditor({
-  container: document.getElementById('editor'),
-  initialContent: '<p>Hello World</p>',
+  plugins: ['bold', 'italic', 'underline', 'heading', 'link', 'table'],
 })
 
-// Access the editing area
-const content = editor.getContent()
+editor.mount(document.getElementById('editor'))
 
-// Execute commands
-editor.context.eventBus.emit('BOLD_TOGGLE')
+// 콘텐츠 제어
+editor.setContent('<p>Hello World</p>')
+const html = editor.getContent()
+
+// 이벤트 구독
+editor.on('content:change', ({ html }) => {
+  console.log('Content changed:', html)
+})
+
+// 명령 실행
+editor.execute('bold')
+editor.execute('heading', { level: 2 })
 ```
 
-## Available Plugins
+## 플러그인
 
-The core package includes these built-in plugins:
+### 텍스트 스타일
+- `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`
 
-### Text Formatting
-- `createBoldPlugin` - Bold text
-- `createItalicPlugin` - Italic text
-- `createUnderlinePlugin` - Underline text
-- `createStrikePlugin` - Strikethrough text
-- `createSubscriptPlugin` - Subscript
-- `createSuperscriptPlugin` - Superscript
+### 폰트
+- `fontFamily`, `fontSize`, `textColor`, `backgroundColor`
 
-### Font Styling
-- `createFontFamilyPlugin` - Font family selection
-- `createFontSizePlugin` - Font size control
-- `createTextColorPlugin` - Text color
-- `createBackgroundColorPlugin` - Background color
+### 문단
+- `heading`, `paragraph`, `alignment`
+- `orderedList`, `unorderedList`, `indent`, `outdent`
 
-### Paragraph Formatting
-- `createHeadingPlugin` - H1-H6 headings
-- `createParagraphPlugin` - Paragraph blocks
-- `createAlignmentPlugin` - Text alignment
-- `createIndentPlugin` - Indent content
-- `createOutdentPlugin` - Outdent content
+### 콘텐츠
+- `link`, `table`, `image`
+- `imageResize`, `imageUpload`, `tableResize`
 
-### Lists
-- `createOrderedListPlugin` - Numbered lists
-- `createUnorderedListPlugin` - Bullet lists
+### 유틸리티
+- `history` - 실행 취소/다시 실행
+- `findReplace` - 찾기/바꾸기
+- `autoSave` - 자동 저장
+- `autocomplete` - 자동 완성
+- `export` - HTML/Markdown/텍스트 내보내기
 
-### Media & Links
-- `createLinkPlugin` - Hyperlinks
-- `createImagePlugin` - Image insertion
-- `createTablePlugin` - Tables
-
-### Advanced Features
-- `createHistoryPlugin` - Undo/Redo
-- `createFindReplacePlugin` - Find and replace
-- `createAutocompletePlugin` - Word autocomplete
-- `createAutoSavePlugin` - Auto-save functionality
-- `createExportPlugin` - Export to HTML/Markdown/Text
-- `createImageResizePlugin` - Image resizing
-- `createImageUploadPlugin` - Image upload
-- `createTableResizePlugin` - Table column resizing
-
-## Creating Custom Plugins
+## 커스텀 플러그인
 
 ```typescript
 import { definePlugin } from 'sagak-core'
 
 const myPlugin = definePlugin({
-  name: 'my-plugin',
+  name: 'myPlugin',
   init(context) {
-    // Plugin initialization
-    context.eventBus.on('MY_CUSTOM_EVENT', (data) => {
-      // Handle event
+    context.eventBus.on('MY_EVENT', (data) => {
+      // handle event
     })
   },
-  destroy() {
-    // Cleanup
+  handlers: {
+    myCommand: (context, payload) => {
+      // execute command
+    },
   },
 })
 ```
 
-## Events
-
-The editor uses an event-driven architecture. Common events:
-
-```typescript
-// Text formatting
-'BOLD_TOGGLE', 'ITALIC_TOGGLE', 'UNDERLINE_TOGGLE', 'STRIKE_TOGGLE'
-
-// Font styling
-'FONT_FAMILY_APPLY', 'FONT_SIZE_APPLY', 'TEXT_COLOR_APPLY', 'BACKGROUND_COLOR_APPLY'
-
-// Paragraph
-'HEADING_APPLY', 'ALIGNMENT_APPLY'
-
-// Lists
-'ORDERED_LIST_TOGGLE', 'UNORDERED_LIST_TOGGLE'
-
-// History
-'HISTORY_UNDO', 'HISTORY_REDO'
-
-// Content
-'CONTENT_CHANGED', 'SELECTION_CHANGED'
-```
-
-## TypeScript Support
-
-Full TypeScript support with exported types:
-
-```typescript
-import type {
-  Editor,
-  EditorContext,
-  Plugin,
-  PluginDefinition,
-  EditingMode,
-  FormattingState,
-} from 'sagak-core'
-```
-
-## License
+## 라이선스
 
 MIT

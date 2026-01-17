@@ -1,38 +1,18 @@
 # sagak-editor
 
-A modern, feature-rich WYSIWYG editor for React.
+React용 WYSIWYG 에디터 컴포넌트입니다.
 
-## Features
-
-- **Rich Text Editing**: Bold, italic, underline, strikethrough, subscript, superscript
-- **Typography**: Font family, font size, text color, background color
-- **Paragraph Formatting**: Headings (H1-H6), alignment, indentation
-- **Lists**: Ordered and unordered lists
-- **Media**: Images with upload, drag-drop, paste, and resize
-- **Tables**: Create, edit, and resize columns
-- **Links**: Insert and edit hyperlinks
-- **Find & Replace**: Search and replace text
-- **Special Characters**: Insert symbols and emojis
-- **Export**: Download as HTML, Markdown, or plain text
-- **Auto-save**: Automatic saving to localStorage
-- **Accessibility**: Full keyboard navigation and screen reader support
-- **Responsive**: Mobile and tablet optimized
-
-## Installation
+## 설치
 
 ```bash
 npm install sagak-editor sagak-core react react-dom
-# or
-pnpm add sagak-editor sagak-core react react-dom
-# or
-yarn add sagak-editor sagak-core react react-dom
 ```
 
-## Quick Start
+## 사용법
 
 ```tsx
 import { useEditor, EditorProvider, Toolbar, EditorContainer } from 'sagak-editor'
-import 'sagak-editor/styles'
+import 'sagak-editor/styles.css'
 
 function MyEditor() {
   const { containerRef, editor, ready } = useEditor({
@@ -52,87 +32,26 @@ function MyEditor() {
 }
 ```
 
-## With Auto-save
+## useEditor 옵션
 
-```tsx
-import { useEditor, EditorProvider, Toolbar, EditorContainer, AutoSaveIndicator } from 'sagak-editor'
-import 'sagak-editor/styles'
+| 옵션 | 타입 | 설명 |
+|------|------|------|
+| `initialContent` | `string` | 초기 HTML 콘텐츠 |
+| `spellCheck` | `boolean` | 브라우저 맞춤법 검사 |
+| `autoSave.storageKey` | `string` | localStorage 저장 키 |
+| `autoSave.debounceMs` | `number` | 자동 저장 딜레이 (ms) |
+| `autoSave.restoreOnInit` | `boolean` | 초기화 시 저장된 콘텐츠 복원 |
 
-function MyEditor() {
-  const { containerRef, editor, ready } = useEditor({
-    initialContent: '<p>Hello World</p>',
-    autoSave: {
-      storageKey: 'my-editor-content',
-      debounceMs: 1000,
-      restoreOnInit: true,
-    },
-  })
+## 컴포넌트
 
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {ready && editor && (
-          <EditorProvider context={editor.context}>
-            <AutoSaveIndicator showTime />
-          </EditorProvider>
-        )}
-      </div>
-      <EditorContainer>
-        {ready && editor && (
-          <EditorProvider context={editor.context}>
-            <Toolbar />
-          </EditorProvider>
-        )}
-        <div ref={containerRef} data-scope="editing-area" data-part="wysiwyg" />
-      </EditorContainer>
-    </div>
-  )
-}
-```
+| 컴포넌트 | 설명 |
+|----------|------|
+| `EditorContainer` | 스타일이 적용된 래퍼 |
+| `EditorProvider` | 에디터 컨텍스트 제공 |
+| `Toolbar` | 전체 툴바 |
+| `AutoSaveIndicator` | 자동 저장 상태 표시 |
 
-## API Reference
-
-### useEditor
-
-Main hook for creating an editor instance.
-
-```tsx
-const { containerRef, editor, ready, error } = useEditor(options)
-```
-
-**Options:**
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `initialContent` | `string` | Initial HTML content |
-| `spellCheck` | `boolean` | Enable browser spell check |
-| `autoSave` | `object` | Auto-save configuration |
-| `autoSave.storageKey` | `string` | localStorage key for saving |
-| `autoSave.debounceMs` | `number` | Debounce delay in ms |
-| `autoSave.restoreOnInit` | `boolean` | Restore saved content on init |
-
-**Returns:**
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `containerRef` | `RefObject` | Ref to attach to editor container |
-| `editor` | `Editor \| null` | Editor instance |
-| `ready` | `boolean` | Whether editor is ready |
-| `error` | `Error \| null` | Error if initialization failed |
-
-### Components
-
-| Component | Description |
-|-----------|-------------|
-| `EditorContainer` | Wrapper component with styling |
-| `EditorProvider` | Context provider for editor |
-| `Toolbar` | Complete toolbar with all controls |
-| `AutoSaveIndicator` | Shows auto-save status |
-| `AutocompletePopover` | Word autocomplete popup |
-
-### Individual Toolbar Components
-
-For custom toolbar layouts:
+### 개별 툴바 컴포넌트
 
 ```tsx
 import {
@@ -150,39 +69,27 @@ import {
 } from 'sagak-editor'
 ```
 
-### Hooks
+## 훅
 
-| Hook | Description |
-|------|-------------|
-| `useFormattingState` | Get current text formatting state |
-| `useHistoryState` | Get undo/redo state |
-| `useFontState` | Get current font state |
-| `useAutoSave` | Get auto-save state |
+| 훅 | 설명 |
+|----|------|
+| `useFormattingState` | 현재 텍스트 서식 상태 |
+| `useHistoryState` | 실행 취소/다시 실행 상태 |
+| `useFontState` | 현재 폰트 상태 |
+| `useAutoSave` | 자동 저장 상태 |
 
-## Keyboard Shortcuts
+## 키보드 단축키
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd/Ctrl + B` | Bold |
-| `Cmd/Ctrl + I` | Italic |
-| `Cmd/Ctrl + U` | Underline |
-| `Cmd/Ctrl + Z` | Undo |
-| `Cmd/Ctrl + Shift + Z` | Redo |
-| `Cmd/Ctrl + K` | Insert link |
+| 단축키 | 동작 |
+|--------|------|
+| `Cmd/Ctrl + B` | 굵게 |
+| `Cmd/Ctrl + I` | 기울임 |
+| `Cmd/Ctrl + U` | 밑줄 |
+| `Cmd/Ctrl + Z` | 실행 취소 |
+| `Cmd/Ctrl + Shift + Z` | 다시 실행 |
+| `Cmd/Ctrl + K` | 링크 삽입 |
 
-## Styling
-
-Import the default styles:
-
-```tsx
-import 'sagak-editor/styles'
-// or
-import 'sagak-editor/styles.css'
-```
-
-### CSS Custom Properties
-
-Customize the editor appearance:
+## 스타일 커스터마이징
 
 ```css
 [data-scope='toolbar'] {
@@ -197,26 +104,6 @@ Customize the editor appearance:
 }
 ```
 
-## TypeScript Support
-
-Full TypeScript support with exported types:
-
-```typescript
-import type {
-  UseEditorOptions,
-  UseEditorReturn,
-  EditorProviderProps,
-  EditingAreaProps,
-} from 'sagak-editor'
-```
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## License
+## 라이선스
 
 MIT
