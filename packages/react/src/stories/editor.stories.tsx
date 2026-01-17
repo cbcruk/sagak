@@ -827,3 +827,407 @@ function MyEditor() {
     },
   },
 }
+
+const headingContent = `
+<h1>Heading 1 - Main Title</h1>
+<p>This is a paragraph under H1.</p>
+<h2>Heading 2 - Section</h2>
+<p>This is a paragraph under H2.</p>
+<h3>Heading 3 - Subsection</h3>
+<p>This is a paragraph under H3.</p>
+<h4>Heading 4</h4>
+<p>This is a paragraph under H4.</p>
+<h5>Heading 5</h5>
+<p>This is a paragraph under H5.</p>
+<h6>Heading 6</h6>
+<p>This is a paragraph under H6.</p>
+`.trim()
+
+function HeadingTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: headingContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Heading Test</strong> - Select text and use the Heading dropdown to change levels
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const HeadingTest: Story = {
+  render: () => <HeadingTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test heading levels (H1-H6). Select text and use the Heading dropdown to change between different heading levels and paragraph.',
+      },
+    },
+  },
+}
+
+const linkContent = `
+<h1>Link Test</h1>
+<p>This paragraph contains a <a href="https://example.com">sample link</a> that you can edit.</p>
+<p>Select text and click the Link button to add a new hyperlink.</p>
+<p>Click on an existing link and use the Link button to edit or remove it.</p>
+`.trim()
+
+function LinkTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: linkContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Link Test</strong> - Select text and click the Link button (or ⌘K)
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const LinkTest: Story = {
+  render: () => <LinkTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test link insertion and editing. Select text and click the Link button to add hyperlinks. Click on existing links to edit them.',
+      },
+    },
+  },
+}
+
+const findReplaceContent = `
+<h1>Find and Replace Test</h1>
+<p>This document contains the word "test" multiple times for testing the find and replace feature.</p>
+<p>You can use the Find & Replace dialog to search for "test" and replace it with another word.</p>
+<p>Try finding "test" - it should highlight all occurrences in the document.</p>
+<p>The test feature also supports case-sensitive searching for more precise results.</p>
+`.trim()
+
+function FindReplaceTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: findReplaceContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Find & Replace</strong> - Click the search icon to open the Find & Replace dialog
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const FindReplaceTest: Story = {
+  render: () => <FindReplaceTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test the Find & Replace feature. Click the search icon in the toolbar to open the dialog. Search for "test" to see highlighting.',
+      },
+    },
+  },
+}
+
+const listContent = `
+<h1>List Test</h1>
+<p>Below are examples of ordered and unordered lists:</p>
+<h2>Unordered List (Bullets)</h2>
+<ul>
+  <li>First bullet item</li>
+  <li>Second bullet item</li>
+  <li>Third bullet item</li>
+</ul>
+<h2>Ordered List (Numbers)</h2>
+<ol>
+  <li>First numbered item</li>
+  <li>Second numbered item</li>
+  <li>Third numbered item</li>
+</ol>
+<p>Select text and click the list buttons to convert paragraphs to lists.</p>
+`.trim()
+
+function ListTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: listContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>List Test</strong> - Use the list buttons to create ordered and unordered lists
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const ListTest: Story = {
+  render: () => <ListTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test ordered and unordered lists. Select text and use the list buttons to create bullet points or numbered lists.',
+      },
+    },
+  },
+}
+
+const alignmentContent = `
+<h1>Alignment Test</h1>
+<p style="text-align: left;">This paragraph is aligned to the <strong>left</strong> (default).</p>
+<p style="text-align: center;">This paragraph is aligned to the <strong>center</strong>.</p>
+<p style="text-align: right;">This paragraph is aligned to the <strong>right</strong>.</p>
+<p style="text-align: justify;">This paragraph is <strong>justified</strong>. Justified text stretches to fill the entire width of the container, creating even margins on both sides. This effect is more visible with longer text content.</p>
+`.trim()
+
+function AlignmentTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: alignmentContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Alignment Test</strong> - Select text and use the alignment buttons
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const AlignmentTest: Story = {
+  render: () => <AlignmentTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test text alignment (left, center, right, justify). Select a paragraph and click the alignment buttons to change its alignment.',
+      },
+    },
+  },
+}
+
+const typographyContent = `
+<h1>Typography Test</h1>
+<p style="font-family: Georgia, serif;">This text uses <strong>Georgia</strong> font family.</p>
+<p style="font-family: 'Courier New', monospace;">This text uses <strong>Courier New</strong> font family.</p>
+<p style="font-size: 24px;">This text has a <strong>24px</strong> font size.</p>
+<p style="font-size: 12px;">This text has a <strong>12px</strong> font size.</p>
+<p style="line-height: 2;">This paragraph has <strong>double line spacing</strong>. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+<p style="letter-spacing: 2px;">This text has <strong>2px letter spacing</strong>.</p>
+`.trim()
+
+function TypographyTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: typographyContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Typography Test</strong> - Test font family, size, line height, and letter spacing
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const TypographyTest: Story = {
+  render: () => <TypographyTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test typography controls: font family, font size, line height, and letter spacing. Select text and use the dropdown menus in the toolbar.',
+      },
+    },
+  },
+}
+
+const specialContent = `
+<h1>Special Features Test</h1>
+<p>This document demonstrates special text features.</p>
+<h2>Subscript and Superscript</h2>
+<p>Chemical formula: H<sub>2</sub>O (water)</p>
+<p>Mathematical expression: x<sup>2</sup> + y<sup>2</sup> = z<sup>2</sup></p>
+<h2>Horizontal Rule</h2>
+<p>A horizontal rule separates sections:</p>
+<hr />
+<p>Content after the horizontal rule.</p>
+<h2>Special Characters</h2>
+<p>You can insert special characters like: © ® ™ € £ ¥ § ¶ • → ← ↑ ↓</p>
+`.trim()
+
+function SpecialFeaturesTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: specialContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Special Features</strong> - Subscript, superscript, horizontal rule, special characters
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const SpecialFeaturesTest: Story = {
+  render: () => <SpecialFeaturesTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test special features: subscript (x₂), superscript (x²), horizontal rule, and special character insertion. Access these from the More menu on mobile or directly in the toolbar.',
+      },
+    },
+  },
+}
+
+const undoRedoContent = `
+<h1>Undo/Redo Test</h1>
+<p>This document is for testing the undo and redo functionality.</p>
+<p>Try the following:</p>
+<ol>
+  <li>Make some changes to this text (add, delete, or format)</li>
+  <li>Click the Undo button (or press ⌘Z) to revert changes</li>
+  <li>Click the Redo button (or press ⌘⇧Z) to restore changes</li>
+</ol>
+<p>The undo/redo buttons will be disabled when there's nothing to undo or redo.</p>
+`.trim()
+
+function UndoRedoTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: undoRedoContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Undo/Redo Test</strong> - Make changes and test the undo/redo buttons
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const UndoRedoTest: Story = {
+  render: () => <UndoRedoTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test the undo/redo functionality. Make changes to the content and use the undo (⌘Z) and redo (⌘⇧Z) buttons or keyboard shortcuts.',
+      },
+    },
+  },
+}
