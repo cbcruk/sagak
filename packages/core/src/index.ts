@@ -89,3 +89,13 @@ export type {
   AutoSaveStatus,
   AutoSaveEventData,
 } from './plugins/auto-save-plugin'
+export {
+  createImageResizePlugin,
+  ImageResizeEvents,
+} from './plugins/image-resize-plugin'
+export type { ImageResizePluginOptions } from './plugins/image-resize-plugin'
+export {
+  createImageUploadPlugin,
+  ImageUploadEvents,
+} from './plugins/image-upload-plugin'
+export type { ImageUploadPluginOptions } from './plugins/image-upload-plugin'

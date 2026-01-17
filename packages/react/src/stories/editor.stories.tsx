@@ -451,3 +451,55 @@ export const AutoSaveTest: Story = {
     },
   },
 }
+
+const imageUploadContent = `
+<h1>Image Upload & Resize Test</h1>
+<p>This editor demonstrates image upload and resize functionality.</p>
+<h2>Features:</h2>
+<ul>
+  <li><strong>File Upload</strong> - Click the image button and select "Upload" tab to upload images from your device</li>
+  <li><strong>Drag & Drop</strong> - Drop images directly into the editor or the upload dialog</li>
+  <li><strong>Paste Images</strong> - Paste images from clipboard (Ctrl/Cmd+V)</li>
+  <li><strong>Resize</strong> - Click on any image to see resize handles, then drag corners to resize</li>
+</ul>
+<p>Try inserting an image below:</p>
+`.trim()
+
+function ImageUploadTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: imageUploadContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Image Upload & Resize</strong> - Upload, drag-drop, paste, and resize images
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const ImageUploadTest: Story = {
+  render: () => <ImageUploadTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with image upload, drag-drop, paste from clipboard, and resize functionality. Click the image button to see URL and Upload options. Click on an inserted image to see resize handles.',
+      },
+    },
+  },
+}

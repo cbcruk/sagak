@@ -30,6 +30,8 @@ import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
 import { createSpecialCharacterPlugin } from './plugins/special-character-plugin'
 import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
+import { createImageResizePlugin } from './plugins/image-resize-plugin'
+import { createImageUploadPlugin } from './plugins/image-upload-plugin'
 import {
   createAutoSavePlugin,
   type AutoSavePluginOptions,
@@ -68,6 +70,8 @@ const defaultPlugins: Plugin[] = [
   createSpecialCharacterPlugin(),
   createAutocompletePlugin(),
   createTableResizePlugin(),
+  createImageResizePlugin(),
+  createImageUploadPlugin(),
 ]
 
 /**

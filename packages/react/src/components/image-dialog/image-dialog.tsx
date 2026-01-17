@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { Dialog } from '@base-ui/react/dialog'
-import { Image } from 'lucide-react'
+import { Image, Upload, Link } from 'lucide-react'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
 const ICON_SIZE = 18
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+type UploadMode = 'url' | 'file'
 
 function getSelectedImage(): HTMLImageElement | null {
   const selection = window.getSelection()
@@ -82,12 +86,17 @@ const labelStyle: React.CSSProperties = {
 export function ImageDialog(): ReactNode {
   const { eventBus, selectionManager } = useEditorContext()
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<UploadMode>('url')
   const [src, setSrc] = useState('')
   const [alt, setAlt] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [hasImage, setHasImage] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const updateImageState = useCallback((): void => {
     const img = getSelectedImage()
@@ -113,6 +122,12 @@ export function ImageDialog(): ReactNode {
     }
   }, [eventBus, updateImageState])
 
+  const resetUploadState = (): void => {
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setUploadError(null)
+  }
+
   const handleOpen = (): void => {
     selectionManager?.saveSelection()
     const img = getSelectedImage()
@@ -122,39 +137,106 @@ export function ImageDialog(): ReactNode {
       setWidth(img.style.width || '')
       setHeight(img.style.height || '')
       setIsEditing(true)
+      setMode('url')
     } else {
       setSrc('')
       setAlt('')
       setWidth('')
       setHeight('')
       setIsEditing(false)
+      setMode('url')
     }
+    resetUploadState()
     setOpen(true)
   }
 
+  const handleFileSelect = (file: File): void => {
+    setUploadError(null)
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setUploadError('Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.')
+      return
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadError(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit.`)
+      return
+    }
+
+    setSelectedFile(file)
+    setAlt(file.name.replace(/\.[^/.]+$/, ''))
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   const handleSubmit = (): void => {
-    const trimmedSrc = src.trim()
-    setOpen(false)
-    if (trimmedSrc) {
+    if (mode === 'file' && previewUrl) {
+      setOpen(false)
       requestAnimationFrame(() => {
         selectionManager?.restoreSelection()
-        if (isEditing) {
-          eventBus.emit(ContentEvents.IMAGE_UPDATE, {
-            src: trimmedSrc,
-            alt: alt.trim(),
-            width: width.trim() || undefined,
-            height: height.trim() || undefined,
-          })
-        } else {
-          eventBus.emit(ContentEvents.IMAGE_INSERT, {
-            src: trimmedSrc,
-            alt: alt.trim(),
-            width: width.trim() || undefined,
-            height: height.trim() || undefined,
-          })
-        }
+        eventBus.emit(ContentEvents.IMAGE_INSERT, {
+          src: previewUrl,
+          alt: alt.trim() || selectedFile?.name,
+          width: width.trim() || undefined,
+          height: height.trim() || undefined,
+        })
       })
+    } else if (mode === 'url') {
+      const trimmedSrc = src.trim()
+      setOpen(false)
+      if (trimmedSrc) {
+        requestAnimationFrame(() => {
+          selectionManager?.restoreSelection()
+          if (isEditing) {
+            eventBus.emit(ContentEvents.IMAGE_UPDATE, {
+              src: trimmedSrc,
+              alt: alt.trim(),
+              width: width.trim() || undefined,
+              height: height.trim() || undefined,
+            })
+          } else {
+            eventBus.emit(ContentEvents.IMAGE_INSERT, {
+              src: trimmedSrc,
+              alt: alt.trim(),
+              width: width.trim() || undefined,
+              height: height.trim() || undefined,
+            })
+          }
+        })
+      }
     }
+  }
+
+  const canSubmit = (): boolean => {
+    if (mode === 'url') {
+      return src.trim().length > 0
+    }
+    return previewUrl !== null
   }
 
   const handleDelete = (): void => {
@@ -212,16 +294,145 @@ export function ImageDialog(): ReactNode {
             {isEditing ? 'Edit Image' : 'Insert Image'}
           </Dialog.Title>
 
-          <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>Image URL *</label>
-            <input
-              type="text"
-              value={src}
-              onChange={(e) => setSrc(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              style={inputStyle}
-            />
-          </div>
+          {!isEditing && (
+            <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setMode('url')}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '8px 12px',
+                  border: '1px solid #d4d4d4',
+                  borderRadius: 6,
+                  background: mode === 'url' ? '#e8f0fe' : '#fff',
+                  color: mode === 'url' ? '#0066cc' : '#666',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                <Link size={16} />
+                URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('file')}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '8px 12px',
+                  border: '1px solid #d4d4d4',
+                  borderRadius: 6,
+                  background: mode === 'file' ? '#e8f0fe' : '#fff',
+                  color: mode === 'file' ? '#0066cc' : '#666',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                <Upload size={16} />
+                Upload
+              </button>
+            </div>
+          )}
+
+          {mode === 'url' && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>Image URL *</label>
+              <input
+                type="text"
+                value={src}
+                onChange={(e) => setSrc(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                style={inputStyle}
+              />
+            </div>
+          )}
+
+          {mode === 'file' && !isEditing && (
+            <div style={{ marginBottom: 12 }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ALLOWED_TYPES.join(',')}
+                onChange={handleFileInputChange}
+                style={{ display: 'none' }}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                style={{
+                  border: '2px dashed #d4d4d4',
+                  borderRadius: 8,
+                  padding: 24,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: '#fafafa',
+                  transition: 'border-color 0.2s, background 0.2s',
+                }}
+              >
+                {previewUrl ? (
+                  <div>
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 150,
+                        borderRadius: 4,
+                        marginBottom: 8,
+                      }}
+                    />
+                    <div style={{ fontSize: 12, color: '#666' }}>
+                      {selectedFile?.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        resetUploadState()
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = ''
+                        }
+                      }}
+                      style={{
+                        marginTop: 8,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        border: '1px solid #d4d4d4',
+                        borderRadius: 4,
+                        background: '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload size={32} style={{ color: '#999', marginBottom: 8 }} />
+                    <div style={{ fontSize: 14, color: '#666' }}>
+                      Click to select or drag and drop
+                    </div>
+                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                      JPEG, PNG, GIF, WebP (max 5MB)
+                    </div>
+                  </div>
+                )}
+              </div>
+              {uploadError && (
+                <div style={{ color: '#dc3545', fontSize: 12, marginTop: 8 }}>
+                  {uploadError}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginBottom: 12 }}>
             <label style={labelStyle}>Alt Text</label>
@@ -288,14 +499,14 @@ export function ImageDialog(): ReactNode {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!src.trim()}
+              disabled={!canSubmit()}
               style={{
                 padding: '8px 16px',
                 border: '1px solid #0066cc',
                 borderRadius: 4,
-                background: src.trim() ? '#0066cc' : '#ccc',
+                background: canSubmit() ? '#0066cc' : '#ccc',
                 color: '#fff',
-                cursor: src.trim() ? 'pointer' : 'not-allowed',
+                cursor: canSubmit() ? 'pointer' : 'not-allowed',
               }}
             >
               {isEditing ? 'Update' : 'Insert'}
