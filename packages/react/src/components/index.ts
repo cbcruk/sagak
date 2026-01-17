@@ -22,3 +22,4 @@ export { HorizontalRuleButton } from './horizontal-rule-button/horizontal-rule-b
 export { LineHeightSelect } from './line-height-select/line-height-select'
 export { LetterSpacingSelect } from './letter-spacing-select/letter-spacing-select'
 export { SpecialCharacterDialog } from './special-character-dialog/special-character-dialog'
+export { AutocompletePopover } from './autocomplete-popover/autocomplete-popover'

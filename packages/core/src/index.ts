@@ -20,6 +20,7 @@ export {
   ContentEvents,
   HistoryEvents,
   FindReplaceEvents,
+  AutocompleteEvents,
   EditingAreaEvents,
   WysiwygEvents,
   EditorEvents,
@@ -72,3 +73,8 @@ export { createTablePlugin } from './plugins/table-plugin'
 export { createImagePlugin } from './plugins/image-plugin'
 export { createFindReplacePlugin } from './plugins/find-replace-plugin'
 export { createHistoryPlugin } from './plugins/history-plugin'
+export { createAutocompletePlugin } from './plugins/autocomplete-plugin'
+export type {
+  AutocompleteSuggestion,
+  AutocompletePluginOptions,
+} from './plugins/autocomplete-plugin'

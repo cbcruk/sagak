@@ -110,6 +110,20 @@ export const FindReplaceEvents = {
 } as const
 
 /**
+ * 자동완성 플러그인 이벤트
+ */
+export const AutocompleteEvents = {
+  /** 자동완성 제안 표시 */
+  AUTOCOMPLETE_SHOW: 'AUTOCOMPLETE_SHOW',
+  /** 자동완성 제안 숨기기 */
+  AUTOCOMPLETE_HIDE: 'AUTOCOMPLETE_HIDE',
+  /** 자동완성 제안 선택 */
+  AUTOCOMPLETE_SELECT: 'AUTOCOMPLETE_SELECT',
+  /** 자동완성 제안 적용 */
+  AUTOCOMPLETE_APPLY: 'AUTOCOMPLETE_APPLY',
+} as const
+
+/**
  * `EditingAreaManager` 이벤트
  */
 export const EditingAreaEvents = {
@@ -146,6 +160,7 @@ export const EditorEvents = {
   ...ContentEvents,
   ...HistoryEvents,
   ...FindReplaceEvents,
+  ...AutocompleteEvents,
   ...EditingAreaEvents,
   ...WysiwygEvents,
 } as const

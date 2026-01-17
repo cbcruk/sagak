@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useEditor } from '../hooks'
 import { EditorProvider } from '../context/editor-context'
-import { Toolbar, EditorContainer } from '../components'
+import { Toolbar, EditorContainer, AutocompletePopover } from '../components'
 import '../styles/index.css'
 
 function BasicEditor(): React.ReactNode {
@@ -16,6 +16,7 @@ function BasicEditor(): React.ReactNode {
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
+            <AutocompletePopover />
           </EditorProvider>
         ) : null}
         <div
@@ -66,6 +67,7 @@ function ScrollbarTestEditor(): React.ReactNode {
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
+            <AutocompletePopover />
           </EditorProvider>
         ) : null}
         <div
@@ -128,6 +130,7 @@ function SpellCheckEnabledEditor(): React.ReactNode {
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
+            <AutocompletePopover />
           </EditorProvider>
         ) : null}
         <div
@@ -156,6 +159,7 @@ function SpellCheckDisabledEditor(): React.ReactNode {
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
+            <AutocompletePopover />
           </EditorProvider>
         ) : null}
         <div
@@ -185,6 +189,53 @@ export const SpellCheckDisabled: Story = {
     docs: {
       description: {
         story: 'Editor with browser spell check disabled. No spell check underlining is shown.',
+      },
+    },
+  },
+}
+
+const autocompleteContent = `
+<h1>Autocomplete Test</h1>
+<p>This editor demonstrates the word autocomplete feature.</p>
+<p>The autocomplete plugin tracks words you type and suggests completions based on existing content.</p>
+<p>Try typing words like "auto", "demon", "compl", "feat" to see suggestions appear.</p>
+<p>Use arrow keys to navigate suggestions and Enter/Tab to select.</p>
+`.trim()
+
+function AutocompleteTestEditor(): React.ReactNode {
+  const { containerRef, editor, ready, error } = useEditor({
+    initialContent: autocompleteContent,
+  })
+
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 10, color: '#666' }}>
+        <strong>Autocomplete</strong> - Type 2+ characters to see suggestions from existing words
+      </div>
+      {error && <div style={{ color: 'red', padding: 16 }}>Error: {error.message}</div>}
+      <EditorContainer>
+        {ready && editor ? (
+          <EditorProvider context={editor.context}>
+            <Toolbar />
+            <AutocompletePopover />
+          </EditorProvider>
+        ) : null}
+        <div
+          ref={containerRef}
+          data-scope="editing-area"
+          data-part="wysiwyg"
+        />
+      </EditorContainer>
+    </div>
+  )
+}
+
+export const AutocompleteTest: Story = {
+  render: () => <AutocompleteTestEditor />,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Editor with word autocomplete. Start typing a word that exists in the document (2+ characters) and suggestions will appear. Use arrow keys to navigate and Enter/Tab to select.',
       },
     },
   },

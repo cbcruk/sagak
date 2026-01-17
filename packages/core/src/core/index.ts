@@ -30,6 +30,7 @@ export {
   ContentEvents,
   HistoryEvents,
   FindReplaceEvents,
+  AutocompleteEvents,
   EditingAreaEvents,
   WysiwygEvents,
   EditorEvents,
