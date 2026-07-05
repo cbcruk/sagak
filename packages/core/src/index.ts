@@ -51,6 +51,17 @@ export type {
   FormattingState,
 } from './core/types'
 
+export {
+  createSanitizer,
+  resolveSanitizer,
+  identitySanitizer,
+} from './editor/editing-area/sanitizer'
+export type {
+  Sanitizer,
+  SanitizerOptions,
+  SanitizeOption,
+} from './editor/editing-area/sanitizer'
+
 export { createBoldPlugin } from './plugins/bold-plugin'
 export { createItalicPlugin } from './plugins/italic-plugin'
 export { createUnderlinePlugin } from './plugins/underline-plugin'

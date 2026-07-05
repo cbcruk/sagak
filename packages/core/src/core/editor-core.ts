@@ -9,6 +9,7 @@ import type {
   EditingAreaManager,
   EditingMode,
 } from './types'
+import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
 
 /**
  * 애플리케이션 상태
@@ -62,6 +63,15 @@ export interface EditorCoreConfig extends EditorConfig {
    * 맞춤법 검사 활성화 (기본값: true)
    */
   spellCheck?: boolean
+
+  /**
+   * 붙여넣기 및 `setContent` 시 HTML 정화 옵션 (기본값: 활성화)
+   *
+   * - `true` 또는 미지정: 기본 정화기 사용 (권장)
+   * - `false`: 정화 비활성화 (신뢰할 수 있는 콘텐츠 전용)
+   * - `SanitizerOptions`: 사용자 정의 `DOMPurify` 설정
+   */
+  sanitize?: SanitizeOption
 }
 
 /**
@@ -169,6 +179,7 @@ export class EditorCore {
         minHeight: this.config.minHeight,
         autoResize: this.config.autoResize,
         spellCheck: this.config.spellCheck,
+        sanitize: this.config.sanitize,
       })
 
       await this.editingAreaManager.initialize()

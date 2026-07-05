@@ -700,4 +700,39 @@ describe('WysiwygArea', () => {
       expect(typeof html).toBe('string')
     })
   })
+
+  describe('콘텐츠 정화 (XSS 방지)', () => {
+    /**
+     * Why: setContent로 유입되는 신뢰할 수 없는 HTML의 스크립트 실행을 차단
+     * How: 기본 정화 활성화 시 위험 마크업 제거, sanitize:false 시 그대로 유지
+     */
+
+    it('setContent 시 기본적으로 위험한 마크업을 제거해야 함', async () => {
+      // Given: 기본 설정(정화 활성화)의 WysiwygArea
+      wysiwygArea = new WysiwygArea({ container })
+
+      // When: 스크립트가 포함된 콘텐츠를 설정
+      await wysiwygArea.setContent(
+        '<p>안전</p><script>alert(1)</script><img src="x" onerror="alert(1)">'
+      )
+
+      // Then: script와 이벤트 핸들러가 제거됨
+      const html = wysiwygArea.getElement().innerHTML
+      expect(html).toContain('안전')
+      expect(html).not.toContain('<script')
+      expect(html).not.toContain('onerror')
+    })
+
+    it('sanitize:false 이면 정화하지 않아야 함', async () => {
+      // Given: 정화를 비활성화한 WysiwygArea
+      wysiwygArea = new WysiwygArea({ container, sanitize: false })
+
+      // When: 콘텐츠를 설정
+      await wysiwygArea.setContent('<p>x</p><em>기울임</em>')
+
+      // Then: 입력이 그대로 유지됨
+      const html = wysiwygArea.getElement().innerHTML
+      expect(html).toContain('<em>기울임</em>')
+    })
+  })
 })

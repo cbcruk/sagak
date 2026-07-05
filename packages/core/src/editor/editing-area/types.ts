@@ -3,6 +3,8 @@
  * 편집 영역 모듈의 타입 정의
  */
 
+import type { SanitizeOption } from './sanitizer'
+
 /**
  * 에디터가 지원하는 편집 모드
  */
@@ -42,6 +44,15 @@ export interface EditingAreaConfig {
    * 맞춤법 검사 활성화 (기본값: true)
    */
   spellCheck?: boolean
+
+  /**
+   * 붙여넣기 및 `setContent` 시 HTML 정화 옵션
+   *
+   * - `true` 또는 미지정: 기본 정화기 사용 (권장)
+   * - `false`: 정화 비활성화 (신뢰할 수 있는 콘텐츠 전용)
+   * - `SanitizerOptions`: 사용자 정의 `DOMPurify` 설정
+   */
+  sanitize?: SanitizeOption
 }
 
 /**

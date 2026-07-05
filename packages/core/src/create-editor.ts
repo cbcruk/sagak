@@ -1,5 +1,6 @@
 import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
+import type { SanitizeOption } from './editor/editing-area/sanitizer'
 
 import { createBoldPlugin } from './plugins/bold-plugin'
 import { createItalicPlugin } from './plugins/italic-plugin'
@@ -111,6 +112,15 @@ export interface CreateEditorOptions {
   spellCheck?: boolean
 
   /**
+   * HTML sanitization for paste and setContent (default: enabled)
+   *
+   * - `true` or omitted: use the default sanitizer (recommended)
+   * - `false`: disable sanitization (trusted content only)
+   * - `SanitizerOptions`: custom DOMPurify configuration
+   */
+  sanitize?: SanitizeOption
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -205,6 +215,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
+    sanitize,
     plugins = [],
     replaceDefaultPlugins = false,
     autoSave = false,
@@ -226,6 +237,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
+    sanitize,
     plugins: allPlugins,
   })
 

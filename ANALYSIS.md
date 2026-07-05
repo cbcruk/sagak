@@ -37,10 +37,14 @@
 
 ---
 
+## 🟢 P2 — HTML 살균 (이번 브랜치에서 수정 완료)
+
+6. **붙여넣기/`setContent` 미살균 (보안, XSS)** — `paste`는 브라우저 기본 동작(임의 HTML 삽입)에 맡겨졌고 `setContent`는 `innerHTML`을 직접 설정해 스크립트 주입 위험이 있었음.
+   → DOMPurify 기반 정화 계층 도입(`sanitizer.ts`). `WysiwygArea`가 `setContent`와 붙여넣기(`text/html`) 시 정화. 이미지 붙여넣기는 이미지 플러그인에, 순수 텍스트는 브라우저 기본 동작에 위임. 기본 활성화이며 `sanitize` 옵션(`createEditor`/`EditorCore`)으로 비활성화(`false`)하거나 사용자 정의 `DOMPurify` 설정을 전달 가능. 공개 API로 `createSanitizer`/`resolveSanitizer` export.
+
 ## 🟡 향후 개선 과제 (미착수 — 별도 논의 필요)
 
 - **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. ROADMAP Phase 8(자체 렌더링 전환)에서 인지 중이나 근본 리스크.
-- **붙여넣기/`setContent` 미살균 (보안)** — `paste` 이벤트를 그대로 전달하고 `innerHTML`을 직접 다뤄 XSS 위험. DOMPurify 등 살균 계층 필요.
 - **프로덕션 소스의 `console.*` 147곳** — 배포 번들에 로그가 남음. 디버그 플래그/logger 추상화로 분리 권장.
 - **에러 처리** — 다수 플러그인이 `catch` 후 `console.error`만 하고 삼킴. 사용자 피드백 경로 부재.
 - **`no-explicit-any` 경고 62건** — 대부분 테스트/스토리 파일. 점진적 정리 권장.
@@ -52,7 +56,8 @@
 | 영역 | 파일 |
 | --- | --- |
 | 릭 수정 | `packages/core/src/editor/editing-area/modes/wysiwyg-area.ts`, `packages/core/src/core/editor-core.ts`, `packages/core/src/create-editor.ts`, `packages/react/src/hooks/use-editor.ts` |
-| 회귀 테스트 | `packages/core/test/core/editor-core.browser.test.ts` (+2) |
+| HTML 살균 | `packages/core/src/editor/editing-area/sanitizer.ts`(신규), `wysiwyg-area.ts`, `editing-area-manager.ts`, `editor-core.ts`, `create-editor.ts`, `types.ts`, `index.ts` |
+| 회귀/신규 테스트 | `packages/core/test/core/editor-core.browser.test.ts`(+2), `packages/core/test/editor/editing-area/sanitizer.browser.test.ts`(신규 +11), `wysiwyg-area.browser.test.ts`(+2) |
 | CI/도구 | `.github/workflows/ci.yml`, `.github/workflows/deploy-storybook.yml`, `eslint.config.js`, `package.json`(root/core/react) |
 
-검증: `pnpm typecheck` ✅ · `pnpm lint` ✅(0 errors) · 코어 856 + 신규 2 테스트 ✅ · 리액트 4 테스트 ✅
+검증: `pnpm build` ✅ · `pnpm typecheck` ✅ · `pnpm lint` ✅(0 errors) · 코어 871 테스트 ✅ · 리액트 4 테스트 ✅

@@ -1,6 +1,7 @@
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
+import { resolveSanitizer, type Sanitizer } from '../sanitizer'
 
 export interface WysiwygAreaConfig extends EditingAreaConfig {
   /**
@@ -22,11 +23,13 @@ export class WysiwygArea implements EditingArea {
   private visible: boolean = false
   private documentSelectionChangeHandler?: () => void
   private resizeObserver?: ResizeObserver
+  private sanitize: Sanitizer
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
     this.selectionManager = config.selectionManager
     this.eventBus = config.eventBus
+    this.sanitize = resolveSanitizer(config.sanitize)
 
     this.element = document.createElement('div')
     this.element.contentEditable = 'true'
@@ -75,7 +78,7 @@ export class WysiwygArea implements EditingArea {
       return
     }
 
-    this.element.innerHTML = content
+    this.element.innerHTML = this.sanitize(content)
 
     if (!this.element.firstChild) {
       this.element.innerHTML = '<p><br></p>'
@@ -312,6 +315,7 @@ export class WysiwygArea implements EditingArea {
       if (this.eventBus) {
         this.eventBus.emit(WysiwygEvents.WYSIWYG_PASTE, { event })
       }
+      this.handleSanitizedPaste(event)
     })
 
     this.element.addEventListener('keydown', (event) => {
@@ -325,6 +329,42 @@ export class WysiwygArea implements EditingArea {
         this.eventBus.emit(WysiwygEvents.WYSIWYG_KEYUP, { event })
       }
     })
+  }
+
+  /**
+   * 붙여넣기된 HTML을 정화한 뒤 삽입합니다
+   *
+   * `text/html` 데이터가 있을 때만 개입하여 기본 동작을 취소하고 정화된
+   * HTML을 삽입합니다. 이미지 붙여넣기는 이미지 업로드 플러그인이 처리하도록
+   * 건너뛰고, 순수 텍스트는 브라우저 기본 동작(안전함)에 맡깁니다.
+   */
+  private handleSanitizedPaste(event: ClipboardEvent): void {
+    if (event.defaultPrevented) {
+      return
+    }
+
+    const clipboard = event.clipboardData
+    if (!clipboard) {
+      return
+    }
+
+    // 이미지 붙여넣기는 이미지 업로드 플러그인이 처리합니다
+    const hasImage = Array.from(clipboard.items ?? []).some((item) =>
+      item.type.startsWith('image/')
+    )
+    if (hasImage) {
+      return
+    }
+
+    const html = clipboard.getData('text/html')
+    if (!html) {
+      // 순수 텍스트 붙여넣기는 브라우저 기본 동작에 맡깁니다
+      return
+    }
+
+    event.preventDefault()
+    const clean = this.sanitize(html)
+    document.execCommand('insertHTML', false, clean)
   }
 
   /**
