@@ -664,7 +664,7 @@ describe('FindReplacePlugin', () => {
       expect(highlights.length).toBe(0)
 
       // Then: 이벤트가 처리되지 않아야 함
-      const result = eventBus.emit('FIND', { query: 'World' })
+      eventBus.emit('FIND', { query: 'World' })
       highlights = element.querySelectorAll('.find-highlight')
       expect(highlights.length).toBe(0)
     })

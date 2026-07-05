@@ -169,6 +169,11 @@ export interface Editor {
    * Execute an event/command
    */
   exec: (event: string, ...args: unknown[]) => boolean
+
+  /**
+   * Tear down the editor, removing all listeners and plugins
+   */
+  destroy: () => void
 }
 
 /**
@@ -240,6 +245,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     getCurrentMode: () => core.getCurrentMode(),
     focus: () => core.focus(),
     exec: (event, ...args) => core.exec(event, ...args),
+    destroy: () => core.destroy(),
   }
 
   return editor

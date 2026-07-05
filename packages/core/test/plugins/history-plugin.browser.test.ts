@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { createHistoryPlugin } from '@/plugins/history-plugin'
 import type { EditorContext } from '@/core'
 
-class MockEventBus {
-  private listeners: Map<string, Map<string, Function[]>> = new Map()
+type MockHandler = (...args: unknown[]) => unknown
 
-  on(eventName: string, phase: string, handler: Function) {
+class MockEventBus {
+  private listeners: Map<string, Map<string, MockHandler[]>> = new Map()
+
+  on(eventName: string, phase: string, handler: MockHandler) {
     if (!this.listeners.has(eventName)) {
       this.listeners.set(eventName, new Map())
     }

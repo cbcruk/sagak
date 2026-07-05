@@ -20,6 +20,8 @@ export class WysiwygArea implements EditingArea {
   private selectionManager?: SelectionManager
   private eventBus?: EventBus
   private visible: boolean = false
+  private documentSelectionChangeHandler?: () => void
+  private resizeObserver?: ResizeObserver
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
@@ -293,14 +295,18 @@ export class WysiwygArea implements EditingArea {
       }
     })
 
-    document.addEventListener('selectionchange', () => {
+    this.documentSelectionChangeHandler = () => {
       const selection = window.getSelection()
       if (selection && this.element.contains(selection.anchorNode as Node)) {
         if (this.eventBus) {
           this.eventBus.emit(WysiwygEvents.WYSIWYG_SELECTION_CHANGED)
         }
       }
-    })
+    }
+    document.addEventListener(
+      'selectionchange',
+      this.documentSelectionChangeHandler
+    )
 
     this.element.addEventListener('paste', (event) => {
       if (this.eventBus) {
@@ -326,7 +332,7 @@ export class WysiwygArea implements EditingArea {
    */
   private setupAutoResize(): void {
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver((entries) => {
+      this.resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           if (this.eventBus) {
             this.eventBus.emit(WysiwygEvents.WYSIWYG_RESIZED, {
@@ -337,14 +343,31 @@ export class WysiwygArea implements EditingArea {
         }
       })
 
-      observer.observe(this.element)
+      this.resizeObserver.observe(this.element)
     }
   }
 
   /**
    * 리소스를 정리합니다
+   *
+   * 요소를 DOM에서 제거하고, `document`에 등록한 `selectionchange` 리스너와
+   * `ResizeObserver`를 해제합니다. 요소에 직접 등록한 리스너는 요소가
+   * 참조 해제되면 함께 정리됩니다.
    */
   destroy(): void {
+    if (this.documentSelectionChangeHandler) {
+      document.removeEventListener(
+        'selectionchange',
+        this.documentSelectionChangeHandler
+      )
+      this.documentSelectionChangeHandler = undefined
+    }
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = undefined
+    }
+
     if (this.element.parentNode) {
       this.element.parentNode.removeChild(this.element)
     }

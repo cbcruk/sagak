@@ -90,6 +90,7 @@ export class EditorCore {
   private config: EditorCoreConfig
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
+  private formattingStateCleanup?: () => void
 
   /**
    * `EditorCore` 인스턴스를 생성합니다
@@ -392,6 +393,9 @@ export class EditorCore {
    * 선택 영역 변경을 감지하고 서식 상태 업데이트를 발행합니다
    */
   private setupFormattingStateTracking(): void {
+    // 재호출(생성자 → run) 시 이전 리스너를 먼저 정리해 중복 등록을 막습니다
+    this.formattingStateCleanup?.()
+
     let rafId: number | null = null
     let lastFormattingState: {
       isBold: boolean
@@ -509,10 +513,34 @@ export class EditorCore {
     }
 
     document.addEventListener('selectionchange', updateFormattingState)
-    this.eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateFormattingState)
-    this.eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateFormattingState)
-    this.eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', updateFormattingState)
+    const unsubStyle = this.eventBus.on(
+      CoreEvents.STYLE_CHANGED,
+      'after',
+      updateFormattingState
+    )
+    const unsubRestored = this.eventBus.on(
+      CoreEvents.CONTENT_RESTORED,
+      'after',
+      updateFormattingState
+    )
+    const unsubContent = this.eventBus.on(
+      WysiwygEvents.WYSIWYG_CONTENT_CHANGED,
+      'after',
+      updateFormattingState
+    )
     updateFormattingState()
+
+    this.formattingStateCleanup = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      document.removeEventListener('selectionchange', updateFormattingState)
+      unsubStyle()
+      unsubRestored()
+      unsubContent()
+      this.formattingStateCleanup = undefined
+    }
   }
 
   /**
@@ -520,12 +548,16 @@ export class EditorCore {
    * 모든 플러그인과 이벤트 리스너를 정리합니다
    */
   destroy(): void {
+    this.formattingStateCleanup?.()
+
     this.pluginManager.destroyAll()
 
     if (this.editingAreaManager) {
       this.editingAreaManager.destroy()
       this.editingAreaManager = undefined
     }
+
+    this.eventBus.clearAll()
 
     this.status = AppStatus.NOT_READY
   }
