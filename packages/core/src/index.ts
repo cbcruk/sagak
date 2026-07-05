@@ -7,6 +7,8 @@ export { EventBus } from './core/event-bus'
 export type { EventPhase, EventHandler, Unsubscribe } from './core/event-bus'
 export { PluginManager } from './core/plugin-manager'
 export { SelectionManager } from './core/selection-manager'
+export { logger, setLogLevel, getLogLevel } from './core/logger'
+export type { LogLevel, Logger } from './core/logger'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,

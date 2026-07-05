@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
@@ -175,7 +176,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertHTML', false, html)
       return true
     } catch (e) {
-      console.error('HTML 삽입 실패:', e)
+      logger.error('HTML 삽입 실패:', e)
       return false
     }
   }
@@ -193,7 +194,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertText', false, text)
       return true
     } catch (e) {
-      console.error('텍스트 삽입 실패:', e)
+      logger.error('텍스트 삽입 실패:', e)
       return false
     }
   }
@@ -205,7 +206,7 @@ export class WysiwygArea implements EditingArea {
     try {
       return document.execCommand(command, false, value)
     } catch (e) {
-      console.error(`명령 ${command} 실행 실패:`, e)
+      logger.error(`명령 ${command} 실행 실패:`, e)
       return false
     }
   }

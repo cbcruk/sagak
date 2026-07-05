@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from '@/core'
 import { WysiwygEvents, CoreEvents } from '@/core'
 
@@ -97,7 +98,7 @@ export function createAutoSavePlugin(
       localStorage.setItem(storageKey, content)
       localStorage.setItem(`${storageKey}-timestamp`, Date.now().toString())
     } catch (e) {
-      console.error('Failed to save to localStorage:', e)
+      logger.error('Failed to save to localStorage:', e)
     }
   }
 
@@ -105,7 +106,7 @@ export function createAutoSavePlugin(
     try {
       return localStorage.getItem(storageKey)
     } catch (e) {
-      console.error('Failed to load from localStorage:', e)
+      logger.error('Failed to load from localStorage:', e)
       return null
     }
   }
@@ -115,7 +116,7 @@ export function createAutoSavePlugin(
       localStorage.removeItem(storageKey)
       localStorage.removeItem(`${storageKey}-timestamp`)
     } catch (e) {
-      console.error('Failed to clear localStorage:', e)
+      logger.error('Failed to clear localStorage:', e)
     }
   }
 
@@ -208,7 +209,7 @@ export function createAutoSavePlugin(
                 eventBus.emit(CoreEvents.CONTENT_RESTORED)
               }
             } catch (e) {
-              console.error('Failed to restore content:', e)
+              logger.error('Failed to restore content:', e)
             }
           })()
         }
@@ -274,7 +275,7 @@ export function createAutoSavePlugin(
                 eventBus.emit(CoreEvents.CONTENT_RESTORED)
               }
             } catch (e) {
-              console.error('Failed to restore content on init:', e)
+              logger.error('Failed to restore content on init:', e)
             }
           })()
         }, 0)

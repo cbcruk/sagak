@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -105,19 +106,19 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
     [options.eventName ?? ParagraphEvents.HEADING_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Heading blocked: IME composition in progress')
+          logger.warn('Heading blocked: IME composition in progress')
           return false
         }
 
         const level = extractHeadingLevel(data)
 
         if (level === null || level === undefined) {
-          console.warn('Heading blocked: No heading level provided')
+          logger.warn('Heading blocked: No heading level provided')
           return false
         }
 
         if (!isValidHeadingLevel(level)) {
-          console.warn(
+          logger.warn(
             `Heading blocked: Invalid heading level "${level}" (must be 1-6)`
           )
           return false
@@ -126,14 +127,14 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
         const minLevel = opts.minLevel ?? 1
         const maxLevel = opts.maxLevel ?? 6
         if (level < minLevel || level > maxLevel) {
-          console.warn(
+          logger.warn(
             `Heading blocked: Level ${level} is outside range ${minLevel}-${maxLevel}`
           )
           return false
         }
 
         if (opts.allowedLevels && !opts.allowedLevels.includes(level)) {
-          console.warn(
+          logger.warn(
             `Heading blocked: Level ${level} is not in allowed levels`
           )
           return false
@@ -166,7 +167,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
 
           return result
         } catch (error) {
-          console.error('Failed to execute heading command:', error)
+          logger.error('Failed to execute heading command:', error)
           return false
         }
       },

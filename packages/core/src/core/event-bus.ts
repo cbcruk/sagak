@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 /**
  * `EventBus` 생명주기의 이벤트 단계
  */
@@ -165,7 +166,7 @@ export class EventBus {
           return false
         }
       } catch (error) {
-        console.error(
+        logger.error(
           `Error in event handler for "${event}" (${phase} phase):`,
           error
         )

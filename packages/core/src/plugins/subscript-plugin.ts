@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -45,7 +46,7 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
       // `BEFORE` 단계: 아래 첨자 서식 적용 가능 여부 확인
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Subscript blocked: IME composition in progress')
+          logger.warn('Subscript blocked: IME composition in progress')
           return false
         }
         return true
@@ -61,7 +62,7 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute subscript command:', error)
+          logger.error('Failed to execute subscript command:', error)
           return false
         }
       },

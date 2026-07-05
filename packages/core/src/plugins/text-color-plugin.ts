@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -105,25 +106,25 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
     [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Text color blocked: IME composition in progress')
+          logger.warn('Text color blocked: IME composition in progress')
           return false
         }
 
         const color = extractColor(data)
 
         if (!color) {
-          console.warn('Text color blocked: No color provided')
+          logger.warn('Text color blocked: No color provided')
           return false
         }
 
         const validateFormat = opts.validateFormat ?? true
         if (validateFormat && !isValidColor(color)) {
-          console.warn(`Text color blocked: Invalid color format "${color}"`)
+          logger.warn(`Text color blocked: Invalid color format "${color}"`)
           return false
         }
 
         if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-          console.warn(
+          logger.warn(
             `Text color blocked: "${color}" is not in allowed colors`
           )
           return false
@@ -152,7 +153,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
 
           return result
         } catch (error) {
-          console.error('Failed to execute text color command:', error)
+          logger.error('Failed to execute text color command:', error)
           return false
         }
       },

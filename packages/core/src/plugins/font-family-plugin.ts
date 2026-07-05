@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -71,19 +72,19 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
     [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Font family blocked: IME composition in progress')
+          logger.warn('Font family blocked: IME composition in progress')
           return false
         }
 
         const fontFamily = extractFontFamily(data)
 
         if (!fontFamily) {
-          console.warn('Font family blocked: No font family provided')
+          logger.warn('Font family blocked: No font family provided')
           return false
         }
 
         if (opts.allowedFonts && !opts.allowedFonts.includes(fontFamily)) {
-          console.warn(
+          logger.warn(
             `Font family blocked: "${fontFamily}" is not in allowed fonts`
           )
           return false
@@ -112,7 +113,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
 
           return result
         } catch (error) {
-          console.error('Failed to execute font family command:', error)
+          logger.error('Failed to execute font family command:', error)
           return false
         }
       },

@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -45,7 +46,7 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
       // `BEFORE` 단계: 검증
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Outdent blocked: IME composition in progress')
+          logger.warn('Outdent blocked: IME composition in progress')
           return false
         }
         return true
@@ -61,7 +62,7 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute outdent command:', error)
+          logger.error('Failed to execute outdent command:', error)
           return false
         }
       },

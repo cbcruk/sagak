@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ContentEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -17,7 +18,7 @@ export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptio
     [options.eventName ?? ContentEvents.HORIZONTAL_RULE_INSERT]: {
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Horizontal rule blocked: IME composition in progress')
+          logger.warn('Horizontal rule blocked: IME composition in progress')
           return false
         }
         return true
@@ -51,7 +52,7 @@ export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptio
           emit(CoreEvents.STYLE_CHANGED, { style: 'horizontalRule' })
           return true
         } catch (error) {
-          console.error('Failed to insert horizontal rule:', error)
+          logger.error('Failed to insert horizontal rule:', error)
           return false
         }
       },

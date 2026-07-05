@@ -1,6 +1,7 @@
 import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
 import type { SanitizeOption } from './editor/editing-area/sanitizer'
+import type { LogLevel } from './core/logger'
 
 import { createBoldPlugin } from './plugins/bold-plugin'
 import { createItalicPlugin } from './plugins/italic-plugin'
@@ -121,6 +122,11 @@ export interface CreateEditorOptions {
   sanitize?: SanitizeOption
 
   /**
+   * Library log level (default: 'warn'); use 'silent' to suppress logs
+   */
+  logLevel?: LogLevel
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -216,6 +222,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     autoResize,
     spellCheck,
     sanitize,
+    logLevel,
     plugins = [],
     replaceDefaultPlugins = false,
     autoSave = false,
@@ -238,6 +245,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     autoResize,
     spellCheck,
     sanitize,
+    logLevel,
     plugins: allPlugins,
   })
 

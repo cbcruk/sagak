@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -45,7 +46,7 @@ export const createUnorderedListPlugin =
       [options.eventName ?? ParagraphEvents.UNORDERED_LIST_CLICKED]: {
         before: ({ selectionManager, options: opts }) => {
           if (opts.checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Unordered list blocked: IME composition in progress')
+            logger.warn('Unordered list blocked: IME composition in progress')
             return false
           }
           return true
@@ -60,7 +61,7 @@ export const createUnorderedListPlugin =
             }
             return result
           } catch (error) {
-            console.error('Failed to execute unordered list command:', error)
+            logger.error('Failed to execute unordered list command:', error)
             return false
           }
         },

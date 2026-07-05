@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 /**
  * `SelectionManager` - 텍스트 선택과 범위 작업을 관리합니다
  *
@@ -141,7 +142,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      console.error('Failed to restore selection:', error)
+      logger.error('Failed to restore selection:', error)
       return false
     }
   }
@@ -181,7 +182,7 @@ export class SelectionManager {
    */
   insertHTML(html: string): boolean {
     if (this.isComposing) {
-      console.warn('Cannot insert HTML during IME composition')
+      logger.warn('Cannot insert HTML during IME composition')
       return false
     }
 
@@ -211,7 +212,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      console.error('Failed to insert HTML:', error)
+      logger.error('Failed to insert HTML:', error)
       return false
     }
   }
@@ -225,7 +226,7 @@ export class SelectionManager {
    */
   insertText(text: string): boolean {
     if (this.isComposing) {
-      console.warn('Cannot insert text during IME composition')
+      logger.warn('Cannot insert text during IME composition')
       return false
     }
 
@@ -256,7 +257,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      console.error('Failed to insert text:', error)
+      logger.error('Failed to insert text:', error)
       return false
     }
   }
@@ -268,7 +269,7 @@ export class SelectionManager {
    */
   deleteContents(): boolean {
     if (this.isComposing) {
-      console.warn('Cannot delete during IME composition')
+      logger.warn('Cannot delete during IME composition')
       return false
     }
 
@@ -286,7 +287,7 @@ export class SelectionManager {
       range.deleteContents()
       return true
     } catch (error) {
-      console.error('Failed to delete contents:', error)
+      logger.error('Failed to delete contents:', error)
       return false
     }
   }
@@ -322,7 +323,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      console.error('Failed to select node:', error)
+      logger.error('Failed to select node:', error)
       return false
     }
   }
@@ -357,7 +358,7 @@ export class SelectionManager {
       selection.addRange(range)
       return true
     } catch (error) {
-      console.error('Failed to select node contents:', error)
+      logger.error('Failed to select node contents:', error)
       return false
     }
   }

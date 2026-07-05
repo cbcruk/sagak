@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from './types'
 
 /**
@@ -247,7 +248,7 @@ export class PluginManager {
     try {
       metadata.plugin.destroy?.()
     } catch (error) {
-      console.error(`Error destroying plugin "${name}":`, error)
+      logger.error(`Error destroying plugin "${name}":`, error)
     }
 
     this.plugins.delete(name)
@@ -287,7 +288,7 @@ export class PluginManager {
       try {
         metadata.plugin.destroy?.()
       } catch (error) {
-        console.error(
+        logger.error(
           `Error destroying plugin "${metadata.plugin.name}":`,
           error
         )

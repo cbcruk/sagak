@@ -10,6 +10,7 @@ import type {
   EditingMode,
 } from './types'
 import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
+import { setLogLevel, type LogLevel } from './logger'
 
 /**
  * 애플리케이션 상태
@@ -72,6 +73,14 @@ export interface EditorCoreConfig extends EditorConfig {
    * - `SanitizerOptions`: 사용자 정의 `DOMPurify` 설정
    */
   sanitize?: SanitizeOption
+
+  /**
+   * 라이브러리 로그 레벨 (기본값: `'warn'`)
+   *
+   * 프로덕션에서 로그를 억제하려면 `'silent'`을 사용하세요.
+   * 전역 로거에 적용됩니다.
+   */
+  logLevel?: LogLevel
 }
 
 /**
@@ -109,6 +118,11 @@ export class EditorCore {
    */
   constructor(config: EditorCoreConfig = {}) {
     this.config = config
+
+    if (config.logLevel) {
+      setLogLevel(config.logLevel)
+    }
+
     this.eventBus = new EventBus()
 
     this.context = {

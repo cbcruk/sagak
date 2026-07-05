@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -285,17 +286,17 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
           const data = args as ImageData | undefined
 
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Image insert blocked: IME composition in progress')
+            logger.warn('Image insert blocked: IME composition in progress')
             return false
           }
 
           if (!data || !data.src) {
-            console.warn('Image insert blocked: No src provided')
+            logger.warn('Image insert blocked: No src provided')
             return false
           }
 
           if (validateUrl && !isValidImageUrl(data.src, { allowedProtocols })) {
-            console.warn(
+            logger.warn(
               `Image insert blocked: Invalid image URL "${data.src}"`
             )
             return false
@@ -304,7 +305,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
           if (data.width) {
             const widthPx = parseInt(data.width)
             if (!isNaN(widthPx) && widthPx > maxWidth) {
-              console.warn(
+              logger.warn(
                 `Image insert blocked: width ${widthPx}px exceeds maximum ${maxWidth}px`
               )
               return false
@@ -314,7 +315,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
           if (data.height) {
             const heightPx = parseInt(data.height)
             if (!isNaN(heightPx) && heightPx > maxHeight) {
-              console.warn(
+              logger.warn(
                 `Image insert blocked: height ${heightPx}px exceeds maximum ${maxHeight}px`
               )
               return false
@@ -379,7 +380,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to insert image:', error)
+            logger.error('Failed to insert image:', error)
             return false
           }
         }
@@ -398,19 +399,19 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
           const data = args as Partial<ImageData> | undefined
 
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Image update blocked: IME composition in progress')
+            logger.warn('Image update blocked: IME composition in progress')
             return false
           }
 
           if (!data) {
-            console.warn('Image update blocked: No data provided')
+            logger.warn('Image update blocked: No data provided')
             return false
           }
 
           const img = findImageAtSelection()
 
           if (!img) {
-            console.warn('Image update blocked: No image selected')
+            logger.warn('Image update blocked: No image selected')
             return false
           }
 
@@ -418,7 +419,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             const widthPx = parseInt(data.width)
 
             if (!isNaN(widthPx) && widthPx > maxWidth) {
-              console.warn(
+              logger.warn(
                 `Image update blocked: width ${widthPx}px exceeds maximum ${maxWidth}px`
               )
               return false
@@ -429,7 +430,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             const heightPx = parseInt(data.height)
 
             if (!isNaN(heightPx) && heightPx > maxHeight) {
-              console.warn(
+              logger.warn(
                 `Image update blocked: height ${heightPx}px exceeds maximum ${maxHeight}px`
               )
               return false
@@ -491,7 +492,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to update image:', error)
+            logger.error('Failed to update image:', error)
             return false
           }
         }
@@ -504,14 +505,14 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
       const unsubDeleteBefore = eventBus.on(deleteEventName, 'before', () => {
         if (checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Image delete blocked: IME composition in progress')
+          logger.warn('Image delete blocked: IME composition in progress')
           return false
         }
 
         const img = findImageAtSelection()
 
         if (!img) {
-          console.warn('Image delete blocked: No image selected')
+          logger.warn('Image delete blocked: No image selected')
           return false
         }
 
@@ -538,7 +539,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          console.error('Failed to delete image:', error)
+          logger.error('Failed to delete image:', error)
           return false
         }
       })

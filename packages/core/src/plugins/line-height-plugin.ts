@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -51,14 +52,14 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
     [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Line height blocked: IME composition in progress')
+          logger.warn('Line height blocked: IME composition in progress')
           return false
         }
 
         const lineHeight = extractLineHeight(data)
 
         if (lineHeight === null) {
-          console.warn('Line height blocked: Invalid line height')
+          logger.warn('Line height blocked: Invalid line height')
           return false
         }
 
@@ -127,7 +128,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
           return false
         } catch (error) {
-          console.error('Failed to apply line height:', error)
+          logger.error('Failed to apply line height:', error)
           return false
         }
       },
