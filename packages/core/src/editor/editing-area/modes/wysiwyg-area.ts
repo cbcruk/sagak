@@ -1,6 +1,9 @@
+import { logger } from '@/core/logger'
+import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
+import { resolveSanitizer, type Sanitizer } from '../sanitizer'
 
 export interface WysiwygAreaConfig extends EditingAreaConfig {
   /**
@@ -20,11 +23,19 @@ export class WysiwygArea implements EditingArea {
   private selectionManager?: SelectionManager
   private eventBus?: EventBus
   private visible: boolean = false
+  private documentSelectionChangeHandler?: () => void
+  private resizeObserver?: ResizeObserver
+  private sanitize: Sanitizer
+  private reportError: ErrorReporter
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
     this.selectionManager = config.selectionManager
     this.eventBus = config.eventBus
+    this.sanitize = resolveSanitizer(config.sanitize)
+    this.reportError = this.eventBus
+      ? createErrorReporter(this.eventBus, 'wysiwyg-area')
+      : (error, message) => logger.error(message, error)
 
     this.element = document.createElement('div')
     this.element.contentEditable = 'true'
@@ -73,7 +84,7 @@ export class WysiwygArea implements EditingArea {
       return
     }
 
-    this.element.innerHTML = content
+    this.element.innerHTML = this.sanitize(content)
 
     if (!this.element.firstChild) {
       this.element.innerHTML = '<p><br></p>'
@@ -170,7 +181,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertHTML', false, html)
       return true
     } catch (e) {
-      console.error('HTML 삽입 실패:', e)
+      this.reportError(e, 'HTML 삽입 실패:')
       return false
     }
   }
@@ -188,7 +199,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertText', false, text)
       return true
     } catch (e) {
-      console.error('텍스트 삽입 실패:', e)
+      this.reportError(e, '텍스트 삽입 실패:')
       return false
     }
   }
@@ -200,7 +211,7 @@ export class WysiwygArea implements EditingArea {
     try {
       return document.execCommand(command, false, value)
     } catch (e) {
-      console.error(`명령 ${command} 실행 실패:`, e)
+      this.reportError(e, `명령 ${command} 실행 실패:`)
       return false
     }
   }
@@ -293,19 +304,24 @@ export class WysiwygArea implements EditingArea {
       }
     })
 
-    document.addEventListener('selectionchange', () => {
+    this.documentSelectionChangeHandler = () => {
       const selection = window.getSelection()
       if (selection && this.element.contains(selection.anchorNode as Node)) {
         if (this.eventBus) {
           this.eventBus.emit(WysiwygEvents.WYSIWYG_SELECTION_CHANGED)
         }
       }
-    })
+    }
+    document.addEventListener(
+      'selectionchange',
+      this.documentSelectionChangeHandler
+    )
 
     this.element.addEventListener('paste', (event) => {
       if (this.eventBus) {
         this.eventBus.emit(WysiwygEvents.WYSIWYG_PASTE, { event })
       }
+      this.handleSanitizedPaste(event)
     })
 
     this.element.addEventListener('keydown', (event) => {
@@ -322,11 +338,47 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
+   * 붙여넣기된 HTML을 정화한 뒤 삽입합니다
+   *
+   * `text/html` 데이터가 있을 때만 개입하여 기본 동작을 취소하고 정화된
+   * HTML을 삽입합니다. 이미지 붙여넣기는 이미지 업로드 플러그인이 처리하도록
+   * 건너뛰고, 순수 텍스트는 브라우저 기본 동작(안전함)에 맡깁니다.
+   */
+  private handleSanitizedPaste(event: ClipboardEvent): void {
+    if (event.defaultPrevented) {
+      return
+    }
+
+    const clipboard = event.clipboardData
+    if (!clipboard) {
+      return
+    }
+
+    // 이미지 붙여넣기는 이미지 업로드 플러그인이 처리합니다
+    const hasImage = Array.from(clipboard.items ?? []).some((item) =>
+      item.type.startsWith('image/')
+    )
+    if (hasImage) {
+      return
+    }
+
+    const html = clipboard.getData('text/html')
+    if (!html) {
+      // 순수 텍스트 붙여넣기는 브라우저 기본 동작에 맡깁니다
+      return
+    }
+
+    event.preventDefault()
+    const clean = this.sanitize(html)
+    document.execCommand('insertHTML', false, clean)
+  }
+
+  /**
    * 자동 크기 조정 기능을 설정합니다
    */
   private setupAutoResize(): void {
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver((entries) => {
+      this.resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           if (this.eventBus) {
             this.eventBus.emit(WysiwygEvents.WYSIWYG_RESIZED, {
@@ -337,14 +389,31 @@ export class WysiwygArea implements EditingArea {
         }
       })
 
-      observer.observe(this.element)
+      this.resizeObserver.observe(this.element)
     }
   }
 
   /**
    * 리소스를 정리합니다
+   *
+   * 요소를 DOM에서 제거하고, `document`에 등록한 `selectionchange` 리스너와
+   * `ResizeObserver`를 해제합니다. 요소에 직접 등록한 리스너는 요소가
+   * 참조 해제되면 함께 정리됩니다.
    */
   destroy(): void {
+    if (this.documentSelectionChangeHandler) {
+      document.removeEventListener(
+        'selectionchange',
+        this.documentSelectionChangeHandler
+      )
+      this.documentSelectionChangeHandler = undefined
+    }
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = undefined
+    }
+
     if (this.element.parentNode) {
       this.element.parentNode.removeChild(this.element)
     }

@@ -9,6 +9,13 @@ import type {
   EditingAreaManager,
   EditingMode,
 } from './types'
+import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
+import { setLogLevel, type LogLevel } from './logger'
+import {
+  createErrorReporter,
+  type ErrorReporter,
+  type EditorErrorData,
+} from './errors'
 
 /**
  * 애플리케이션 상태
@@ -62,6 +69,31 @@ export interface EditorCoreConfig extends EditorConfig {
    * 맞춤법 검사 활성화 (기본값: true)
    */
   spellCheck?: boolean
+
+  /**
+   * 붙여넣기 및 `setContent` 시 HTML 정화 옵션 (기본값: 활성화)
+   *
+   * - `true` 또는 미지정: 기본 정화기 사용 (권장)
+   * - `false`: 정화 비활성화 (신뢰할 수 있는 콘텐츠 전용)
+   * - `SanitizerOptions`: 사용자 정의 `DOMPurify` 설정
+   */
+  sanitize?: SanitizeOption
+
+  /**
+   * 라이브러리 로그 레벨 (기본값: `'warn'`)
+   *
+   * 프로덕션에서 로그를 억제하려면 `'silent'`을 사용하세요.
+   * 전역 로거에 적용됩니다.
+   */
+  logLevel?: LogLevel
+
+  /**
+   * 오류 콜백
+   *
+   * 플러그인/코어에서 오류가 포착될 때 호출됩니다.
+   * `CoreEvents.ERROR` 이벤트를 구독하는 것과 동일합니다.
+   */
+  onError?: (data: EditorErrorData) => void
 }
 
 /**
@@ -90,6 +122,9 @@ export class EditorCore {
   private config: EditorCoreConfig
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
+  private formattingStateCleanup?: () => void
+  private selectionErrorReporter: ErrorReporter
+  private onErrorUnsub?: () => void
 
   /**
    * `EditorCore` 인스턴스를 생성합니다
@@ -98,7 +133,28 @@ export class EditorCore {
    */
   constructor(config: EditorCoreConfig = {}) {
     this.config = config
+
+    if (config.logLevel) {
+      setLogLevel(config.logLevel)
+    }
+
     this.eventBus = new EventBus()
+
+    this.selectionErrorReporter = createErrorReporter(
+      this.eventBus,
+      'selection-manager'
+    )
+
+    if (config.onError) {
+      const { onError } = config
+      this.onErrorUnsub = this.eventBus.on(
+        CoreEvents.ERROR,
+        'on',
+        (data?: unknown) => {
+          onError(data as EditorErrorData)
+        }
+      )
+    }
 
     this.context = {
       eventBus: this.eventBus,
@@ -107,7 +163,10 @@ export class EditorCore {
     }
 
     if (config.element) {
-      this.selectionManager = new SelectionManager(config.element)
+      this.selectionManager = new SelectionManager(
+        config.element,
+        this.selectionErrorReporter
+      )
       this.context.selectionManager = this.selectionManager
       this.setupFormattingStateTracking()
     }
@@ -168,6 +227,7 @@ export class EditorCore {
         minHeight: this.config.minHeight,
         autoResize: this.config.autoResize,
         spellCheck: this.config.spellCheck,
+        sanitize: this.config.sanitize,
       })
 
       await this.editingAreaManager.initialize()
@@ -177,7 +237,10 @@ export class EditorCore {
       const currentArea = this.editingAreaManager.getCurrentArea()
       if (currentArea) {
         this.context.element = currentArea.getElement()
-        this.selectionManager = new SelectionManager(this.context.element)
+        this.selectionManager = new SelectionManager(
+          this.context.element,
+          this.selectionErrorReporter
+        )
         this.context.selectionManager = this.selectionManager
         this.setupFormattingStateTracking()
       }
@@ -392,6 +455,9 @@ export class EditorCore {
    * 선택 영역 변경을 감지하고 서식 상태 업데이트를 발행합니다
    */
   private setupFormattingStateTracking(): void {
+    // 재호출(생성자 → run) 시 이전 리스너를 먼저 정리해 중복 등록을 막습니다
+    this.formattingStateCleanup?.()
+
     let rafId: number | null = null
     let lastFormattingState: {
       isBold: boolean
@@ -509,10 +575,34 @@ export class EditorCore {
     }
 
     document.addEventListener('selectionchange', updateFormattingState)
-    this.eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateFormattingState)
-    this.eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateFormattingState)
-    this.eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', updateFormattingState)
+    const unsubStyle = this.eventBus.on(
+      CoreEvents.STYLE_CHANGED,
+      'after',
+      updateFormattingState
+    )
+    const unsubRestored = this.eventBus.on(
+      CoreEvents.CONTENT_RESTORED,
+      'after',
+      updateFormattingState
+    )
+    const unsubContent = this.eventBus.on(
+      WysiwygEvents.WYSIWYG_CONTENT_CHANGED,
+      'after',
+      updateFormattingState
+    )
     updateFormattingState()
+
+    this.formattingStateCleanup = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      document.removeEventListener('selectionchange', updateFormattingState)
+      unsubStyle()
+      unsubRestored()
+      unsubContent()
+      this.formattingStateCleanup = undefined
+    }
   }
 
   /**
@@ -520,12 +610,18 @@ export class EditorCore {
    * 모든 플러그인과 이벤트 리스너를 정리합니다
    */
   destroy(): void {
+    this.formattingStateCleanup?.()
+    this.onErrorUnsub?.()
+    this.onErrorUnsub = undefined
+
     this.pluginManager.destroyAll()
 
     if (this.editingAreaManager) {
       this.editingAreaManager.destroy()
       this.editingAreaManager = undefined
     }
+
+    this.eventBus.clearAll()
 
     this.status = AppStatus.NOT_READY
   }

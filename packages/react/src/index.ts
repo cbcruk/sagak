@@ -8,6 +8,7 @@ export {
   useFontState,
   useRecentColors,
   useAutoSave,
+  useEditorError,
 } from './hooks'
 export type {
   UseEditorOptions,
@@ -21,6 +22,7 @@ export type {
   UseFontStateReturn,
   UseRecentColorsReturn,
   UseAutoSaveReturn,
+  UseEditorErrorReturn,
 } from './hooks'
 
 export {

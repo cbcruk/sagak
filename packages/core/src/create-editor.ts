@@ -1,5 +1,8 @@
 import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
+import type { SanitizeOption } from './editor/editing-area/sanitizer'
+import type { LogLevel } from './core/logger'
+import type { EditorErrorData } from './core/errors'
 
 import { createBoldPlugin } from './plugins/bold-plugin'
 import { createItalicPlugin } from './plugins/italic-plugin'
@@ -111,6 +114,25 @@ export interface CreateEditorOptions {
   spellCheck?: boolean
 
   /**
+   * HTML sanitization for paste and setContent (default: enabled)
+   *
+   * - `true` or omitted: use the default sanitizer (recommended)
+   * - `false`: disable sanitization (trusted content only)
+   * - `SanitizerOptions`: custom DOMPurify configuration
+   */
+  sanitize?: SanitizeOption
+
+  /**
+   * Library log level (default: 'warn'); use 'silent' to suppress logs
+   */
+  logLevel?: LogLevel
+
+  /**
+   * Error callback, invoked when a plugin/core error is caught
+   */
+  onError?: (data: EditorErrorData) => void
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -169,6 +191,11 @@ export interface Editor {
    * Execute an event/command
    */
   exec: (event: string, ...args: unknown[]) => boolean
+
+  /**
+   * Tear down the editor, removing all listeners and plugins
+   */
+  destroy: () => void
 }
 
 /**
@@ -200,6 +227,9 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
+    sanitize,
+    logLevel,
+    onError,
     plugins = [],
     replaceDefaultPlugins = false,
     autoSave = false,
@@ -221,6 +251,9 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
+    sanitize,
+    logLevel,
+    onError,
     plugins: allPlugins,
   })
 
@@ -240,6 +273,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     getCurrentMode: () => core.getCurrentMode(),
     focus: () => core.focus(),
     exec: (event, ...args) => core.exec(event, ...args),
+    destroy: () => core.destroy(),
   }
 
   return editor

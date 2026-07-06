@@ -27,6 +27,12 @@ export const CoreEvents = {
    * 스타일 적용 등 즉시 스냅샷이 필요할 때 발행
    */
   CAPTURE_SNAPSHOT: 'CAPTURE_SNAPSHOT',
+
+  /**
+   * 에디터 오류 발생 - 플러그인/코어에서 오류가 포착될 때 발행
+   * 페이로드: `EditorErrorData`
+   */
+  ERROR: 'EDITOR_ERROR',
 } as const
 
 /**

@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -106,7 +107,7 @@ export const createBackgroundColorPlugin =
       [options.eventName ?? FontEvents.BACKGROUND_COLOR_CHANGED]: {
         before: ({ selectionManager, options: opts }, data?: unknown) => {
           if (opts.checkComposition && selectionManager?.getIsComposing()) {
-            console.warn(
+            logger.warn(
               'Background color blocked: IME composition in progress'
             )
             return false
@@ -115,20 +116,20 @@ export const createBackgroundColorPlugin =
           const color = extractColor(data)
 
           if (!color) {
-            console.warn('Background color blocked: No color provided')
+            logger.warn('Background color blocked: No color provided')
             return false
           }
 
           const validateFormat = opts.validateFormat ?? true
           if (validateFormat && !isValidColor(color)) {
-            console.warn(
+            logger.warn(
               `Background color blocked: Invalid color format "${color}"`
             )
             return false
           }
 
           if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-            console.warn(
+            logger.warn(
               `Background color blocked: "${color}" is not in allowed colors`
             )
             return false
@@ -137,7 +138,7 @@ export const createBackgroundColorPlugin =
           return true
         },
 
-        on: ({ emit }, data?: unknown) => {
+        on: ({ emit, reportError }, data?: unknown) => {
           try {
             const color = extractColor(data)
 
@@ -157,7 +158,7 @@ export const createBackgroundColorPlugin =
 
             return result
           } catch (error) {
-            console.error('Failed to execute background color command:', error)
+            reportError(error, 'Failed to execute background color command:')
             return false
           }
         },

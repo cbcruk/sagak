@@ -1,4 +1,5 @@
 import type { Plugin, EditorContext } from './types'
+import { createErrorReporter, type ErrorReporter } from './errors'
 
 /**
  * 플러그인 상태
@@ -58,10 +59,12 @@ interface PluginMetadata {
 export class PluginManager {
   private plugins: Map<string, PluginMetadata> = new Map()
   private context: EditorContext
+  private reportError: ErrorReporter
 
   constructor(context: EditorContext) {
     this.context = context
     this.context.pluginManager = this
+    this.reportError = createErrorReporter(context.eventBus, 'plugin-manager')
   }
 
   /**
@@ -247,7 +250,7 @@ export class PluginManager {
     try {
       metadata.plugin.destroy?.()
     } catch (error) {
-      console.error(`Error destroying plugin "${name}":`, error)
+      this.reportError(error, `Error destroying plugin "${name}":`)
     }
 
     this.plugins.delete(name)
@@ -287,9 +290,9 @@ export class PluginManager {
       try {
         metadata.plugin.destroy?.()
       } catch (error) {
-        console.error(
-          `Error destroying plugin "${metadata.plugin.name}":`,
-          error
+        this.reportError(
+          error,
+          `Error destroying plugin "${metadata.plugin.name}":`
         )
       }
     }

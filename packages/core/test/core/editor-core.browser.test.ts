@@ -552,6 +552,40 @@ describe('EditorCore', () => {
       expect(core.isReady()).toBe(false)
     })
 
+    it('destroy() 호출 시 서식 상태 추적 리스너를 정리해야 함 (메모리 릭 방지)', async () => {
+      // Given: element가 있어 서식 상태 추적 리스너가 등록된 EditorCore
+      const removeSpy = vi.spyOn(document, 'removeEventListener')
+      const core = new EditorCore({ element })
+      await core.run()
+
+      // When: destroy() 호출
+      core.destroy()
+
+      // Then: document의 selectionchange 리스너가 제거되어야 함
+      expect(removeSpy).toHaveBeenCalledWith(
+        'selectionchange',
+        expect.any(Function)
+      )
+
+      removeSpy.mockRestore()
+    })
+
+    it('destroy() 호출 시 EventBus의 모든 핸들러를 정리해야 함', async () => {
+      // Given: 이벤트 핸들러가 등록된 EditorCore
+      const core = new EditorCore({ element })
+      await core.run()
+
+      const eventBus = core.getEventBus()
+      eventBus.on('CUSTOM_EVENT', 'on', () => {})
+      expect(eventBus.getEvents().length).toBeGreaterThan(0)
+
+      // When: destroy() 호출
+      core.destroy()
+
+      // Then: 등록된 이벤트가 모두 제거되어야 함
+      expect(eventBus.getEvents()).toHaveLength(0)
+    })
+
     it('destroy() 호출 시 플러그인의 destroy()가 호출되어야 함', async () => {
       // Given: destroy 메서드가 있는 플러그인
       const core = new EditorCore()

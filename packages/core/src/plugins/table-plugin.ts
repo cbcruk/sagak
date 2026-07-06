@@ -1,3 +1,5 @@
+import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -294,6 +296,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     name: 'content:table',
     initialize(context: EditorContext) {
       const { eventBus } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:content:table')
       const selectionManager = context.selectionManager
 
       const unsubCreateBefore = eventBus.on(
@@ -301,7 +304,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         (data?: unknown) => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Table create blocked: IME composition in progress')
+            logger.warn('Table create blocked: IME composition in progress')
             return false
           }
 
@@ -313,14 +316,14 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           })
 
           if (rows < 1 || rows > maxRows) {
-            console.warn(
+            logger.warn(
               `Table create blocked: rows ${rows} is outside range 1-${maxRows}`
             )
             return false
           }
 
           if (cols < 1 || cols > maxColumns) {
-            console.warn(
+            logger.warn(
               `Table create blocked: columns ${cols} is outside range 1-${maxColumns}`
             )
             return false
@@ -373,7 +376,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to create table:', error)
+            reportError(error, 'Failed to create table:')
             return false
           }
         }
@@ -390,7 +393,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         () => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn(
+            logger.warn(
               'Table insert row blocked: IME composition in progress'
             )
             return false
@@ -399,7 +402,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           const cell = findCellAtSelection()
 
           if (!cell) {
-            console.warn('Table insert row blocked: No table cell selected')
+            logger.warn('Table insert row blocked: No table cell selected')
             return false
           }
 
@@ -463,7 +466,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to insert row:', error)
+            reportError(error, 'Failed to insert row:')
             return false
           }
         }
@@ -484,7 +487,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         () => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn(
+            logger.warn(
               'Table delete row blocked: IME composition in progress'
             )
             return false
@@ -493,7 +496,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           const cell = findCellAtSelection()
 
           if (!cell) {
-            console.warn('Table delete row blocked: No table cell selected')
+            logger.warn('Table delete row blocked: No table cell selected')
             return false
           }
 
@@ -515,7 +518,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           if (!tbody) return false
 
           if (tbody.children.length <= 1) {
-            console.warn('Cannot delete last row in table')
+            logger.warn('Cannot delete last row in table')
             return false
           }
 
@@ -532,7 +535,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          console.error('Failed to delete row:', error)
+          reportError(error, 'Failed to delete row:')
           return false
         }
       })
@@ -552,7 +555,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         () => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn(
+            logger.warn(
               'Table insert column blocked: IME composition in progress'
             )
             return false
@@ -561,7 +564,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           const cell = findCellAtSelection()
 
           if (!cell) {
-            console.warn('Table insert column blocked: No table cell selected')
+            logger.warn('Table insert column blocked: No table cell selected')
             return false
           }
 
@@ -624,7 +627,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to insert column:', error)
+            reportError(error, 'Failed to insert column:')
             return false
           }
         }
@@ -645,7 +648,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         () => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn(
+            logger.warn(
               'Table delete column blocked: IME composition in progress'
             )
             return false
@@ -654,7 +657,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           const cell = findCellAtSelection()
 
           if (!cell) {
-            console.warn('Table delete column blocked: No table cell selected')
+            logger.warn('Table delete column blocked: No table cell selected')
             return false
           }
 
@@ -682,7 +685,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
             const row = cell.parentElement as HTMLTableRowElement
 
             if (row.children.length <= 1) {
-              console.warn('Cannot delete last column in table')
+              logger.warn('Cannot delete last column in table')
               return false
             }
 
@@ -708,7 +711,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            console.error('Failed to delete column:', error)
+            reportError(error, 'Failed to delete column:')
             return false
           }
         }
@@ -729,14 +732,14 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         'before',
         () => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Table delete blocked: IME composition in progress')
+            logger.warn('Table delete blocked: IME composition in progress')
             return false
           }
 
           const table = findTableAtSelection()
 
           if (!table) {
-            console.warn('Table delete blocked: No table selected')
+            logger.warn('Table delete blocked: No table selected')
             return false
           }
 
@@ -762,7 +765,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          console.error('Failed to delete table:', error)
+          reportError(error, 'Failed to delete table:')
           return false
         }
       })

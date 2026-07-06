@@ -7,6 +7,10 @@ export { EventBus } from './core/event-bus'
 export type { EventPhase, EventHandler, Unsubscribe } from './core/event-bus'
 export { PluginManager } from './core/plugin-manager'
 export { SelectionManager } from './core/selection-manager'
+export { logger, setLogLevel, getLogLevel } from './core/logger'
+export type { LogLevel, Logger } from './core/logger'
+export { createErrorReporter } from './core/errors'
+export type { EditorErrorData, ErrorReporter } from './core/errors'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,
@@ -50,6 +54,17 @@ export type {
   EditingAreaManager,
   FormattingState,
 } from './core/types'
+
+export {
+  createSanitizer,
+  resolveSanitizer,
+  identitySanitizer,
+} from './editor/editing-area/sanitizer'
+export type {
+  Sanitizer,
+  SanitizerOptions,
+  SanitizeOption,
+} from './editor/editing-area/sanitizer'
 
 export { createBoldPlugin } from './plugins/bold-plugin'
 export { createItalicPlugin } from './plugins/italic-plugin'

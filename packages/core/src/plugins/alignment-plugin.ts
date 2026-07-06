@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -102,26 +103,26 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
     [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Alignment blocked: IME composition in progress')
+          logger.warn('Alignment blocked: IME composition in progress')
           return false
         }
 
         const align = extractAlignment(data)
 
         if (!align) {
-          console.warn('Alignment blocked: No alignment provided')
+          logger.warn('Alignment blocked: No alignment provided')
           return false
         }
 
         if (!isValidAlignment(align)) {
-          console.warn(
+          logger.warn(
             `Alignment blocked: Invalid alignment "${align}" (must be left, center, right, or justify)`
           )
           return false
         }
 
         if (opts.allowedAlignments && !opts.allowedAlignments.includes(align)) {
-          console.warn(
+          logger.warn(
             `Alignment blocked: "${align}" is not in allowed alignments`
           )
           return false
@@ -130,7 +131,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const align = extractAlignment(data)
 
@@ -151,7 +152,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
 
           return result
         } catch (error) {
-          console.error('Failed to execute alignment command:', error)
+          reportError(error, 'Failed to execute alignment command:')
           return false
         }
       },

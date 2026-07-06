@@ -1,3 +1,5 @@
+import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { FindReplaceEvents, CoreEvents } from '@/core'
 
@@ -301,6 +303,7 @@ export function createFindReplacePlugin(
 
     initialize(context: EditorContext) {
       const { eventBus, config } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:utility:find-replace')
       const selectionManager = context.selectionManager
 
       editorElement =
@@ -315,17 +318,17 @@ export function createFindReplacePlugin(
         'before',
         (data?: unknown) => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Find blocked: IME composition in progress')
+            logger.warn('Find blocked: IME composition in progress')
             return false
           }
 
           if (!isFindData(data)) {
-            console.warn('Find blocked: Invalid find data')
+            logger.warn('Find blocked: Invalid find data')
             return false
           }
 
           if (!editorElement) {
-            console.warn('Find blocked: No editor element')
+            logger.warn('Find blocked: No editor element')
             return false
           }
 
@@ -377,7 +380,7 @@ export function createFindReplacePlugin(
 
           return true
         } catch (error) {
-          console.error('Failed to find text:', error)
+          reportError(error, 'Failed to find text:')
           return false
         }
       })
@@ -464,17 +467,17 @@ export function createFindReplacePlugin(
         'before',
         (data?: unknown) => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Replace blocked: IME composition in progress')
+            logger.warn('Replace blocked: IME composition in progress')
             return false
           }
 
           if (!isReplaceData(data)) {
-            console.warn('Replace blocked: Invalid replace data')
+            logger.warn('Replace blocked: Invalid replace data')
             return false
           }
 
           if (currentMatches.length === 0 || currentMatchIndex < 0) {
-            console.warn('Replace blocked: No current match')
+            logger.warn('Replace blocked: No current match')
             return false
           }
 
@@ -526,7 +529,7 @@ export function createFindReplacePlugin(
 
             return true
           } catch (error) {
-            console.error('Failed to replace text:', error)
+            reportError(error, 'Failed to replace text:')
             return false
           }
         }
@@ -543,17 +546,17 @@ export function createFindReplacePlugin(
         'before',
         (data?: unknown) => {
           if (checkComposition && selectionManager?.getIsComposing()) {
-            console.warn('Replace all blocked: IME composition in progress')
+            logger.warn('Replace all blocked: IME composition in progress')
             return false
           }
 
           if (!isReplaceData(data)) {
-            console.warn('Replace all blocked: Invalid replace data')
+            logger.warn('Replace all blocked: Invalid replace data')
             return false
           }
 
           if (!editorElement) {
-            console.warn('Replace all blocked: No editor element')
+            logger.warn('Replace all blocked: No editor element')
             return false
           }
 
@@ -602,7 +605,7 @@ export function createFindReplacePlugin(
 
             return true
           } catch (error) {
-            console.error('Failed to replace all text:', error)
+            reportError(error, 'Failed to replace all text:')
             return false
           }
         }
@@ -636,7 +639,7 @@ export function createFindReplacePlugin(
 
           return true
         } catch (error) {
-          console.error('Failed to clear find highlights:', error)
+          reportError(error, 'Failed to clear find highlights:')
           return false
         }
       })

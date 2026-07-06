@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ContentEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -33,20 +34,20 @@ export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginO
     [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Special character blocked: IME composition in progress')
+          logger.warn('Special character blocked: IME composition in progress')
           return false
         }
 
         const character = extractCharacter(data)
         if (!character) {
-          console.warn('Special character blocked: No character provided')
+          logger.warn('Special character blocked: No character provided')
           return false
         }
 
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const character = extractCharacter(data)
           if (!character) {
@@ -75,7 +76,7 @@ export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginO
           emit(CoreEvents.STYLE_CHANGED, { style: 'specialCharacter', value: character })
           return true
         } catch (error) {
-          console.error('Failed to insert special character:', error)
+          reportError(error, 'Failed to insert special character:')
           return false
         }
       },

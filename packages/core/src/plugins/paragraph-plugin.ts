@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -45,14 +46,14 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
       // `BEFORE` 단계: 형식화 가능 여부 확인
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Paragraph format blocked: IME composition in progress')
+          logger.warn('Paragraph format blocked: IME composition in progress')
           return false
         }
         return true
       },
 
       // `ON` 단계: 단락 형식화 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('formatBlock', false, '<p>')
@@ -61,7 +62,7 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute paragraph format command:', error)
+          reportError(error, 'Failed to execute paragraph format command:')
           return false
         }
       },

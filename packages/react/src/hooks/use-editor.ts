@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createEditor, type CreateEditorOptions, type Editor } from 'sagak-core'
 
-export interface UseEditorOptions
-  extends Omit<CreateEditorOptions, 'container'> {}
+export type UseEditorOptions = Omit<CreateEditorOptions, 'container'>
 
 export interface UseEditorReturn {
   containerRef: React.RefObject<HTMLDivElement>
@@ -35,6 +34,12 @@ export function useEditor(options: UseEditorOptions = {}): UseEditorReturn {
       .catch((err: Error) => {
         setError(err)
       })
+
+    return () => {
+      instance.destroy()
+      editorRef.current = null
+      setReady(false)
+    }
   }, [])
 
   return {

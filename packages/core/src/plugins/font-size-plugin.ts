@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -91,21 +92,21 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
     [options.eventName ?? FontEvents.FONT_SIZE_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Font size blocked: IME composition in progress')
+          logger.warn('Font size blocked: IME composition in progress')
           return false
         }
 
         const size = extractFontSize(data)
 
         if (size === null) {
-          console.warn('Font size blocked: Invalid font size')
+          logger.warn('Font size blocked: Invalid font size')
           return false
         }
 
         const minSize = opts.minSize ?? 1
         const maxSize = opts.maxSize ?? 7
         if (size < minSize || size > maxSize) {
-          console.warn(
+          logger.warn(
             `Font size blocked: Size ${size} is outside range ${minSize}-${maxSize}`
           )
           return false
@@ -114,7 +115,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const fontSize = extractFontSize(data)
 
@@ -135,7 +136,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
 
           return result
         } catch (error) {
-          console.error('Failed to execute font size command:', error)
+          reportError(error, 'Failed to execute font size command:')
           return false
         }
       },

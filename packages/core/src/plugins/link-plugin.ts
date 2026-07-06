@@ -1,3 +1,5 @@
+import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -190,18 +192,19 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
     initialize(context: EditorContext) {
       const { eventBus } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:content:link')
       const selectionManager = context.selectionManager
 
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
         if (checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Link blocked: IME composition in progress')
+          logger.warn('Link blocked: IME composition in progress')
           return false
         }
 
         const { url } = extractLinkData(data)
 
         if (!url) {
-          console.warn('Link blocked: No URL provided')
+          logger.warn('Link blocked: No URL provided')
           return false
         }
 
@@ -209,7 +212,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
           validateUrl &&
           !isValidUrl(url, { requireProtocol, allowedProtocols })
         ) {
-          console.warn(`Link blocked: Invalid URL format "${url}"`)
+          logger.warn(`Link blocked: Invalid URL format "${url}"`)
           return false
         }
 
@@ -259,7 +262,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
           return result
         } catch (error) {
-          console.error('Failed to execute link command:', error)
+          reportError(error, 'Failed to execute link command:')
           return false
         }
       })
@@ -272,7 +275,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       const unsubUnlinkBefore = eventBus.on(unlinkEventName, 'before', () => {
         if (checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Unlink blocked: IME composition in progress')
+          logger.warn('Unlink blocked: IME composition in progress')
           return false
         }
 
@@ -295,7 +298,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
           return result
         } catch (error) {
-          console.error('Failed to execute unlink command:', error)
+          reportError(error, 'Failed to execute unlink command:')
           return false
         }
       })

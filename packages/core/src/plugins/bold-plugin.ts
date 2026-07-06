@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -44,13 +45,13 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
     [options.eventName ?? TextStyleEvents.BOLD_CLICKED]: {
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Bold blocked: IME composition in progress')
+          logger.warn('Bold blocked: IME composition in progress')
           return false
         }
         return true
       },
 
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('bold', false)
@@ -59,7 +60,7 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute bold command:', error)
+          reportError(error, 'Failed to execute bold command:')
           return false
         }
       },

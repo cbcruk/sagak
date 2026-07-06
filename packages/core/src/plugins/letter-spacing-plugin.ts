@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, FontEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -51,21 +52,21 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
     [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: {
       before: ({ selectionManager, options: opts }, data?: unknown) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Letter spacing blocked: IME composition in progress')
+          logger.warn('Letter spacing blocked: IME composition in progress')
           return false
         }
 
         const letterSpacing = extractLetterSpacing(data)
 
         if (letterSpacing === null) {
-          console.warn('Letter spacing blocked: Invalid letter spacing')
+          logger.warn('Letter spacing blocked: Invalid letter spacing')
           return false
         }
 
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const letterSpacing = extractLetterSpacing(data)
 
@@ -124,7 +125,7 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
 
           return false
         } catch (error) {
-          console.error('Failed to apply letter spacing:', error)
+          reportError(error, 'Failed to apply letter spacing:')
           return false
         }
       },

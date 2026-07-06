@@ -22,3 +22,6 @@ export type { UseRecentColorsReturn } from './use-recent-colors'
 
 export { useAutoSave } from './use-auto-save'
 export type { UseAutoSaveReturn } from './use-auto-save'
+
+export { useEditorError } from './use-editor-error'
+export type { UseEditorErrorReturn } from './use-editor-error'

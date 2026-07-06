@@ -84,10 +84,11 @@ function convertNodeToMarkdown(node: Node): string {
         case 'pre':
           result += `\`\`\`\n${el.textContent || ''}\n\`\`\`\n\n`
           break
-        case 'blockquote':
+        case 'blockquote': {
           const quoteLines = convertNodeToMarkdown(el).trim().split('\n')
           result += quoteLines.map((line) => `> ${line}`).join('\n') + '\n\n'
           break
+        }
         case 'ul':
           result += convertListToMarkdown(el, 'ul', 0) + '\n'
           break

@@ -1,5 +1,7 @@
+import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from '@/core'
 import { WysiwygEvents, CoreEvents } from '@/core'
+import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 
 /**
  * Auto-save status
@@ -92,12 +94,16 @@ export function createAutoSavePlugin(
   let isDirty = false
   let lastSavedContent = ''
 
+  // eventBus가 준비되기 전 기본 리포터(로그만). initialize에서 이벤트 발행 리포터로 교체됩니다.
+  let reportError: ErrorReporter = (error, message) =>
+    logger.error(message, error)
+
   const saveToStorage = (content: string): void => {
     try {
       localStorage.setItem(storageKey, content)
       localStorage.setItem(`${storageKey}-timestamp`, Date.now().toString())
     } catch (e) {
-      console.error('Failed to save to localStorage:', e)
+      reportError(e, 'Failed to save to localStorage:')
     }
   }
 
@@ -105,7 +111,7 @@ export function createAutoSavePlugin(
     try {
       return localStorage.getItem(storageKey)
     } catch (e) {
-      console.error('Failed to load from localStorage:', e)
+      reportError(e, 'Failed to load from localStorage:')
       return null
     }
   }
@@ -115,7 +121,7 @@ export function createAutoSavePlugin(
       localStorage.removeItem(storageKey)
       localStorage.removeItem(`${storageKey}-timestamp`)
     } catch (e) {
-      console.error('Failed to clear localStorage:', e)
+      reportError(e, 'Failed to clear localStorage:')
     }
   }
 
@@ -124,6 +130,8 @@ export function createAutoSavePlugin(
 
     initialize(context: EditorContext) {
       const { eventBus, element } = context
+
+      reportError = createErrorReporter(eventBus, 'plugin:utility:auto-save')
 
       const emitStatus = (status: AutoSaveStatus, error?: Error): void => {
         const data: AutoSaveEventData = {
@@ -208,7 +216,7 @@ export function createAutoSavePlugin(
                 eventBus.emit(CoreEvents.CONTENT_RESTORED)
               }
             } catch (e) {
-              console.error('Failed to restore content:', e)
+              reportError(e, 'Failed to restore content:')
             }
           })()
         }
@@ -274,7 +282,7 @@ export function createAutoSavePlugin(
                 eventBus.emit(CoreEvents.CONTENT_RESTORED)
               }
             } catch (e) {
-              console.error('Failed to restore content on init:', e)
+              reportError(e, 'Failed to restore content on init:')
             }
           })()
         }, 0)

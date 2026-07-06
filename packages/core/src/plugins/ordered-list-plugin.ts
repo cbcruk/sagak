@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -44,13 +45,13 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
     [options.eventName ?? ParagraphEvents.ORDERED_LIST_CLICKED]: {
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Ordered list blocked: IME composition in progress')
+          logger.warn('Ordered list blocked: IME composition in progress')
           return false
         }
         return true
       },
 
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('insertOrderedList', false)
@@ -59,7 +60,7 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute ordered list command:', error)
+          reportError(error, 'Failed to execute ordered list command:')
           return false
         }
       },

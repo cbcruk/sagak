@@ -1,3 +1,4 @@
+import { logger } from '@/core/logger'
 import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -45,14 +46,14 @@ export const createItalicPlugin = definePlugin<ItalicPluginOptions>({
       // `BEFORE` 단계: 기울임 서식 적용 가능 여부 확인
       before: ({ selectionManager, options: opts }) => {
         if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          console.warn('Italic blocked: IME composition in progress')
+          logger.warn('Italic blocked: IME composition in progress')
           return false
         }
         return true
       },
 
       // `ON` 단계: 기울임 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('italic', false)
@@ -61,7 +62,7 @@ export const createItalicPlugin = definePlugin<ItalicPluginOptions>({
           }
           return result
         } catch (error) {
-          console.error('Failed to execute italic command:', error)
+          reportError(error, 'Failed to execute italic command:')
           return false
         }
       },

@@ -1,3 +1,6 @@
+import { logger } from '@/core/logger'
+import { CoreEvents } from './events'
+
 /**
  * `EventBus` 생명주기의 이벤트 단계
  */
@@ -165,10 +168,20 @@ export class EventBus {
           return false
         }
       } catch (error) {
-        console.error(
+        logger.error(
           `Error in event handler for "${event}" (${phase} phase):`,
           error
         )
+
+        // 핸들러 오류를 ERROR 이벤트로 노출합니다.
+        // ERROR 이벤트 자체의 핸들러 오류는 재발행하지 않아 무한 루프를 막습니다.
+        if (event !== CoreEvents.ERROR) {
+          this.emit(CoreEvents.ERROR, {
+            source: `event-bus:${event}:${phase}`,
+            message: `Error in event handler for "${event}" (${phase} phase)`,
+            error,
+          })
+        }
       }
     }
 
