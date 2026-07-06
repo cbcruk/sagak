@@ -11,6 +11,11 @@ import type {
 } from './types'
 import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
 import { setLogLevel, type LogLevel } from './logger'
+import {
+  createErrorReporter,
+  type ErrorReporter,
+  type EditorErrorData,
+} from './errors'
 
 /**
  * 애플리케이션 상태
@@ -81,6 +86,14 @@ export interface EditorCoreConfig extends EditorConfig {
    * 전역 로거에 적용됩니다.
    */
   logLevel?: LogLevel
+
+  /**
+   * 오류 콜백
+   *
+   * 플러그인/코어에서 오류가 포착될 때 호출됩니다.
+   * `CoreEvents.ERROR` 이벤트를 구독하는 것과 동일합니다.
+   */
+  onError?: (data: EditorErrorData) => void
 }
 
 /**
@@ -110,6 +123,8 @@ export class EditorCore {
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
   private formattingStateCleanup?: () => void
+  private selectionErrorReporter: ErrorReporter
+  private onErrorUnsub?: () => void
 
   /**
    * `EditorCore` 인스턴스를 생성합니다
@@ -125,6 +140,22 @@ export class EditorCore {
 
     this.eventBus = new EventBus()
 
+    this.selectionErrorReporter = createErrorReporter(
+      this.eventBus,
+      'selection-manager'
+    )
+
+    if (config.onError) {
+      const { onError } = config
+      this.onErrorUnsub = this.eventBus.on(
+        CoreEvents.ERROR,
+        'on',
+        (data?: unknown) => {
+          onError(data as EditorErrorData)
+        }
+      )
+    }
+
     this.context = {
       eventBus: this.eventBus,
       config: this.config,
@@ -132,7 +163,10 @@ export class EditorCore {
     }
 
     if (config.element) {
-      this.selectionManager = new SelectionManager(config.element)
+      this.selectionManager = new SelectionManager(
+        config.element,
+        this.selectionErrorReporter
+      )
       this.context.selectionManager = this.selectionManager
       this.setupFormattingStateTracking()
     }
@@ -203,7 +237,10 @@ export class EditorCore {
       const currentArea = this.editingAreaManager.getCurrentArea()
       if (currentArea) {
         this.context.element = currentArea.getElement()
-        this.selectionManager = new SelectionManager(this.context.element)
+        this.selectionManager = new SelectionManager(
+          this.context.element,
+          this.selectionErrorReporter
+        )
         this.context.selectionManager = this.selectionManager
         this.setupFormattingStateTracking()
       }
@@ -574,6 +611,8 @@ export class EditorCore {
    */
   destroy(): void {
     this.formattingStateCleanup?.()
+    this.onErrorUnsub?.()
+    this.onErrorUnsub = undefined
 
     this.pluginManager.destroyAll()
 

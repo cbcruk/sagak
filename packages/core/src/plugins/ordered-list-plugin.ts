@@ -51,7 +51,7 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
         return true
       },
 
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('insertOrderedList', false)
@@ -60,7 +60,7 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute ordered list command:', error)
+          reportError(error, 'Failed to execute ordered list command:')
           return false
         }
       },

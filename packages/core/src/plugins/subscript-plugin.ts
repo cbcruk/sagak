@@ -53,7 +53,7 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
       },
 
       // `ON` 단계: 아래 첨자 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('subscript', false)
@@ -62,7 +62,7 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute subscript command:', error)
+          reportError(error, 'Failed to execute subscript command:')
           return false
         }
       },

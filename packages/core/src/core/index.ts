@@ -19,6 +19,9 @@ export { SelectionManager } from './selection-manager'
 export { logger, setLogLevel, getLogLevel } from './logger'
 export type { LogLevel, Logger } from './logger'
 
+export { createErrorReporter } from './errors'
+export type { EditorErrorData, ErrorReporter } from './errors'
+
 export { HistoryManager } from './history-manager'
 export type { HistoryState, HistoryManagerOptions } from './history-manager'
 

@@ -47,7 +47,7 @@ export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginO
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const character = extractCharacter(data)
           if (!character) {
@@ -76,7 +76,7 @@ export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginO
           emit(CoreEvents.STYLE_CHANGED, { style: 'specialCharacter', value: character })
           return true
         } catch (error) {
-          logger.error('Failed to insert special character:', error)
+          reportError(error, 'Failed to insert special character:')
           return false
         }
       },

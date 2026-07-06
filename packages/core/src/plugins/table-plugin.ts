@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -295,6 +296,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     name: 'content:table',
     initialize(context: EditorContext) {
       const { eventBus } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:content:table')
       const selectionManager = context.selectionManager
 
       const unsubCreateBefore = eventBus.on(
@@ -374,7 +376,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to create table:', error)
+            reportError(error, 'Failed to create table:')
             return false
           }
         }
@@ -464,7 +466,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to insert row:', error)
+            reportError(error, 'Failed to insert row:')
             return false
           }
         }
@@ -533,7 +535,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          logger.error('Failed to delete row:', error)
+          reportError(error, 'Failed to delete row:')
           return false
         }
       })
@@ -625,7 +627,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to insert column:', error)
+            reportError(error, 'Failed to insert column:')
             return false
           }
         }
@@ -709,7 +711,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to delete column:', error)
+            reportError(error, 'Failed to delete column:')
             return false
           }
         }
@@ -763,7 +765,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          logger.error('Failed to delete table:', error)
+          reportError(error, 'Failed to delete table:')
           return false
         }
       })

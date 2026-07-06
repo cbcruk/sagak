@@ -53,7 +53,7 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
       },
 
       // `ON` 단계: 내어쓰기 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('outdent', false)
@@ -62,7 +62,7 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute outdent command:', error)
+          reportError(error, 'Failed to execute outdent command:')
           return false
         }
       },

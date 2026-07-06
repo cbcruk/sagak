@@ -131,7 +131,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const align = extractAlignment(data)
 
@@ -152,7 +152,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
 
           return result
         } catch (error) {
-          logger.error('Failed to execute alignment command:', error)
+          reportError(error, 'Failed to execute alignment command:')
           return false
         }
       },

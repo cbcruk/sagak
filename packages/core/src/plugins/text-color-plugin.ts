@@ -133,7 +133,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const color = extractColor(data)
 
@@ -153,7 +153,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
 
           return result
         } catch (error) {
-          logger.error('Failed to execute text color command:', error)
+          reportError(error, 'Failed to execute text color command:')
           return false
         }
       },

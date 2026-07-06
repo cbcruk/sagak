@@ -53,7 +53,7 @@ export const createIndentPlugin = definePlugin<IndentPluginOptions>({
       },
 
       // `ON` 단계: 들여쓰기 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('indent', false)
@@ -62,7 +62,7 @@ export const createIndentPlugin = definePlugin<IndentPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute indent command:', error)
+          reportError(error, 'Failed to execute indent command:')
           return false
         }
       },

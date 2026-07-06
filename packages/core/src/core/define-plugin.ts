@@ -1,6 +1,7 @@
 import type { EventBus, EventPhase } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { EditorContext, Plugin } from './types'
+import { createErrorReporter, type ErrorReporter } from './errors'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -21,6 +22,23 @@ export interface PluginHandlerContext<
   state: TState
   /** 이벤트 발행 헬퍼 */
   emit: (event: string, data?: unknown) => boolean
+  /**
+   * 오류 보고 헬퍼
+   *
+   * 오류를 기록하고 `CoreEvents.ERROR` 이벤트를 발행합니다.
+   * 소스는 플러그인 이름으로 자동 지정됩니다.
+   *
+   * @example
+   * ```typescript
+   * on: ({ emit, reportError }) => {
+   *   try { ... } catch (error) {
+   *     reportError(error, 'Failed to execute command:')
+   *     return false
+   *   }
+   * }
+   * ```
+   */
+  reportError: ErrorReporter
 }
 
 /**
@@ -213,6 +231,11 @@ export function definePlugin<
       initialize(context: EditorContext) {
         const { eventBus, selectionManager } = context
 
+        const reportError = createErrorReporter(
+          eventBus,
+          `plugin:${definition.name}`
+        )
+
         const createHandlerContext = (): PluginHandlerContext<
           TOpts,
           TState
@@ -222,6 +245,7 @@ export function definePlugin<
           options: finalOptions,
           state,
           emit: (event, data) => eventBus.emit(event, data),
+          reportError,
         })
 
         if (definition.handlers) {

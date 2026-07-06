@@ -2,6 +2,7 @@ import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
 import type { SanitizeOption } from './editor/editing-area/sanitizer'
 import type { LogLevel } from './core/logger'
+import type { EditorErrorData } from './core/errors'
 
 import { createBoldPlugin } from './plugins/bold-plugin'
 import { createItalicPlugin } from './plugins/italic-plugin'
@@ -127,6 +128,11 @@ export interface CreateEditorOptions {
   logLevel?: LogLevel
 
   /**
+   * Error callback, invoked when a plugin/core error is caught
+   */
+  onError?: (data: EditorErrorData) => void
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -223,6 +229,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     spellCheck,
     sanitize,
     logLevel,
+    onError,
     plugins = [],
     replaceDefaultPlugins = false,
     autoSave = false,
@@ -246,6 +253,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     spellCheck,
     sanitize,
     logLevel,
+    onError,
     plugins: allPlugins,
   })
 

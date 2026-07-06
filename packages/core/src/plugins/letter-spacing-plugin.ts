@@ -66,7 +66,7 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const letterSpacing = extractLetterSpacing(data)
 
@@ -125,7 +125,7 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
 
           return false
         } catch (error) {
-          logger.error('Failed to apply letter spacing:', error)
+          reportError(error, 'Failed to apply letter spacing:')
           return false
         }
       },

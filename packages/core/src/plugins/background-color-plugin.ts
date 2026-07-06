@@ -138,7 +138,7 @@ export const createBackgroundColorPlugin =
           return true
         },
 
-        on: ({ emit }, data?: unknown) => {
+        on: ({ emit, reportError }, data?: unknown) => {
           try {
             const color = extractColor(data)
 
@@ -158,7 +158,7 @@ export const createBackgroundColorPlugin =
 
             return result
           } catch (error) {
-            logger.error('Failed to execute background color command:', error)
+            reportError(error, 'Failed to execute background color command:')
             return false
           }
         },

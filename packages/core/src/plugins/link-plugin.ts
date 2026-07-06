@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -191,6 +192,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
     initialize(context: EditorContext) {
       const { eventBus } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:content:link')
       const selectionManager = context.selectionManager
 
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
@@ -260,7 +262,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
           return result
         } catch (error) {
-          logger.error('Failed to execute link command:', error)
+          reportError(error, 'Failed to execute link command:')
           return false
         }
       })
@@ -296,7 +298,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
           return result
         } catch (error) {
-          logger.error('Failed to execute unlink command:', error)
+          reportError(error, 'Failed to execute unlink command:')
           return false
         }
       })

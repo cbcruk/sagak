@@ -24,7 +24,7 @@ export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptio
         return true
       },
 
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
 
@@ -52,7 +52,7 @@ export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptio
           emit(CoreEvents.STYLE_CHANGED, { style: 'horizontalRule' })
           return true
         } catch (error) {
-          logger.error('Failed to insert horizontal rule:', error)
+          reportError(error, 'Failed to insert horizontal rule:')
           return false
         }
       },

@@ -53,7 +53,7 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
       },
 
       // `ON` 단계: 위 첨자 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('superscript', false)
@@ -62,7 +62,7 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute superscript command:', error)
+          reportError(error, 'Failed to execute superscript command:')
           return false
         }
       },

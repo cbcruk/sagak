@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { FindReplaceEvents, CoreEvents } from '@/core'
 
@@ -302,6 +303,7 @@ export function createFindReplacePlugin(
 
     initialize(context: EditorContext) {
       const { eventBus, config } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:utility:find-replace')
       const selectionManager = context.selectionManager
 
       editorElement =
@@ -378,7 +380,7 @@ export function createFindReplacePlugin(
 
           return true
         } catch (error) {
-          logger.error('Failed to find text:', error)
+          reportError(error, 'Failed to find text:')
           return false
         }
       })
@@ -527,7 +529,7 @@ export function createFindReplacePlugin(
 
             return true
           } catch (error) {
-            logger.error('Failed to replace text:', error)
+            reportError(error, 'Failed to replace text:')
             return false
           }
         }
@@ -603,7 +605,7 @@ export function createFindReplacePlugin(
 
             return true
           } catch (error) {
-            logger.error('Failed to replace all text:', error)
+            reportError(error, 'Failed to replace all text:')
             return false
           }
         }
@@ -637,7 +639,7 @@ export function createFindReplacePlugin(
 
           return true
         } catch (error) {
-          logger.error('Failed to clear find highlights:', error)
+          reportError(error, 'Failed to clear find highlights:')
           return false
         }
       })

@@ -47,10 +47,14 @@
 7. **프로덕션 소스의 `console.*`** — 137개의 실제 `console.warn`/`console.error` 호출(나머지는 JSDoc 예시)이 소비자 콘솔에 그대로 노출됨. 억제 수단 없음.
    → 레벨 인식 로거(`logger.ts`) 도입. 137개 호출을 `logger.warn`/`logger.error`로 교체. 기본 레벨 `'warn'`(기존 동작·테스트 호환 유지)이며 `setLogLevel('silent')` 또는 `createEditor({ logLevel: 'silent' })`로 프로덕션 로그 억제 가능. `logger`/`setLogLevel`/`getLogLevel`/`LogLevel` export.
 
+## 🟢 P2 — 에러 피드백 경로 (이번 브랜치에서 수정 완료)
+
+8. **다수 플러그인/코어의 에러 삼킴** — `catch` 후 `logger.error`만 하고 소비자에게 알릴 경로가 없었음.
+   → `CoreEvents.ERROR` 이벤트 + `EditorErrorData`(`{ source, message, error }`) 도입. `createErrorReporter`가 **기존 `logger.error(message, error)` 로깅을 그대로 유지**하면서 이벤트를 발행. 137개 삼켜지던 에러 사이트를 소스 태깅과 함께 이벤트로 노출(플러그인·selection-manager·wysiwyg-area·plugin-manager). `EventBus`는 핸들러 throw를 중앙에서 포착해 ERROR로 발행(재귀 가드 포함). `createEditor({ onError })`/`EditorCore` 콜백과 React `useEditorError` 훅 제공.
+
 ## 🟡 향후 개선 과제 (미착수 — 별도 논의 필요)
 
-- **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. ROADMAP Phase 8(자체 렌더링 전환)에서 인지 중이나 근본 리스크.
-- **다수 플러그인의 에러 삼킴** — `catch` 후 `logger.error`만 하고 사용자 피드백 경로 부재. 에러 이벤트/콜백 도입 검토.
+- **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. ROADMAP Phase 8(자체 렌더링 전환)에서 인지 중이나 근본 리스크. 남은 최상위 우선순위 과제.
 - **에러 처리** — 다수 플러그인이 `catch` 후 `console.error`만 하고 삼킴. 사용자 피드백 경로 부재.
 - **`no-explicit-any` 경고 62건** — 대부분 테스트/스토리 파일. 점진적 정리 권장.
 
@@ -64,6 +68,7 @@
 | HTML 살균 | `packages/core/src/editor/editing-area/sanitizer.ts`(신규), `wysiwyg-area.ts`, `editing-area-manager.ts`, `editor-core.ts`, `create-editor.ts`, `types.ts`, `index.ts` |
 | 회귀/신규 테스트 | `packages/core/test/core/editor-core.browser.test.ts`(+2), `packages/core/test/editor/editing-area/sanitizer.browser.test.ts`(신규 +11), `wysiwyg-area.browser.test.ts`(+2) |
 | 로거 추상화 | `packages/core/src/core/logger.ts`(신규), 코어 30개 파일의 `console.*`→`logger.*`, `editor-core.ts`, `create-editor.ts`, `index.ts`(core/root) |
+| 에러 피드백 | `packages/core/src/core/errors.ts`(신규), `event-bus.ts`, `define-plugin.ts`, `selection-manager.ts`, `plugin-manager.ts`, `wysiwyg-area.ts`, 플러그인 다수, `editor-core.ts`, `create-editor.ts`, `packages/react/src/hooks/use-editor-error.ts`(신규) |
 | CI/도구 | `.github/workflows/ci.yml`, `.github/workflows/deploy-storybook.yml`, `eslint.config.js`, `package.json`(root/core/react) |
 
-검증: `pnpm build` ✅ · `pnpm typecheck` ✅ · `pnpm lint` ✅(0 errors) · 코어 877 테스트 ✅ · 리액트 4 테스트 ✅
+검증: `pnpm build` ✅ · `pnpm typecheck` ✅ · `pnpm lint` ✅(0 errors) · 코어 883 테스트 ✅ · 리액트 4 테스트 ✅

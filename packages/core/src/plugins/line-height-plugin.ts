@@ -66,7 +66,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const lineHeight = extractLineHeight(data)
 
@@ -128,7 +128,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
           return false
         } catch (error) {
-          logger.error('Failed to apply line height:', error)
+          reportError(error, 'Failed to apply line height:')
           return false
         }
       },

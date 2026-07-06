@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
 
@@ -277,6 +278,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
     initialize(context: EditorContext) {
       const { eventBus } = context
+      const reportError = createErrorReporter(eventBus, 'plugin:content:image')
       const selectionManager = context.selectionManager
 
       const unsubInsertBefore = eventBus.on(
@@ -380,7 +382,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to insert image:', error)
+            reportError(error, 'Failed to insert image:')
             return false
           }
         }
@@ -492,7 +494,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
             return true
           } catch (error) {
-            logger.error('Failed to update image:', error)
+            reportError(error, 'Failed to update image:')
             return false
           }
         }
@@ -539,7 +541,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
           return true
         } catch (error) {
-          logger.error('Failed to delete image:', error)
+          reportError(error, 'Failed to delete image:')
           return false
         }
       })

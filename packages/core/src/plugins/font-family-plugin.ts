@@ -93,7 +93,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const fontFamily = extractFontFamily(data)
 
@@ -113,7 +113,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
 
           return result
         } catch (error) {
-          logger.error('Failed to execute font family command:', error)
+          reportError(error, 'Failed to execute font family command:')
           return false
         }
       },

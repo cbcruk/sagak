@@ -52,7 +52,7 @@ export const createUnorderedListPlugin =
           return true
         },
 
-        on: ({ emit }) => {
+        on: ({ emit, reportError }) => {
           try {
             emit(CoreEvents.CAPTURE_SNAPSHOT)
             const result = document.execCommand('insertUnorderedList', false)
@@ -61,7 +61,7 @@ export const createUnorderedListPlugin =
             }
             return result
           } catch (error) {
-            logger.error('Failed to execute unordered list command:', error)
+            reportError(error, 'Failed to execute unordered list command:')
             return false
           }
         },

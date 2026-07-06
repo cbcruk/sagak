@@ -53,7 +53,7 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
       },
 
       // `ON` 단계: 단락 형식화 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('formatBlock', false, '<p>')
@@ -62,7 +62,7 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute paragraph format command:', error)
+          reportError(error, 'Failed to execute paragraph format command:')
           return false
         }
       },

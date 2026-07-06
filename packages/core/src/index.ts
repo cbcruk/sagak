@@ -9,6 +9,8 @@ export { PluginManager } from './core/plugin-manager'
 export { SelectionManager } from './core/selection-manager'
 export { logger, setLogLevel, getLogLevel } from './core/logger'
 export type { LogLevel, Logger } from './core/logger'
+export { createErrorReporter } from './core/errors'
+export type { EditorErrorData, ErrorReporter } from './core/errors'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,

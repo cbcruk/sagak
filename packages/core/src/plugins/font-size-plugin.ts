@@ -115,7 +115,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const fontSize = extractFontSize(data)
 
@@ -136,7 +136,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
 
           return result
         } catch (error) {
-          logger.error('Failed to execute font size command:', error)
+          reportError(error, 'Failed to execute font size command:')
           return false
         }
       },

@@ -51,7 +51,7 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
         return true
       },
 
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('bold', false)
@@ -60,7 +60,7 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute bold command:', error)
+          reportError(error, 'Failed to execute bold command:')
           return false
         }
       },

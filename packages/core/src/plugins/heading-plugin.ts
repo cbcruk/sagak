@@ -143,7 +143,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
         return true
       },
 
-      on: ({ emit }, data?: unknown) => {
+      on: ({ emit, reportError }, data?: unknown) => {
         try {
           const level = extractHeadingLevel(data)
 
@@ -167,7 +167,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
 
           return result
         } catch (error) {
-          logger.error('Failed to execute heading command:', error)
+          reportError(error, 'Failed to execute heading command:')
           return false
         }
       },

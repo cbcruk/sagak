@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
@@ -25,12 +26,16 @@ export class WysiwygArea implements EditingArea {
   private documentSelectionChangeHandler?: () => void
   private resizeObserver?: ResizeObserver
   private sanitize: Sanitizer
+  private reportError: ErrorReporter
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
     this.selectionManager = config.selectionManager
     this.eventBus = config.eventBus
     this.sanitize = resolveSanitizer(config.sanitize)
+    this.reportError = this.eventBus
+      ? createErrorReporter(this.eventBus, 'wysiwyg-area')
+      : (error, message) => logger.error(message, error)
 
     this.element = document.createElement('div')
     this.element.contentEditable = 'true'
@@ -176,7 +181,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertHTML', false, html)
       return true
     } catch (e) {
-      logger.error('HTML 삽입 실패:', e)
+      this.reportError(e, 'HTML 삽입 실패:')
       return false
     }
   }
@@ -194,7 +199,7 @@ export class WysiwygArea implements EditingArea {
       document.execCommand('insertText', false, text)
       return true
     } catch (e) {
-      logger.error('텍스트 삽입 실패:', e)
+      this.reportError(e, '텍스트 삽입 실패:')
       return false
     }
   }
@@ -206,7 +211,7 @@ export class WysiwygArea implements EditingArea {
     try {
       return document.execCommand(command, false, value)
     } catch (e) {
-      logger.error(`명령 ${command} 실행 실패:`, e)
+      this.reportError(e, `명령 ${command} 실행 실패:`)
       return false
     }
   }

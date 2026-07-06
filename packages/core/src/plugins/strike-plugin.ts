@@ -53,7 +53,7 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
       },
 
       // `ON` 단계: 취소선 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('strikeThrough', false)
@@ -62,7 +62,7 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute strike command:', error)
+          reportError(error, 'Failed to execute strike command:')
           return false
         }
       },

@@ -53,7 +53,7 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
       },
 
       // `ON` 단계: 밑줄 명령 실행
-      on: ({ emit }) => {
+      on: ({ emit, reportError }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
           const result = document.execCommand('underline', false)
@@ -62,7 +62,7 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
           }
           return result
         } catch (error) {
-          logger.error('Failed to execute underline command:', error)
+          reportError(error, 'Failed to execute underline command:')
           return false
         }
       },

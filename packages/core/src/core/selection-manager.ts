@@ -1,4 +1,6 @@
 import { logger } from '@/core/logger'
+import type { ErrorReporter } from './errors'
+
 /**
  * `SelectionManager` - 텍스트 선택과 범위 작업을 관리합니다
  *
@@ -32,14 +34,18 @@ export class SelectionManager {
   private element: HTMLElement
   private savedRange: Range | null = null
   private isComposing = false
+  private reportError: ErrorReporter
 
   /**
    * `SelectionManager`를 생성합니다
    *
    * @param element 선택 영역을 관리할 편집 가능한 요소
+   * @param onError 오류 보고 함수 (미지정 시 `logger.error`로만 기록)
    */
-  constructor(element: HTMLElement) {
+  constructor(element: HTMLElement, onError?: ErrorReporter) {
     this.element = element
+    this.reportError =
+      onError ?? ((error, message) => logger.error(message, error))
     this.initializeCompositionListeners()
   }
 
@@ -142,7 +148,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      logger.error('Failed to restore selection:', error)
+      this.reportError(error, 'Failed to restore selection:')
       return false
     }
   }
@@ -212,7 +218,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      logger.error('Failed to insert HTML:', error)
+      this.reportError(error, 'Failed to insert HTML:')
       return false
     }
   }
@@ -257,7 +263,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      logger.error('Failed to insert text:', error)
+      this.reportError(error, 'Failed to insert text:')
       return false
     }
   }
@@ -287,7 +293,7 @@ export class SelectionManager {
       range.deleteContents()
       return true
     } catch (error) {
-      logger.error('Failed to delete contents:', error)
+      this.reportError(error, 'Failed to delete contents:')
       return false
     }
   }
@@ -323,7 +329,7 @@ export class SelectionManager {
 
       return true
     } catch (error) {
-      logger.error('Failed to select node:', error)
+      this.reportError(error, 'Failed to select node:')
       return false
     }
   }
@@ -358,7 +364,7 @@ export class SelectionManager {
       selection.addRange(range)
       return true
     } catch (error) {
-      logger.error('Failed to select node contents:', error)
+      this.reportError(error, 'Failed to select node contents:')
       return false
     }
   }
