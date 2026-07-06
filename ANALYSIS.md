@@ -52,9 +52,10 @@
 8. **다수 플러그인/코어의 에러 삼킴** — `catch` 후 `logger.error`만 하고 소비자에게 알릴 경로가 없었음.
    → `CoreEvents.ERROR` 이벤트 + `EditorErrorData`(`{ source, message, error }`) 도입. `createErrorReporter`가 **기존 `logger.error(message, error)` 로깅을 그대로 유지**하면서 이벤트를 발행. 137개 삼켜지던 에러 사이트를 소스 태깅과 함께 이벤트로 노출(플러그인·selection-manager·wysiwyg-area·plugin-manager). `EventBus`는 핸들러 throw를 중앙에서 포착해 ERROR로 발행(재귀 가드 포함). `createEditor({ onError })`/`EditorCore` 콜백과 React `useEditorError` 훅 제공.
 
-## 🟡 향후 개선 과제 (미착수 — 별도 논의 필요)
+## 🟡 향후 개선 과제
 
-- **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. ROADMAP Phase 8(자체 렌더링 전환)에서 인지 중이나 근본 리스크. 남은 최상위 우선순위 과제.
+- **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. 남은 최상위 우선순위 과제.
+  → 탈피 설계 문서 작성 완료: [`docs/execcommand-migration.md`](docs/execcommand-migration.md). 커맨드 추상화 레이어(P0) → 정렬·블록(P1) → 인라인 서식 엔진(P2) → 리스트/들여쓰기(P3) → 잔존 제거(P4)의 5단계 점진 전환. 히스토리(스냅샷)·삽입(Range)은 이미 execCommand와 무관함을 확인.
 - **에러 처리** — 다수 플러그인이 `catch` 후 `console.error`만 하고 삼킴. 사용자 피드백 경로 부재.
 - **`no-explicit-any` 경고 62건** — 대부분 테스트/스토리 파일. 점진적 정리 권장.
 

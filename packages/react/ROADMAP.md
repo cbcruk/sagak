@@ -206,6 +206,17 @@
 
 > contentEditable 대신 자체 렌더링 시스템으로 전환
 
+> **선행 작업**: `execCommand` 탈피 — 설계 문서 [`docs/execcommand-migration.md`](../../docs/execcommand-migration.md) 참고.
+> contentEditable을 유지한 채 서식 엔진을 자체 커맨드 레이어로 교체하는 중간 단계.
+
+### 8.0 execCommand 탈피 (선행)
+
+- [ ] 커맨드 추상화 골격(`CommandRegistry`) + 위임 어댑터 (P0)
+- [ ] 정렬/블록 포맷 자체 구현 (P1)
+- [ ] 인라인 서식 엔진(토글/스타일/링크) (P2)
+- [ ] 리스트/들여쓰기 (P3)
+- [ ] `execCommand`/`queryCommand*` 잔존 제거 (P4)
+
 ### 8.1 블록 아키텍처
 
 - [ ] 블록 데이터 모델 설계
