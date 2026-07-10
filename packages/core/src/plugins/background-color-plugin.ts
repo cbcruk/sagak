@@ -138,7 +138,7 @@ export const createBackgroundColorPlugin =
           return true
         },
 
-        on: ({ emit, reportError }, data?: unknown) => {
+        on: ({ emit, reportError, runCommand }, data?: unknown) => {
           try {
             const color = extractColor(data)
 
@@ -146,8 +146,7 @@ export const createBackgroundColorPlugin =
               return false
             }
 
-            emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const result = document.execCommand('backColor', false, color)
+            const result = runCommand('backColor', color)
 
             if (result) {
               emit(CoreEvents.STYLE_CHANGED, {

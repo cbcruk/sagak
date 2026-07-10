@@ -51,10 +51,9 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('insertOrderedList', false)
+          const result = runCommand('insertOrderedList')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'orderedList' })
           }

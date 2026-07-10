@@ -1,7 +1,13 @@
 import { logger } from '@/core/logger'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
-import { ContentEvents, CoreEvents } from '@/core'
+import {
+  ContentEvents,
+  CoreEvents,
+  CommandRegistry,
+  registerLegacyExecCommands,
+  runCommand as runCmd,
+} from '@/core'
 
 /**
  * 링크 플러그인 설정 옵션
@@ -195,6 +201,16 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
       const reportError = createErrorReporter(eventBus, 'plugin:content:link')
       const selectionManager = context.selectionManager
 
+      const commandRegistry =
+        context.commandRegistry ??
+        (() => {
+          const registry = new CommandRegistry(context)
+          registerLegacyExecCommands(registry)
+          return registry
+        })()
+      const runCommand = (name: string, value?: string): boolean =>
+        runCmd(commandRegistry, eventBus, name, value)
+
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
         if (checkComposition && selectionManager?.getIsComposing()) {
           logger.warn('Link blocked: IME composition in progress')
@@ -231,8 +247,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
             return false
           }
 
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('createLink', false, url)
+          const result = runCommand('createLink', url)
 
           if (result) {
             if (target) {
@@ -286,8 +301,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       const unsubUnlinkOn = eventBus.on(unlinkEventName, 'on', () => {
         try {
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('unlink', false)
+          const result = runCommand('unlink')
 
           if (result) {
             eventBus.emit(CoreEvents.STYLE_CHANGED, {

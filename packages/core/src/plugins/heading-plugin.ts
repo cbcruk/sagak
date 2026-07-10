@@ -143,7 +143,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }, data?: unknown) => {
+      on: ({ emit, reportError, runCommand }, data?: unknown) => {
         try {
           const level = extractHeadingLevel(data)
 
@@ -151,12 +151,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand(
-            'formatBlock',
-            false,
-            `<h${level}>`
-          )
+          const result = runCommand('formatBlock', `<h${level}>`)
 
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, {

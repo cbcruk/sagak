@@ -115,7 +115,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }, data?: unknown) => {
+      on: ({ emit, reportError, runCommand }, data?: unknown) => {
         try {
           const fontSize = extractFontSize(data)
 
@@ -123,9 +123,8 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const sizeStr = String(fontSize)
-          const result = document.execCommand('fontSize', false, sizeStr)
+          const result = runCommand('fontSize', sizeStr)
 
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, {

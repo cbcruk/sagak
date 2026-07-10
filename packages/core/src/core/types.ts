@@ -1,5 +1,6 @@
 import type { EventBus } from './event-bus'
 import type { SelectionManager } from './selection-manager'
+import type { CommandRegistry } from './command-registry'
 
 /**
  * 편집 모드
@@ -91,6 +92,9 @@ export interface EditorContext {
 
   /** 모드 전환을 위한 편집 영역 관리자 */
   editingAreaManager?: EditingAreaManager
+
+  /** 커맨드 실행/조회를 위한 커맨드 레지스트리 */
+  commandRegistry?: CommandRegistry
 
   /** 편집 가능한 요소 */
   element?: HTMLElement

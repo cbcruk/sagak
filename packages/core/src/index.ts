@@ -11,6 +11,12 @@ export { logger, setLogLevel, getLogLevel } from './core/logger'
 export type { LogLevel, Logger } from './core/logger'
 export { createErrorReporter } from './core/errors'
 export type { EditorErrorData, ErrorReporter } from './core/errors'
+export { CommandRegistry, runCommand } from './core/command-registry'
+export type {
+  CommandContext,
+  CommandHandler,
+  CommandStateQuery,
+} from './core/command-registry'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,

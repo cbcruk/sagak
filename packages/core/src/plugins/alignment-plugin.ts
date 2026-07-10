@@ -131,7 +131,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }, data?: unknown) => {
+      on: ({ emit, reportError, runCommand }, data?: unknown) => {
         try {
           const align = extractAlignment(data)
 
@@ -139,9 +139,8 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
           const command = ALIGNMENT_COMMANDS[align]
-          const result = document.execCommand(command, false)
+          const result = runCommand(command)
 
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, {
