@@ -14,6 +14,9 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
   beforeEach(() => {
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     element = document.createElement('div')
     element.contentEditable = 'true'
     element.innerHTML = '<p>Hello World</p>'
@@ -76,9 +79,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     })
 
     it('H1으로 formatBlock 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -91,17 +92,14 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       // When: H1 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 1 })
 
-      // Then: formatBlock '<h1>' 명령이 실행되어야 함
+      // Then: 블록이 h1으로 변환되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h1>')
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('p')).toBeNull()
+      expect(element.querySelector('h1')?.textContent).toBe('Hello World')
     })
 
     it('H2로 formatBlock 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -114,17 +112,14 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       // When: H2 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 2 })
 
-      // Then: formatBlock '<h2>' 명령이 실행되어야 함
+      // Then: 블록이 h2로 변환되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h2>')
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('p')).toBeNull()
+      expect(element.querySelector('h2')?.textContent).toBe('Hello World')
     })
 
     it('H3으로 formatBlock 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -137,11 +132,10 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       // When: H3 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 3 })
 
-      // Then: formatBlock '<h3>' 명령이 실행되어야 함
+      // Then: 블록이 h3으로 변환되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h3>')
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('p')).toBeNull()
+      expect(element.querySelector('h3')?.textContent).toBe('Hello World')
     })
 
     it('모든 제목 레벨(1-6)을 지원해야 함', () => {
@@ -167,9 +161,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     })
 
     it('객체 래퍼 없이 직접 숫자를 받아야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -182,11 +174,9 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       // When: 숫자 형태로 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', 2)
 
-      // Then: formatBlock '<h2>' 명령이 실행되어야 함
+      // Then: 블록이 h2로 변환되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h2>')
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('h2')?.textContent).toBe('Hello World')
     })
 
     it('제목 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {

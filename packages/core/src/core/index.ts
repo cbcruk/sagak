@@ -37,6 +37,7 @@ export {
   registerNativeAlignment,
   NATIVE_PRECEDENCE,
 } from './commands/native-alignment'
+export { registerNativeFormatBlock } from './commands/native-format-block'
 
 export { HistoryManager } from './history-manager'
 export type { HistoryState, HistoryManagerOptions } from './history-manager'
