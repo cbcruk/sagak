@@ -56,6 +56,7 @@
 
 - **`execCommand` 전면 의존** — 브라우저에서 deprecated. 생성 마크업이 브라우저별로 달라 일관성/유지보수가 어려움. 남은 최상위 우선순위 과제.
   → 탈피 설계 문서 작성 완료: [`docs/execcommand-migration.md`](docs/execcommand-migration.md). 커맨드 추상화 레이어(P0) → 정렬·블록(P1) → 인라인 서식 엔진(P2) → 리스트/들여쓰기(P3) → 잔존 제거(P4)의 5단계 점진 전환. 히스토리(스냅샷)·삽입(Range)은 이미 execCommand와 무관함을 확인.
+  → 외부 레퍼런스(Wordgard, ProseMirror/CodeMirror 저자) 비교 분석: [`docs/comparison-wordgard.md`](docs/comparison-wordgard.md). 커맨드 핸들러 precedence·정규형 마크 정렬 아이디어를 마이그레이션 설계에 반영.
 - **에러 처리** — 다수 플러그인이 `catch` 후 `console.error`만 하고 삼킴. 사용자 피드백 경로 부재.
 - **`no-explicit-any` 경고 62건** — 대부분 테스트/스토리 파일. 점진적 정리 권장.
 

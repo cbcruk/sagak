@@ -98,6 +98,32 @@ on: ({ runCommand }) => runCommand('bold')
 - **테스트 용이**: 각 커맨드가 `(입력 HTML + 선택) → 출력 HTML`의 순수 단위로 테스트됩니다.
 - **콘텐츠 모델 강제**: 자체 구현은 `<strong>`/`<em>` 등 원하는 태그만 생성하도록 보장합니다.
 
+### 3.3 커맨드 핸들러 precedence (Wordgard 차용)
+
+> 참고: [`docs/comparison-wordgard.md`](./comparison-wordgard.md) — Wordgard의 `Command` 개념.
+
+단일 구현으로 고정하지 말고, 하나의 커맨드에 **여러 핸들러를 precedence 순으로** 등록할 수 있게
+설계합니다. 핸들러는 처리하면 결과를 반환하고, 처리하지 않으면 `false`/`undefined`를 반환해 다음
+핸들러로 넘깁니다.
+
+```typescript
+type CommandHandler = (ctx: CommandContext, value?: string) => boolean | undefined
+
+interface CommandRegistry {
+  /** 커맨드에 핸들러를 등록 (높은 precedence가 먼저 시도됨) */
+  register(name: string, handler: CommandHandler, prec?: number): () => void
+  /** precedence 순으로 핸들러를 시도, 처리한 핸들러가 있으면 true */
+  run(name: string, value?: string): boolean
+  queryState(name: string): boolean
+}
+```
+
+이점:
+- **오버라이드 가능**: 소비자/플러그인이 특정 상황(예: 표 안의 Enter)에서만 기본 동작을 가로챌 수 있음.
+- **위임 어댑터와 자연스럽게 공존**: `LegacyExecCommand`를 최저 precedence로 두고, 자체 구현을 더 높은
+  precedence로 얹으면 **커맨드 단위 점진 교체**가 그대로 precedence 등록/해제로 표현됨.
+- 기존 `EventBus`의 `before/on/after`와 상보적: precedence는 "누가 먼저 처리하고 멈출지"를 다룸.
+
 ## 4. 커맨드별 대체 전략
 
 ### 4.1 정렬 (가장 쉬움 — 파일럿 후보)
@@ -110,6 +136,21 @@ on: ({ runCommand }) => runCommand('bold')
 - **해제(토글 off)**: 선택 영역이 이미 해당 서식이면 래퍼를 제거(unwrap)하고 경계에서 분할.
 - **상태 조회**: 선택 anchor에서 조상 방향으로 해당 태그 존재 여부 탐색 → `queryCommandState` 대체.
 - 경계 분할·부분 선택·중첩 처리가 핵심 난점. 이 로직은 공용 `inline-format.ts` 유틸로 추출.
+
+#### 정규형 마크 정렬 (Wordgard 차용)
+
+> 참고: [`docs/comparison-wordgard.md`](./comparison-wordgard.md) — Wordgard의 flat·ordered marks.
+
+HTML은 인라인 래퍼의 중첩 순서가 자유로워(`<strong><em>` vs `<em><strong>`) 같은 의미의 콘텐츠가
+여러 마크업으로 표현됩니다. 이는 diff·비교·테스트·살균을 어렵게 만드는 근본 원인입니다.
+
+자체 인라인 엔진에서는 각 마크에 **rank를 부여**하고, 겹치는 마크의 래퍼를 **항상 rank 순으로 중첩**하도록
+정규화합니다. 예: `strong`(60) > `em`(50) > `underline`(40) …이면 항상 `<strong><em><u>…` 순.
+- 결과: 동일 의미 콘텐츠 = **단일 정규 표현(canonical form)**. 스냅샷 테스트가 안정적이고, 인접 동일-마크
+  텍스트 병합/언랩이 결정론적이 됨.
+- 이 정렬 규칙을 `inline-format.ts`에 rank 테이블로 두고, 적용·해제·병합 모든 경로가 이를 따르게 함.
+- 살균 계층(`sanitizer.ts`)과도 정합: 붙여넣기 HTML을 파싱 후 동일 rank 정렬로 정규화하면 외부 마크업의
+  편차를 흡수.
 
 ### 4.3 인라인 스타일 (foreColor/backColor/fontName/fontSize)
 `<span style="...">`로 래핑합니다. `fontSize`는 현재 `execCommand`의 레거시 1–7 스케일을 쓰는데,
@@ -140,16 +181,17 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 각 단계 종료 시 **전체 테스트 통과 + Storybook 육안 확인**을 게이트로 둡니다.
 
 - **P0 — 커맨드 추상화 골격**
-  - `CommandRegistry`, `EditorCommand`, `CommandContext` 정의
-  - 모든 명령을 `execCommand`에 위임하는 `LegacyExecCommand` 어댑터 구현
+  - `CommandRegistry`(precedence 핸들러, §3.3), `EditorCommand`, `CommandContext` 정의
+  - 모든 명령을 `execCommand`에 위임하는 `LegacyExecCommand` 어댑터를 **최저 precedence**로 등록
   - 핸들러 컨텍스트에 `runCommand`/`queryState` 추가, 플러그인을 `runCommand`로 이행
   - `queryCommandState` 추적을 `commands.queryState`로 이행
   - **동작·마크업 불변**(순수 리팩터). 회귀 안전망 확보.
 
-- **P1 — 저난이도 자체 구현**: 정렬(4.1) → 블록 포맷(4.4). 각 커맨드 단위 테스트 추가.
+- **P1 — 저난이도 자체 구현**: 정렬(4.1) → 블록 포맷(4.4). 각 커맨드를 `LegacyExecCommand`보다 높은
+  precedence로 얹어 교체. 각 커맨드 단위 테스트 추가.
 
-- **P2 — 인라인 서식 엔진**: `inline-format.ts`(래핑/언랩/경계 분할/상태 조회) 구현 후
-  토글 6종 + 스타일 4종(4.2/4.3) + 링크(4.5)를 교체. 이 단계가 가장 많은 테스트를 요구.
+- **P2 — 인라인 서식 엔진**: `inline-format.ts`(래핑/언랩/경계 분할/상태 조회 + **정규형 마크 rank 정렬**,
+  §4.2) 구현 후 토글 6종 + 스타일 4종(4.2/4.3) + 링크(4.5)를 교체. 이 단계가 가장 많은 테스트를 요구.
 
 - **P3 — 리스트/들여쓰기**(4.6): 트리 조작 구현 또는 범위 축소 결정.
 
