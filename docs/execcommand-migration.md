@@ -176,6 +176,9 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 호출 대상만 `commands.queryState(name)`로 바꿉니다. 초기에는 `queryState`가 `queryCommandState`를
 위임하므로 동작 불변, 이후 4.2의 조상 탐색 기반으로 교체.
 
+> **연계**: `queryState`가 반환하는 파생 값은 signal(`computed`)로 노출하기에 가장 자연스러운 대상입니다.
+> 파생 상태 계층을 signal로 구성하는 방안은 [`signals-adoption.md`](./signals-adoption.md) 참고.
+
 ## 6. 단계별 로드맵
 
 각 단계 종료 시 **전체 테스트 통과 + Storybook 육안 확인**을 게이트로 둡니다.
