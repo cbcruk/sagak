@@ -17,6 +17,14 @@ export type {
   CommandHandler,
   CommandStateQuery,
 } from './core/command-registry'
+export {
+  registerDefaultCommands,
+  createDefaultCommandRegistry,
+} from './core/default-commands'
+export {
+  registerNativeAlignment,
+  NATIVE_PRECEDENCE,
+} from './core/commands/native-alignment'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,

@@ -29,6 +29,14 @@ export type {
   CommandStateQuery,
 } from './command-registry'
 export { registerLegacyExecCommands } from './legacy-exec-command'
+export {
+  registerDefaultCommands,
+  createDefaultCommandRegistry,
+} from './default-commands'
+export {
+  registerNativeAlignment,
+  NATIVE_PRECEDENCE,
+} from './commands/native-alignment'
 
 export { HistoryManager } from './history-manager'
 export type { HistoryState, HistoryManagerOptions } from './history-manager'

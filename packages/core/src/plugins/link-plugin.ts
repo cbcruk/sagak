@@ -4,8 +4,7 @@ import type { Plugin, EditorContext } from '@/core'
 import {
   ContentEvents,
   CoreEvents,
-  CommandRegistry,
-  registerLegacyExecCommands,
+  createDefaultCommandRegistry,
   runCommand as runCmd,
 } from '@/core'
 
@@ -202,12 +201,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
       const selectionManager = context.selectionManager
 
       const commandRegistry =
-        context.commandRegistry ??
-        (() => {
-          const registry = new CommandRegistry(context)
-          registerLegacyExecCommands(registry)
-          return registry
-        })()
+        context.commandRegistry ?? createDefaultCommandRegistry(context)
       const runCommand = (name: string, value?: string): boolean =>
         runCmd(commandRegistry, eventBus, name, value)
 

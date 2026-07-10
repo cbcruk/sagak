@@ -2,18 +2,8 @@ import type { EventBus, EventPhase } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
-import { CommandRegistry, runCommand } from './command-registry'
-import { registerLegacyExecCommands } from './legacy-exec-command'
-
-/**
- * 공유 레지스트리가 없을 때 사용할 폴백 커맨드 레지스트리를 생성합니다
- * (레거시 execCommand 어댑터 등록 포함)
- */
-function createFallbackRegistry(context: EditorContext): CommandRegistry {
-  const registry = new CommandRegistry(context)
-  registerLegacyExecCommands(registry)
-  return registry
-}
+import { runCommand } from './command-registry'
+import { createDefaultCommandRegistry } from './default-commands'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -267,9 +257,9 @@ export function definePlugin<
         )
 
         // EditorCore가 공유 레지스트리를 제공하지 않은 경우(예: 단독 사용/테스트)
-        // 레거시 execCommand 어댑터가 등록된 폴백 레지스트리를 생성합니다.
+        // 기본 커맨드 구성이 등록된 폴백 레지스트리를 생성합니다.
         const commandRegistry =
-          context.commandRegistry ?? createFallbackRegistry(context)
+          context.commandRegistry ?? createDefaultCommandRegistry(context)
 
         const createHandlerContext = (): PluginHandlerContext<
           TOpts,

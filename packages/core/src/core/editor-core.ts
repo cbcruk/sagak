@@ -17,7 +17,7 @@ import {
   type EditorErrorData,
 } from './errors'
 import { CommandRegistry } from './command-registry'
-import { registerLegacyExecCommands } from './legacy-exec-command'
+import { registerDefaultCommands } from './default-commands'
 
 /**
  * 애플리케이션 상태
@@ -165,11 +165,11 @@ export class EditorCore {
       element: config.element,
     }
 
-    // 커맨드 레지스트리 생성 + 레거시 execCommand 어댑터 등록.
+    // 커맨드 레지스트리 생성 + 기본 커맨드(레거시 어댑터 + 자체 구현) 등록.
     // context를 라이브 참조로 보유하므로, 이후 element/selectionManager가
     // 갱신되어도 실행 시점의 최신 값을 사용합니다.
     this.commandRegistry = new CommandRegistry(this.context)
-    registerLegacyExecCommands(this.commandRegistry)
+    registerDefaultCommands(this.commandRegistry)
     this.context.commandRegistry = this.commandRegistry
 
     if (config.element) {
