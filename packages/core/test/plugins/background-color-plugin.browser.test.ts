@@ -16,6 +16,9 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'
@@ -82,8 +85,6 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('hex 색상으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -98,17 +99,15 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         color: '#FFFF00',
       })
 
-      // Then: execCommand가 backColor로 호출됨
+      // Then: 선택 구간이 배경색 span으로 감싸짐
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('backColor', false, '#FFFF00')
-
-      execCommandSpy.mockRestore()
+      const span = element.querySelector('span') as HTMLElement
+      expect(span.style.backgroundColor).toBe('rgb(255, 255, 0)')
+      expect(span.textContent).toBe('Hello')
     })
 
     it('rgb 색상으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -123,21 +122,14 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         color: 'rgb(255, 255, 0)',
       })
 
-      // Then: execCommand가 rgb 색상으로 호출됨
+      // Then: 선택 구간이 배경색 span으로 감싸짐
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith(
-        'backColor',
-        false,
-        'rgb(255, 255, 0)'
-      )
-
-      execCommandSpy.mockRestore()
+      const span = element.querySelector('span') as HTMLElement
+      expect(span.style.backgroundColor).toBe('rgb(255, 255, 0)')
     })
 
     it('색상 이름으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -152,11 +144,10 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         color: 'yellow',
       })
 
-      // Then: execCommand가 색상 이름으로 호출됨
+      // Then: 선택 구간이 배경색 span으로 감싸짐
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('backColor', false, 'yellow')
-
-      execCommandSpy.mockRestore()
+      const span = element.querySelector('span') as HTMLElement
+      expect(span.style.backgroundColor).toBe('yellow')
     })
 
     it('색상 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {

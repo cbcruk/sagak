@@ -37,7 +37,7 @@ const EXCLUSIVE_PAIRS: Record<string, string> = {
 /**
  * 노드에서 호스트까지 조상 중 서식 요소를 찾습니다
  */
-function findFormatAncestor(
+export function findFormatAncestor(
   node: Node,
   format: InlineFormat,
   host: HTMLElement
@@ -60,7 +60,7 @@ function findFormatAncestor(
 /**
  * 범위 경계가 텍스트 노드 중간이면 분할하여 노드 경계에 맞춥니다
  */
-function splitBoundaries(range: Range): void {
+export function splitBoundaries(range: Range): void {
   const { endContainer, endOffset } = range
   if (
     endContainer.nodeType === Node.TEXT_NODE &&
@@ -87,7 +87,7 @@ function splitBoundaries(range: Range): void {
  *
  * `splitBoundaries` 이후에 호출하면 모든 노드가 범위에 완전히 포함됩니다.
  */
-function textNodesInRange(range: Range, host: HTMLElement): Text[] {
+export function textNodesInRange(range: Range, host: HTMLElement): Text[] {
   const nodes: Text[] = []
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT)
 
@@ -118,7 +118,7 @@ function textNodesInRange(range: Range, host: HTMLElement): Text[] {
  * 분리해, 반환되는 `ancestor`가 `node`로 이어지는 가지만 담게 합니다.
  * 중간 래퍼(예: 제거 대상이 아닌 다른 서식)는 보존됩니다.
  */
-function isolateBranch(node: Node, ancestor: HTMLElement): HTMLElement {
+export function isolateBranch(node: Node, ancestor: HTMLElement): HTMLElement {
   let current: Node = node
 
   while (current.parentNode !== ancestor.parentNode) {
@@ -149,7 +149,7 @@ function isolateBranch(node: Node, ancestor: HTMLElement): HTMLElement {
 /**
  * 요소를 제거하고 자식을 그 자리에 남깁니다
  */
-function unwrapElement(el: HTMLElement): void {
+export function unwrapElement(el: HTMLElement): void {
   const parent = el.parentNode
   if (!parent) return
 
@@ -195,7 +195,7 @@ function mergeAdjacent(el: HTMLElement): void {
 /**
  * 텍스트 노드들 위로 선택 영역을 복원합니다
  */
-function restoreSelection(nodes: Text[]): void {
+export function restoreSelection(nodes: Text[]): void {
   if (nodes.length === 0) return
 
   const selection = window.getSelection()

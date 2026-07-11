@@ -3,6 +3,7 @@ import { registerLegacyExecCommands } from './legacy-exec-command'
 import { registerNativeAlignment } from './commands/native-alignment'
 import { registerNativeFormatBlock } from './commands/native-format-block'
 import { registerNativeInlineToggles } from './commands/native-inline-toggles'
+import { registerNativeInlineStyles } from './commands/native-inline-styles'
 
 /**
  * 기본 커맨드 구성을 레지스트리에 등록합니다
@@ -12,6 +13,8 @@ import { registerNativeInlineToggles } from './commands/native-inline-toggles'
  *   - 정렬: `justifyLeft/Center/Right/Full`
  *   - 블록 포맷: `formatBlock` (`p`, `h1`~`h6`, `blockquote` 등)
  *   - 인라인 토글: `bold/italic/underline/strikeThrough/subscript/superscript`
+ *   - 인라인 스타일: `foreColor/backColor/fontName` + 링크 `createLink/unlink`
+ *     (`fontSize`는 레거시 유지 — 1–7 스케일 전환과 함께 별도 단계에서 처리)
  *
  * @param registry 커맨드 레지스트리
  * @returns 모든 등록을 해제하는 함수
@@ -21,8 +24,10 @@ export function registerDefaultCommands(registry: CommandRegistry): () => void {
   const unsubAlignment = registerNativeAlignment(registry)
   const unsubFormatBlock = registerNativeFormatBlock(registry)
   const unsubInlineToggles = registerNativeInlineToggles(registry)
+  const unsubInlineStyles = registerNativeInlineStyles(registry)
 
   return () => {
+    unsubInlineStyles()
     unsubInlineToggles()
     unsubFormatBlock()
     unsubAlignment()

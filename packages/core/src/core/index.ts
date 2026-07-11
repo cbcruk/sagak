@@ -39,6 +39,13 @@ export {
 } from './commands/native-alignment'
 export { registerNativeFormatBlock } from './commands/native-format-block'
 export { registerNativeInlineToggles } from './commands/native-inline-toggles'
+export { registerNativeInlineStyles } from './commands/native-inline-styles'
+export {
+  applyInlineStyle,
+  applyLink,
+  removeLink,
+} from './commands/inline-style'
+export type { InlineStyleProp } from './commands/inline-style'
 export { toggleInlineFormat, INLINE_FORMATS } from './commands/inline-format'
 export type { InlineFormat } from './commands/inline-format'
 
