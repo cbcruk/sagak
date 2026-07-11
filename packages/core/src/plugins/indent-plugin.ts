@@ -53,10 +53,9 @@ export const createIndentPlugin = definePlugin<IndentPluginOptions>({
       },
 
       // `ON` 단계: 들여쓰기 명령 실행
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('indent', false)
+          const result = runCommand('indent')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
           }

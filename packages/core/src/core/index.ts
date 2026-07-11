@@ -22,6 +22,23 @@ export type { LogLevel, Logger } from './logger'
 export { createErrorReporter } from './errors'
 export type { EditorErrorData, ErrorReporter } from './errors'
 
+export { CommandRegistry, runCommand } from './command-registry'
+export type {
+  CommandContext,
+  CommandHandler,
+  CommandStateQuery,
+} from './command-registry'
+export { registerLegacyExecCommands } from './legacy-exec-command'
+export {
+  registerDefaultCommands,
+  createDefaultCommandRegistry,
+} from './default-commands'
+export {
+  registerNativeAlignment,
+  NATIVE_PRECEDENCE,
+} from './commands/native-alignment'
+export { registerNativeFormatBlock } from './commands/native-format-block'
+
 export { HistoryManager } from './history-manager'
 export type { HistoryState, HistoryManagerOptions } from './history-manager'
 

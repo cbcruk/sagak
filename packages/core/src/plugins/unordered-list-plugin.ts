@@ -52,10 +52,9 @@ export const createUnorderedListPlugin =
           return true
         },
 
-        on: ({ emit, reportError }) => {
+        on: ({ emit, reportError, runCommand }) => {
           try {
-            emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const result = document.execCommand('insertUnorderedList', false)
+            const result = runCommand('insertUnorderedList')
             if (result) {
               emit(CoreEvents.STYLE_CHANGED, { style: 'unorderedList' })
             }

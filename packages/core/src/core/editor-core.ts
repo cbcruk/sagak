@@ -16,6 +16,8 @@ import {
   type ErrorReporter,
   type EditorErrorData,
 } from './errors'
+import { CommandRegistry } from './command-registry'
+import { registerDefaultCommands } from './default-commands'
 
 /**
  * 애플리케이션 상태
@@ -125,6 +127,7 @@ export class EditorCore {
   private formattingStateCleanup?: () => void
   private selectionErrorReporter: ErrorReporter
   private onErrorUnsub?: () => void
+  private commandRegistry: CommandRegistry
 
   /**
    * `EditorCore` 인스턴스를 생성합니다
@@ -161,6 +164,13 @@ export class EditorCore {
       config: this.config,
       element: config.element,
     }
+
+    // 커맨드 레지스트리 생성 + 기본 커맨드(레거시 어댑터 + 자체 구현) 등록.
+    // context를 라이브 참조로 보유하므로, 이후 element/selectionManager가
+    // 갱신되어도 실행 시점의 최신 값을 사용합니다.
+    this.commandRegistry = new CommandRegistry(this.context)
+    registerDefaultCommands(this.commandRegistry)
+    this.context.commandRegistry = this.commandRegistry
 
     if (config.element) {
       this.selectionManager = new SelectionManager(
@@ -346,6 +356,13 @@ export class EditorCore {
    */
   getPluginManager(): PluginManager {
     return this.pluginManager
+  }
+
+  /**
+   * `CommandRegistry` 인스턴스를 가져옵니다
+   */
+  getCommandRegistry(): CommandRegistry {
+    return this.commandRegistry
   }
 
   /**
@@ -559,12 +576,12 @@ export class EditorCore {
         }
 
         const formattingState = {
-          isBold: document.queryCommandState('bold'),
-          isItalic: document.queryCommandState('italic'),
-          isUnderline: document.queryCommandState('underline'),
-          isStrikeThrough: document.queryCommandState('strikeThrough'),
-          isSubscript: document.queryCommandState('subscript'),
-          isSuperscript: document.queryCommandState('superscript'),
+          isBold: this.commandRegistry.queryState('bold'),
+          isItalic: this.commandRegistry.queryState('italic'),
+          isUnderline: this.commandRegistry.queryState('underline'),
+          isStrikeThrough: this.commandRegistry.queryState('strikeThrough'),
+          isSubscript: this.commandRegistry.queryState('subscript'),
+          isSuperscript: this.commandRegistry.queryState('superscript'),
         }
 
         if (!isStateEqual(formattingState, lastFormattingState)) {

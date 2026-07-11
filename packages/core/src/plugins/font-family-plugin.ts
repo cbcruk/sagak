@@ -93,7 +93,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }, data?: unknown) => {
+      on: ({ emit, reportError, runCommand }, data?: unknown) => {
         try {
           const fontFamily = extractFontFamily(data)
 
@@ -101,8 +101,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('fontName', false, fontFamily)
+          const result = runCommand('fontName', fontFamily)
 
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, {

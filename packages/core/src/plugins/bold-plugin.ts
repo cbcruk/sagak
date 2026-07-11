@@ -51,10 +51,9 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('bold', false)
+          const result = runCommand('bold')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
           }
