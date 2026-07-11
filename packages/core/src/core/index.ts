@@ -38,6 +38,9 @@ export {
   NATIVE_PRECEDENCE,
 } from './commands/native-alignment'
 export { registerNativeFormatBlock } from './commands/native-format-block'
+export { registerNativeInlineToggles } from './commands/native-inline-toggles'
+export { toggleInlineFormat, INLINE_FORMATS } from './commands/inline-format'
+export type { InlineFormat } from './commands/inline-format'
 
 export { HistoryManager } from './history-manager'
 export type { HistoryState, HistoryManagerOptions } from './history-manager'

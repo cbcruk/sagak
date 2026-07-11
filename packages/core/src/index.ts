@@ -26,6 +26,12 @@ export {
   NATIVE_PRECEDENCE,
 } from './core/commands/native-alignment'
 export { registerNativeFormatBlock } from './core/commands/native-format-block'
+export { registerNativeInlineToggles } from './core/commands/native-inline-toggles'
+export {
+  toggleInlineFormat,
+  INLINE_FORMATS,
+} from './core/commands/inline-format'
+export type { InlineFormat } from './core/commands/inline-format'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,
