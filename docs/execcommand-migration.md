@@ -1,6 +1,7 @@
 # `execCommand` 탈피 설계 문서
 
-> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8
+> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8,
+> [`reference-codemirror-state.md`](./reference-codemirror-state.md) (functional core 원칙·델타 인코딩)
 
 ## 1. 배경과 목적
 
@@ -222,7 +223,7 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 
 - 블록 기반 렌더링(ROADMAP Phase 8) 자체 — 본 문서는 contentEditable을 유지한 채 서식 엔진만 교체.
 - 협업 편집(CRDT/OT), 실시간 동기화.
-- Undo/Redo 재설계(현행 스냅샷 유지).
+- Undo/Redo 재설계(현행 스냅샷 유지). 델타 기반 undo 대안은 [`reference-codemirror-state.md`](./reference-codemirror-state.md) §2 참고.
 
 ---
 
