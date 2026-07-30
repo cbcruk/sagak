@@ -246,35 +246,32 @@ function removeFormat(
 }
 
 /**
- * 현재 선택 범위에 인라인 서식을 토글합니다
+ * 주어진 범위에 인라인 서식을 토글합니다 (코어 — 전역 selection 미접근)
  *
- * 범위의 모든 텍스트가 이미 해당 서식이면 해제하고, 아니면 (미서식 구간에)
- * 적용합니다. 적용 시 항상 정규 태그(`strong`, `em` 등)를 생성하며 인접한
- * 동일 서식 요소는 병합합니다. 해제는 별칭 태그(`b`, `i` 등)도 인식합니다.
+ * functional core / imperative shell 원칙에 따라, 이 함수는 전역
+ * `window.getSelection()`을 읽거나 쓰지 않고 인자로 받은 `Range`에만
+ * 동작합니다. 선택 읽기/복원은 셸(`toggleInlineFormat`)이 담당합니다.
  *
+ * @param range 대상 범위 (호출자가 소유; 경계 분할로 변형될 수 있음)
  * @param formatName `INLINE_FORMATS`의 키 (예: `'bold'`)
- * @returns 성공 시 `true`, 판단 불가 시 `undefined` (레거시 위임)
- *          — 선택 없음 / collapsed 커서(타이핑 상태는 레거시가 처리) /
- *            편집 호스트 없음 / 텍스트 노드 없음
+ * @returns 영향받은 텍스트 노드 배열, 판단 불가 시 `null`
+ *          — collapsed 범위 / 편집 호스트 없음 / 텍스트 노드 없음
  */
-export function toggleInlineFormat(formatName: string): boolean | undefined {
+export function toggleFormatInRange(
+  range: Range,
+  formatName: string
+): Text[] | null {
   const format = INLINE_FORMATS[formatName]
-  if (!format) return undefined
+  if (!format) return null
 
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) return undefined
-
-  const range = selection.getRangeAt(0)
-  // collapsed 커서의 토글(타이핑 상태)은 execCommand의 내부 상태가 필요하므로
-  // 레거시에 위임합니다
-  if (range.collapsed) return undefined
+  if (range.collapsed) return null
 
   const host = closestEditableHost(range.commonAncestorContainer)
-  if (!host) return undefined
+  if (!host) return null
 
   splitBoundaries(range)
   const nodes = textNodesInRange(range, host)
-  if (nodes.length === 0) return undefined
+  if (nodes.length === 0) return null
 
   const allFormatted = nodes.every((node) =>
     findFormatAncestor(node, format, host)
@@ -290,6 +287,27 @@ export function toggleInlineFormat(formatName: string): boolean | undefined {
     }
     applyFormat(nodes, format, host)
   }
+
+  return nodes
+}
+
+/**
+ * 현재 선택 범위에 인라인 서식을 토글합니다 (셸)
+ *
+ * 전역 selection을 읽어 코어(`toggleFormatInRange`)에 넘기고, 처리 후
+ * 영향받은 텍스트 노드 위로 선택을 복원합니다.
+ *
+ * @param formatName `INLINE_FORMATS`의 키 (예: `'bold'`)
+ * @returns 성공 시 `true`, 판단 불가 시 `undefined` (레거시 위임)
+ *          — 선택 없음 / collapsed 커서(타이핑 상태는 레거시가 처리) /
+ *            편집 호스트 없음 / 텍스트 노드 없음
+ */
+export function toggleInlineFormat(formatName: string): boolean | undefined {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return undefined
+
+  const nodes = toggleFormatInRange(selection.getRangeAt(0), formatName)
+  if (!nodes) return undefined
 
   restoreSelection(nodes)
   return true

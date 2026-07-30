@@ -59,16 +59,18 @@ function mergeAdjacentIdentical(el: HTMLElement): void {
 }
 
 /**
- * 선택 준비: 경계 분할 후 범위의 텍스트 노드를 수집합니다
+ * 범위 준비: 경계 분할 후 범위의 텍스트 노드를 수집합니다 (코어)
  *
- * @returns 텍스트 노드와 호스트, 판단 불가 시 `null` (레거시 위임)
+ * functional core / imperative shell 원칙에 따라 전역 selection에
+ * 접근하지 않고 인자로 받은 `Range`에만 동작합니다.
+ *
+ * @param range 대상 범위 (경계 분할로 변형될 수 있음)
+ * @returns 텍스트 노드와 호스트, 판단 불가 시 `null`
  */
-function prepareSelection(): { nodes: Text[]; host: HTMLElement } | null {
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) return null
-
-  const range = selection.getRangeAt(0)
-  // collapsed 커서의 스타일 적용(타이핑 상태)은 레거시에 위임합니다
+function prepareRange(
+  range: Range
+): { nodes: Text[]; host: HTMLElement } | null {
+  // collapsed 범위의 스타일 적용(타이핑 상태)은 레거시에 위임합니다
   if (range.collapsed) return null
 
   const host = closestEditableHost(range.commonAncestorContainer)
@@ -79,6 +81,16 @@ function prepareSelection(): { nodes: Text[]; host: HTMLElement } | null {
   if (nodes.length === 0) return null
 
   return { nodes, host }
+}
+
+/**
+ * 전역 selection에서 범위를 읽어 준비합니다 (셸)
+ */
+function prepareSelection(): { nodes: Text[]; host: HTMLElement } | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+
+  return prepareRange(selection.getRangeAt(0))
 }
 
 /**
@@ -100,8 +112,37 @@ export function applyInlineStyle(
   const prepared = prepareSelection()
   if (!prepared) return undefined
 
-  const { nodes } = prepared
+  restoreSelection(applyStyleToNodes(prepared.nodes, prop, value))
+  return true
+}
 
+/**
+ * 주어진 범위에 인라인 스타일을 적용합니다 (코어 — 전역 selection 미접근)
+ *
+ * @param range 대상 범위 (경계 분할로 변형될 수 있음)
+ * @param prop 적용할 CSS 속성
+ * @param value 적용할 값
+ * @returns 영향받은 텍스트 노드, 판단 불가 시 `null`
+ */
+export function applyInlineStyleInRange(
+  range: Range,
+  prop: InlineStyleProp,
+  value: string
+): Text[] | null {
+  const prepared = prepareRange(range)
+  if (!prepared) return null
+
+  return applyStyleToNodes(prepared.nodes, prop, value)
+}
+
+/**
+ * 텍스트 노드들에 인라인 스타일을 적용합니다
+ */
+function applyStyleToNodes(
+  nodes: Text[],
+  prop: InlineStyleProp,
+  value: string
+): Text[] {
   for (const node of nodes) {
     const parent = node.parentElement
 
@@ -118,8 +159,7 @@ export function applyInlineStyle(
     }
   }
 
-  restoreSelection(nodes)
-  return true
+  return nodes
 }
 
 /**
@@ -136,8 +176,32 @@ export function applyLink(url: string): boolean | undefined {
   const prepared = prepareSelection()
   if (!prepared) return undefined
 
-  const { nodes, host } = prepared
+  restoreSelection(applyLinkToNodes(prepared.nodes, prepared.host, url))
+  return true
+}
 
+/**
+ * 주어진 범위를 링크로 만듭니다 (코어 — 전역 selection 미접근)
+ *
+ * @param range 대상 범위 (경계 분할로 변형될 수 있음)
+ * @param url 링크 URL
+ * @returns 영향받은 텍스트 노드, 판단 불가 시 `null`
+ */
+export function applyLinkInRange(range: Range, url: string): Text[] | null {
+  const prepared = prepareRange(range)
+  if (!prepared) return null
+
+  return applyLinkToNodes(prepared.nodes, prepared.host, url)
+}
+
+/**
+ * 텍스트 노드들을 링크로 감쌉니다 (기존 링크는 `href` 갱신)
+ */
+function applyLinkToNodes(
+  nodes: Text[],
+  host: HTMLElement,
+  url: string
+): Text[] {
   for (const node of nodes) {
     const existing = findFormatAncestor(node, LINK_FORMAT, host)
 
@@ -152,8 +216,7 @@ export function applyLink(url: string): boolean | undefined {
     }
   }
 
-  restoreSelection(nodes)
-  return true
+  return nodes
 }
 
 /**
@@ -169,8 +232,27 @@ export function removeLink(): boolean | undefined {
   const prepared = prepareSelection()
   if (!prepared) return undefined
 
-  const { nodes, host } = prepared
+  restoreSelection(removeLinkFromNodes(prepared.nodes, prepared.host))
+  return true
+}
 
+/**
+ * 주어진 범위의 링크를 해제합니다 (코어 — 전역 selection 미접근)
+ *
+ * @param range 대상 범위 (경계 분할로 변형될 수 있음)
+ * @returns 영향받은 텍스트 노드, 판단 불가 시 `null`
+ */
+export function removeLinkInRange(range: Range): Text[] | null {
+  const prepared = prepareRange(range)
+  if (!prepared) return null
+
+  return removeLinkFromNodes(prepared.nodes, prepared.host)
+}
+
+/**
+ * 텍스트 노드들을 감싼 링크를 (필요 시 분할하여) 제거합니다
+ */
+function removeLinkFromNodes(nodes: Text[], host: HTMLElement): Text[] {
   for (const node of nodes) {
     let anchor = findFormatAncestor(node, LINK_FORMAT, host)
     while (anchor) {
@@ -180,6 +262,5 @@ export function removeLink(): boolean | undefined {
     }
   }
 
-  restoreSelection(nodes)
-  return true
+  return nodes
 }

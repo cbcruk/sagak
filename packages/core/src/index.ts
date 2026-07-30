@@ -32,10 +32,14 @@ export {
   applyInlineStyle,
   applyLink,
   removeLink,
+  applyInlineStyleInRange,
+  applyLinkInRange,
+  removeLinkInRange,
 } from './core/commands/inline-style'
 export type { InlineStyleProp } from './core/commands/inline-style'
 export {
   toggleInlineFormat,
+  toggleFormatInRange,
   INLINE_FORMATS,
 } from './core/commands/inline-format'
 export type { InlineFormat } from './core/commands/inline-format'

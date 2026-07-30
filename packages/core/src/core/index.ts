@@ -44,9 +44,16 @@ export {
   applyInlineStyle,
   applyLink,
   removeLink,
+  applyInlineStyleInRange,
+  applyLinkInRange,
+  removeLinkInRange,
 } from './commands/inline-style'
 export type { InlineStyleProp } from './commands/inline-style'
-export { toggleInlineFormat, INLINE_FORMATS } from './commands/inline-format'
+export {
+  toggleInlineFormat,
+  toggleFormatInRange,
+  INLINE_FORMATS,
+} from './commands/inline-format'
 export type { InlineFormat } from './commands/inline-format'
 
 export { HistoryManager } from './history-manager'
