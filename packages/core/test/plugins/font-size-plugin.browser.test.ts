@@ -16,6 +16,9 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'
@@ -82,7 +85,6 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
     it('제공된 크기로 fontSize 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -95,11 +97,11 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       // When: FONT_SIZE_CHANGED 이벤트 발생
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })
 
-      // Then: execCommand가 호출되고 성공 반환
+      // Then: 선택 구간이 글꼴 크기 span으로 감싸짐 (1-7 스케일 → CSS)
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('fontSize', false, '3')
-
-      execCommandSpy.mockRestore()
+      const span = element.querySelector('span') as HTMLElement
+      expect(span.style.fontSize).toBe('16px')
+      expect(span.textContent).toBe('Hello')
     })
 
     it('크기 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {

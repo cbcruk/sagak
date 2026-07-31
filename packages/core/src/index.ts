@@ -16,6 +16,7 @@ export type {
   CommandContext,
   CommandHandler,
   CommandStateQuery,
+  CommandValueQuery,
 } from './core/command-registry'
 export {
   registerDefaultCommands,
@@ -29,6 +30,16 @@ export { registerNativeFormatBlock } from './core/commands/native-format-block'
 export { registerNativeInlineToggles } from './core/commands/native-inline-toggles'
 export { registerNativeInlineStyles } from './core/commands/native-inline-styles'
 export { registerNativeList } from './core/commands/native-list'
+export {
+  registerNativeFontSize,
+  legacyFontSizeToCss,
+  cssToLegacyFontSize,
+} from './core/commands/native-font-size'
+export { registerNativeQueries } from './core/commands/native-query'
+export {
+  insertHTMLAtSelection,
+  insertTextAtSelection,
+} from './core/commands/range-insert'
 export {
   toggleList,
   shiftIndent,

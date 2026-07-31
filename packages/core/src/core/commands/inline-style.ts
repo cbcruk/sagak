@@ -12,7 +12,11 @@ import {
 /**
  * 인라인 스타일로 적용 가능한 CSS 속성
  */
-export type InlineStyleProp = 'color' | 'backgroundColor' | 'fontFamily'
+export type InlineStyleProp =
+  | 'color'
+  | 'backgroundColor'
+  | 'fontFamily'
+  | 'fontSize'
 
 /**
  * 링크 서식 정의 (조상 탐색용)

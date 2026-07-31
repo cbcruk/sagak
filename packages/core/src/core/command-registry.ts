@@ -31,6 +31,13 @@ export type CommandHandler = (
  */
 export type CommandStateQuery = (ctx: CommandContext) => boolean | undefined
 
+/**
+ * 커맨드 값 조회 함수
+ *
+ * @returns 현재 값, 또는 판단하지 않으면 `undefined`
+ */
+export type CommandValueQuery = (ctx: CommandContext) => string | undefined
+
 interface HandlerEntry {
   handler: CommandHandler
   prec: number
@@ -39,6 +46,12 @@ interface HandlerEntry {
 
 interface StateEntry {
   query: CommandStateQuery
+  prec: number
+  seq: number
+}
+
+interface ValueEntry {
+  query: CommandValueQuery
   prec: number
   seq: number
 }
@@ -61,6 +74,7 @@ interface StateEntry {
 export class CommandRegistry {
   private handlers: Map<string, HandlerEntry[]> = new Map()
   private stateQueries: Map<string, StateEntry[]> = new Map()
+  private valueQueries: Map<string, ValueEntry[]> = new Map()
   private context: CommandContext
   private seq = 0
 
@@ -147,6 +161,47 @@ export class CommandRegistry {
     }
 
     return false
+  }
+
+  /**
+   * 커맨드 값 조회 함수를 등록합니다
+   */
+  registerValueQuery(
+    name: string,
+    query: CommandValueQuery,
+    prec = 0
+  ): () => void {
+    const entry: ValueEntry = { query, prec, seq: this.seq++ }
+    const list = this.valueQueries.get(name) ?? []
+    list.push(entry)
+    list.sort((a, b) => b.prec - a.prec || b.seq - a.seq)
+    this.valueQueries.set(name, list)
+
+    return () => {
+      const current = this.valueQueries.get(name)
+      if (!current) return
+      const next = current.filter((e) => e !== entry)
+      if (next.length === 0) this.valueQueries.delete(name)
+      else this.valueQueries.set(name, next)
+    }
+  }
+
+  /**
+   * 커맨드의 현재 값을 조회합니다
+   *
+   * @param name 커맨드 이름
+   * @returns 현재 값 (판단한 조회 함수가 없으면 빈 문자열)
+   */
+  queryValue(name: string): string {
+    const list = this.valueQueries.get(name)
+    if (!list) return ''
+
+    for (const { query } of list) {
+      const result = query(this.context)
+      if (result !== undefined) return result
+    }
+
+    return ''
   }
 
   /**
