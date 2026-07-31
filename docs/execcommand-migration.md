@@ -199,8 +199,26 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 
 - **P3 — 리스트/들여쓰기**(4.6): 트리 조작 구현 또는 범위 축소 결정.
 
-- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 0 확인.
-  `LegacyExecCommand` 어댑터 제거. `insertHTML` 폴백을 Range 경로로 일원화.
+- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 제거,
+  `insertHTML`/`insertText` 폴백을 Range 경로로 일원화, `fontSize`·상태/값 조회 자체 구현.
+  `LegacyExecCommand` 어댑터 제거는 아래 §6.1의 선행 조건이 해결된 뒤에 가능합니다.
+
+### 6.1 어댑터 제거의 선행 조건 — 보류 중인 서식 상태(stored marks)
+
+P4까지 진행하면 레거시 어댑터가 실제로 처리하는 경우는 **collapsed 커서에서의 토글/스타일**
+하나로 좁혀집니다. 이 경로만 남는 이유는 `execCommand`가 브라우저 내부에 "다음 입력에 적용할
+서식" 상태를 들고 있기 때문입니다 — 커서만 둔 채 굵게를 켜고 타이핑하면 굵게로 입력되는 동작.
+
+자체 구현으로 대체하려면 그 상태를 에디터가 직접 소유해야 합니다.
+
+- **보류 서식 상태**: 현재 커서 위치와 그때 토글된 서식 집합을 상태로 보관
+  (ProseMirror의 stored marks, CM6의 상태 필드에 해당)
+- **입력 시 적용**: `beforeinput`/`input`을 가로채 삽입되는 텍스트에 보류 서식을 적용
+- **무효화**: 선택이 이동하거나 문서가 바뀌면 보류 상태를 폐기
+- **상태 조회 반영**: `queryState`가 보류 서식도 활성으로 보고해야 툴바 표시가 일치
+
+이는 단순 커맨드 교체가 아니라 **에디터 상태 모델의 확장**이므로 별도 단계로 다룹니다.
+이 상태가 도입되면 어댑터와 `WysiwygArea.execCommand` 탈출구를 함께 제거할 수 있습니다.
 
 ## 7. 리스크와 완화
 
