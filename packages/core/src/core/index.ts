@@ -34,6 +34,7 @@ export {
   registerDefaultCommands,
   createDefaultCommandRegistry,
 } from './default-commands'
+export type { DefaultCommandsOptions } from './default-commands'
 export {
   registerNativeAlignment,
   NATIVE_PRECEDENCE,

@@ -22,6 +22,7 @@ export {
   registerDefaultCommands,
   createDefaultCommandRegistry,
 } from './core/default-commands'
+export type { DefaultCommandsOptions } from './core/default-commands'
 export {
   registerNativeAlignment,
   NATIVE_PRECEDENCE,

@@ -96,6 +96,15 @@ export interface EditorCoreConfig extends EditorConfig {
    * `CoreEvents.ERROR` 이벤트를 구독하는 것과 동일합니다.
    */
   onError?: (data: EditorErrorData) => void
+
+  /**
+   * 레거시 `execCommand` 폴백 사용 여부 (기본값: `true`)
+   *
+   * 자체 구현이 판단할 수 없는 상황에서 브라우저 기본 동작으로 위임하는
+   * 안전망입니다. `false`로 두면 deprecated된 `execCommand`/`queryCommand*`를
+   * 전혀 호출하지 않습니다.
+   */
+  legacyFallback?: boolean
 }
 
 /**
@@ -165,11 +174,13 @@ export class EditorCore {
       element: config.element,
     }
 
-    // 커맨드 레지스트리 생성 + 기본 커맨드(레거시 어댑터 + 자체 구현) 등록.
+    // 커맨드 레지스트리 생성 + 기본 커맨드(자체 구현 + 선택적 레거시 폴백) 등록.
     // context를 라이브 참조로 보유하므로, 이후 element/selectionManager가
     // 갱신되어도 실행 시점의 최신 값을 사용합니다.
     this.commandRegistry = new CommandRegistry(this.context)
-    registerDefaultCommands(this.commandRegistry)
+    registerDefaultCommands(this.commandRegistry, {
+      legacyFallback: config.legacyFallback,
+    })
     this.context.commandRegistry = this.commandRegistry
 
     if (config.element) {
