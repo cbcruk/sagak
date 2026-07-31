@@ -4,6 +4,7 @@ import { registerNativeAlignment } from './commands/native-alignment'
 import { registerNativeFormatBlock } from './commands/native-format-block'
 import { registerNativeInlineToggles } from './commands/native-inline-toggles'
 import { registerNativeInlineStyles } from './commands/native-inline-styles'
+import { registerNativeList } from './commands/native-list'
 
 /**
  * 기본 커맨드 구성을 레지스트리에 등록합니다
@@ -15,6 +16,7 @@ import { registerNativeInlineStyles } from './commands/native-inline-styles'
  *   - 인라인 토글: `bold/italic/underline/strikeThrough/subscript/superscript`
  *   - 인라인 스타일: `foreColor/backColor/fontName` + 링크 `createLink/unlink`
  *     (`fontSize`는 레거시 유지 — 1–7 스케일 전환과 함께 별도 단계에서 처리)
+ *   - 리스트·들여쓰기: `insertOrderedList/insertUnorderedList/indent/outdent`
  *
  * @param registry 커맨드 레지스트리
  * @returns 모든 등록을 해제하는 함수
@@ -25,8 +27,10 @@ export function registerDefaultCommands(registry: CommandRegistry): () => void {
   const unsubFormatBlock = registerNativeFormatBlock(registry)
   const unsubInlineToggles = registerNativeInlineToggles(registry)
   const unsubInlineStyles = registerNativeInlineStyles(registry)
+  const unsubList = registerNativeList(registry)
 
   return () => {
+    unsubList()
     unsubInlineStyles()
     unsubInlineToggles()
     unsubFormatBlock()

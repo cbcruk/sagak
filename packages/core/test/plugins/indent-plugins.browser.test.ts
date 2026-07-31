@@ -14,6 +14,9 @@ describe('IndentPlugin', () => {
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'
@@ -76,9 +79,7 @@ describe('IndentPlugin', () => {
     })
 
     it('should execute indent command', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -93,9 +94,9 @@ describe('IndentPlugin', () => {
 
       // Then: indent 명령이 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('indent', false)
-
-      execCommandSpy.mockRestore()
+      expect((element.querySelector('p') as HTMLElement).style.marginLeft).toBe(
+        '40px'
+      )
     })
 
     it('should emit STYLE_CHANGED event after successful indent', () => {

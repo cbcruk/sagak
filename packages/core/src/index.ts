@@ -28,6 +28,15 @@ export {
 export { registerNativeFormatBlock } from './core/commands/native-format-block'
 export { registerNativeInlineToggles } from './core/commands/native-inline-toggles'
 export { registerNativeInlineStyles } from './core/commands/native-inline-styles'
+export { registerNativeList } from './core/commands/native-list'
+export {
+  toggleList,
+  shiftIndent,
+  toggleListForBlocks,
+  shiftIndentForBlocks,
+  INDENT_STEP,
+} from './core/commands/list-format'
+export type { ListType } from './core/commands/list-format'
 export {
   applyInlineStyle,
   applyLink,

@@ -40,6 +40,15 @@ export {
 export { registerNativeFormatBlock } from './commands/native-format-block'
 export { registerNativeInlineToggles } from './commands/native-inline-toggles'
 export { registerNativeInlineStyles } from './commands/native-inline-styles'
+export { registerNativeList } from './commands/native-list'
+export {
+  toggleList,
+  shiftIndent,
+  toggleListForBlocks,
+  shiftIndentForBlocks,
+  INDENT_STEP,
+} from './commands/list-format'
+export type { ListType } from './commands/list-format'
 export {
   applyInlineStyle,
   applyLink,
