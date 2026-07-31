@@ -41,6 +41,14 @@ export {
   insertTextAtSelection,
 } from './core/commands/range-insert'
 export {
+  installStoredMarks,
+  togglePendingFormat,
+  getPendingFormat,
+  clearPendingFormats,
+  hasPendingFormats,
+  insertTextWithPendingFormats,
+} from './core/commands/stored-marks'
+export {
   toggleList,
   shiftIndent,
   toggleListForBlocks,

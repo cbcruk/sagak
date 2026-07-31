@@ -8,6 +8,7 @@ import {
   insertHTMLAtSelection,
   insertTextAtSelection,
 } from '@/core/commands/range-insert'
+import { installStoredMarks } from '@/core/commands/stored-marks'
 
 export interface WysiwygAreaConfig extends EditingAreaConfig {
   /**
@@ -31,6 +32,7 @@ export class WysiwygArea implements EditingArea {
   private resizeObserver?: ResizeObserver
   private sanitize: Sanitizer
   private reportError: ErrorReporter
+  private storedMarksCleanup?: () => void
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
@@ -66,6 +68,8 @@ export class WysiwygArea implements EditingArea {
 
     this.container.appendChild(this.element)
     this.initializeEventListeners()
+    // 보류 서식(stored marks): collapsed 커서 토글 후 입력에 서식을 적용합니다
+    this.storedMarksCleanup = installStoredMarks(this.element)
 
     if (config.autoResize) {
       this.setupAutoResize()
@@ -412,6 +416,9 @@ export class WysiwygArea implements EditingArea {
    * 참조 해제되면 함께 정리됩니다.
    */
   destroy(): void {
+    this.storedMarksCleanup?.()
+    this.storedMarksCleanup = undefined
+
     if (this.documentSelectionChangeHandler) {
       document.removeEventListener(
         'selectionchange',

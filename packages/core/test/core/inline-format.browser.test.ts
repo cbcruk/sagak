@@ -195,15 +195,13 @@ describe('inline-format engine', () => {
       registerLegacyExecCommands(registry)
     })
 
-    it('collapsed 커서는 레거시로 위임해야 함(타이핑 상태)', () => {
+    it('collapsed 커서는 엔진이 처리하지 않아야 함(보류 서식이 담당)', () => {
       element.innerHTML = '<p>Hello</p>'
       const text = textOf('p')
       select(text, 2, text, 2)
 
-      const execSpy = vi.spyOn(document, 'execCommand').mockReturnValue(true)
-
-      expect(registry.run('bold')).toBe(true)
-      expect(execSpy).toHaveBeenCalledWith('bold', false)
+      // 엔진 코어는 collapsed 범위를 다루지 않습니다
+      expect(toggleInlineFormat('bold')).toBeUndefined()
       expect(element.querySelector('strong')).toBeNull()
     })
 

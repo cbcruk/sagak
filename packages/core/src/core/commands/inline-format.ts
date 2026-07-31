@@ -209,9 +209,9 @@ export function restoreSelection(nodes: Text[]): void {
 }
 
 /**
- * 서식을 범위의 텍스트 노드들에 적용합니다
+ * 서식을 텍스트 노드들에 적용합니다
  */
-function applyFormat(
+export function applyFormatToNodes(
   nodes: Text[],
   format: InlineFormat,
   host: HTMLElement
@@ -227,9 +227,9 @@ function applyFormat(
 }
 
 /**
- * 범위의 텍스트 노드들에서 서식을 해제합니다
+ * 텍스트 노드들에서 서식을 해제합니다
  */
-function removeFormat(
+export function removeFormatFromNodes(
   nodes: Text[],
   format: InlineFormat,
   host: HTMLElement
@@ -278,14 +278,14 @@ export function toggleFormatInRange(
   )
 
   if (allFormatted) {
-    removeFormat(nodes, format, host)
+    removeFormatFromNodes(nodes, format, host)
   } else {
     // 배타 서식(sub ↔ sup)은 적용 전에 해제합니다
     const exclusive = EXCLUSIVE_PAIRS[formatName]
     if (exclusive) {
-      removeFormat(nodes, INLINE_FORMATS[exclusive], host)
+      removeFormatFromNodes(nodes, INLINE_FORMATS[exclusive], host)
     }
-    applyFormat(nodes, format, host)
+    applyFormatToNodes(nodes, format, host)
   }
 
   return nodes

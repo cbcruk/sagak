@@ -2,6 +2,7 @@ import type { CommandRegistry } from '../command-registry'
 import { NATIVE_PRECEDENCE } from './native-alignment'
 import { INLINE_FORMATS, findFormatAncestor } from './inline-format'
 import { closestEditableHost } from './selection-blocks'
+import { getPendingFormat } from './stored-marks'
 import { cssToLegacyFontSize } from './native-font-size'
 
 /**
@@ -62,6 +63,10 @@ export function registerNativeQueries(registry: CommandRegistry): () => void {
       registry.registerStateQuery(
         name,
         () => {
+          // 보류 서식이 있으면 그것이 현재 상태입니다
+          const pendingValue = getPendingFormat(name)
+          if (pendingValue !== undefined) return pendingValue
+
           const found = anchorNode()
           if (!found) return undefined
           return findFormatAncestor(found.node, format, found.host) !== null
