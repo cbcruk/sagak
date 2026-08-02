@@ -17,6 +17,9 @@ describe('AlignmentPlugin', () => {
 
   beforeEach(() => {
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     element = document.createElement('div')
     element.contentEditable = 'true'
     element.innerHTML = '<p>Hello World</p>'
@@ -79,9 +82,7 @@ describe('AlignmentPlugin', () => {
     })
 
     it('왼쪽 정렬 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -94,17 +95,14 @@ describe('AlignmentPlugin', () => {
       // When: 왼쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'left' })
 
-      // Then: justifyLeft 명령이 실행되어야 함
+      // Then: 선택된 블록에 왼쪽 정렬이 적용되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyLeft', false)
-
-      execCommandSpy.mockRestore()
+      const p = element.querySelector('p') as HTMLElement
+      expect(p.style.textAlign).toBe('left')
     })
 
     it('가운데 정렬 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -117,17 +115,14 @@ describe('AlignmentPlugin', () => {
       // When: 가운데 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'center' })
 
-      // Then: justifyCenter 명령이 실행되어야 함
+      // Then: 선택된 블록에 가운데 정렬이 적용되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyCenter', false)
-
-      execCommandSpy.mockRestore()
+      const p = element.querySelector('p') as HTMLElement
+      expect(p.style.textAlign).toBe('center')
     })
 
     it('오른쪽 정렬 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -140,17 +135,14 @@ describe('AlignmentPlugin', () => {
       // When: 오른쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'right' })
 
-      // Then: justifyRight 명령이 실행되어야 함
+      // Then: 선택된 블록에 오른쪽 정렬이 적용되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyRight', false)
-
-      execCommandSpy.mockRestore()
+      const p = element.querySelector('p') as HTMLElement
+      expect(p.style.textAlign).toBe('right')
     })
 
     it('양쪽 정렬 명령을 실행해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -163,11 +155,10 @@ describe('AlignmentPlugin', () => {
       // When: 양쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'justify' })
 
-      // Then: justifyFull 명령이 실행되어야 함
+      // Then: 선택된 블록에 양쪽 정렬이 적용되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyFull', false)
-
-      execCommandSpy.mockRestore()
+      const p = element.querySelector('p') as HTMLElement
+      expect(p.style.textAlign).toBe('justify')
     })
 
     it('모든 정렬 타입을 지원해야 함', () => {
@@ -193,9 +184,7 @@ describe('AlignmentPlugin', () => {
     })
 
     it('객체 래퍼 없이 직접 문자열을 허용해야 함', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -208,11 +197,10 @@ describe('AlignmentPlugin', () => {
       // When: 문자열 형태로 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', 'center')
 
-      // Then: justifyCenter 명령이 실행되어야 함
+      // Then: 선택된 블록에 가운데 정렬이 적용되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyCenter', false)
-
-      execCommandSpy.mockRestore()
+      const p = element.querySelector('p') as HTMLElement
+      expect(p.style.textAlign).toBe('center')
     })
 
     it('정렬 변경 성공 후 STYLE_CHANGED 이벤트를 발행해야 함', () => {

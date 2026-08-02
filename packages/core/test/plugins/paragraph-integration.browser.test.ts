@@ -19,6 +19,9 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
 
   beforeEach(() => {
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     element = document.createElement('div')
     element.contentEditable = 'true'
     element.innerHTML = '<p>Hello World</p>'

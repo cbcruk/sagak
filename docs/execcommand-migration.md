@@ -1,6 +1,7 @@
 # `execCommand` 탈피 설계 문서
 
-> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8
+> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8,
+> [`reference-codemirror-state.md`](./reference-codemirror-state.md) (functional core 원칙·델타 인코딩)
 
 ## 1. 배경과 목적
 
@@ -98,6 +99,32 @@ on: ({ runCommand }) => runCommand('bold')
 - **테스트 용이**: 각 커맨드가 `(입력 HTML + 선택) → 출력 HTML`의 순수 단위로 테스트됩니다.
 - **콘텐츠 모델 강제**: 자체 구현은 `<strong>`/`<em>` 등 원하는 태그만 생성하도록 보장합니다.
 
+### 3.3 커맨드 핸들러 precedence (Wordgard 차용)
+
+> 참고: [`docs/comparison-wordgard.md`](./comparison-wordgard.md) — Wordgard의 `Command` 개념.
+
+단일 구현으로 고정하지 말고, 하나의 커맨드에 **여러 핸들러를 precedence 순으로** 등록할 수 있게
+설계합니다. 핸들러는 처리하면 결과를 반환하고, 처리하지 않으면 `false`/`undefined`를 반환해 다음
+핸들러로 넘깁니다.
+
+```typescript
+type CommandHandler = (ctx: CommandContext, value?: string) => boolean | undefined
+
+interface CommandRegistry {
+  /** 커맨드에 핸들러를 등록 (높은 precedence가 먼저 시도됨) */
+  register(name: string, handler: CommandHandler, prec?: number): () => void
+  /** precedence 순으로 핸들러를 시도, 처리한 핸들러가 있으면 true */
+  run(name: string, value?: string): boolean
+  queryState(name: string): boolean
+}
+```
+
+이점:
+- **오버라이드 가능**: 소비자/플러그인이 특정 상황(예: 표 안의 Enter)에서만 기본 동작을 가로챌 수 있음.
+- **위임 어댑터와 자연스럽게 공존**: `LegacyExecCommand`를 최저 precedence로 두고, 자체 구현을 더 높은
+  precedence로 얹으면 **커맨드 단위 점진 교체**가 그대로 precedence 등록/해제로 표현됨.
+- 기존 `EventBus`의 `before/on/after`와 상보적: precedence는 "누가 먼저 처리하고 멈출지"를 다룸.
+
 ## 4. 커맨드별 대체 전략
 
 ### 4.1 정렬 (가장 쉬움 — 파일럿 후보)
@@ -110,6 +137,21 @@ on: ({ runCommand }) => runCommand('bold')
 - **해제(토글 off)**: 선택 영역이 이미 해당 서식이면 래퍼를 제거(unwrap)하고 경계에서 분할.
 - **상태 조회**: 선택 anchor에서 조상 방향으로 해당 태그 존재 여부 탐색 → `queryCommandState` 대체.
 - 경계 분할·부분 선택·중첩 처리가 핵심 난점. 이 로직은 공용 `inline-format.ts` 유틸로 추출.
+
+#### 정규형 마크 정렬 (Wordgard 차용)
+
+> 참고: [`docs/comparison-wordgard.md`](./comparison-wordgard.md) — Wordgard의 flat·ordered marks.
+
+HTML은 인라인 래퍼의 중첩 순서가 자유로워(`<strong><em>` vs `<em><strong>`) 같은 의미의 콘텐츠가
+여러 마크업으로 표현됩니다. 이는 diff·비교·테스트·살균을 어렵게 만드는 근본 원인입니다.
+
+자체 인라인 엔진에서는 각 마크에 **rank를 부여**하고, 겹치는 마크의 래퍼를 **항상 rank 순으로 중첩**하도록
+정규화합니다. 예: `strong`(60) > `em`(50) > `underline`(40) …이면 항상 `<strong><em><u>…` 순.
+- 결과: 동일 의미 콘텐츠 = **단일 정규 표현(canonical form)**. 스냅샷 테스트가 안정적이고, 인접 동일-마크
+  텍스트 병합/언랩이 결정론적이 됨.
+- 이 정렬 규칙을 `inline-format.ts`에 rank 테이블로 두고, 적용·해제·병합 모든 경로가 이를 따르게 함.
+- 살균 계층(`sanitizer.ts`)과도 정합: 붙여넣기 HTML을 파싱 후 동일 rank 정렬로 정규화하면 외부 마크업의
+  편차를 흡수.
 
 ### 4.3 인라인 스타일 (foreColor/backColor/fontName/fontSize)
 `<span style="...">`로 래핑합니다. `fontSize`는 현재 `execCommand`의 레거시 1–7 스케일을 쓰는데,
@@ -135,26 +177,75 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 호출 대상만 `commands.queryState(name)`로 바꿉니다. 초기에는 `queryState`가 `queryCommandState`를
 위임하므로 동작 불변, 이후 4.2의 조상 탐색 기반으로 교체.
 
+> **연계**: `queryState`가 반환하는 파생 값은 signal(`computed`)로 노출하기에 가장 자연스러운 대상입니다.
+> 파생 상태 계층을 signal로 구성하는 방안은 [`signals-adoption.md`](./signals-adoption.md) 참고.
+
 ## 6. 단계별 로드맵
 
 각 단계 종료 시 **전체 테스트 통과 + Storybook 육안 확인**을 게이트로 둡니다.
 
 - **P0 — 커맨드 추상화 골격**
-  - `CommandRegistry`, `EditorCommand`, `CommandContext` 정의
-  - 모든 명령을 `execCommand`에 위임하는 `LegacyExecCommand` 어댑터 구현
+  - `CommandRegistry`(precedence 핸들러, §3.3), `EditorCommand`, `CommandContext` 정의
+  - 모든 명령을 `execCommand`에 위임하는 `LegacyExecCommand` 어댑터를 **최저 precedence**로 등록
   - 핸들러 컨텍스트에 `runCommand`/`queryState` 추가, 플러그인을 `runCommand`로 이행
   - `queryCommandState` 추적을 `commands.queryState`로 이행
   - **동작·마크업 불변**(순수 리팩터). 회귀 안전망 확보.
 
-- **P1 — 저난이도 자체 구현**: 정렬(4.1) → 블록 포맷(4.4). 각 커맨드 단위 테스트 추가.
+- **P1 — 저난이도 자체 구현**: 정렬(4.1) → 블록 포맷(4.4). 각 커맨드를 `LegacyExecCommand`보다 높은
+  precedence로 얹어 교체. 각 커맨드 단위 테스트 추가.
 
-- **P2 — 인라인 서식 엔진**: `inline-format.ts`(래핑/언랩/경계 분할/상태 조회) 구현 후
-  토글 6종 + 스타일 4종(4.2/4.3) + 링크(4.5)를 교체. 이 단계가 가장 많은 테스트를 요구.
+- **P2 — 인라인 서식 엔진**: `inline-format.ts`(래핑/언랩/경계 분할/상태 조회 + **정규형 마크 rank 정렬**,
+  §4.2) 구현 후 토글 6종 + 스타일 4종(4.2/4.3) + 링크(4.5)를 교체. 이 단계가 가장 많은 테스트를 요구.
 
 - **P3 — 리스트/들여쓰기**(4.6): 트리 조작 구현 또는 범위 축소 결정.
 
-- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 0 확인.
-  `LegacyExecCommand` 어댑터 제거. `insertHTML` 폴백을 Range 경로로 일원화.
+- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 제거,
+  `insertHTML`/`insertText` 폴백을 Range 경로로 일원화, `fontSize`·상태/값 조회 자체 구현.
+  `LegacyExecCommand` 어댑터 제거는 아래 §6.1의 선행 조건이 해결된 뒤에 가능합니다.
+
+### 6.1 어댑터 제거의 선행 조건 — 보류 중인 서식 상태(stored marks)
+
+P4까지 진행하면 레거시 어댑터가 실제로 처리하는 경우는 **collapsed 커서에서의 토글/스타일**
+하나로 좁혀집니다. 이 경로만 남는 이유는 `execCommand`가 브라우저 내부에 "다음 입력에 적용할
+서식" 상태를 들고 있기 때문입니다 — 커서만 둔 채 굵게를 켜고 타이핑하면 굵게로 입력되는 동작.
+
+자체 구현으로 대체하려면 그 상태를 에디터가 직접 소유해야 합니다.
+
+- **보류 서식 상태**: 현재 커서 위치와 그때 토글된 서식 집합을 상태로 보관
+  (ProseMirror의 stored marks, CM6의 상태 필드에 해당)
+- **입력 시 적용**: `beforeinput`/`input`을 가로채 삽입되는 텍스트에 보류 서식을 적용
+- **무효화**: 선택이 이동하거나 문서가 바뀌면 보류 상태를 폐기
+- **상태 조회 반영**: `queryState`가 보류 서식도 활성으로 보고해야 툴바 표시가 일치
+
+이는 단순 커맨드 교체가 아니라 **에디터 상태 모델의 확장**이므로 별도 단계로 다룹니다.
+
+**진행 결과**: 보류 서식 상태를 `stored-marks.ts`로 구현해 collapsed 커서 경로까지 자체 구현으로
+대체했습니다. 이로써 19개 명령 전부가 네이티브로 동작합니다.
+
+### 6.2 어댑터는 제거 대신 옵션화 — 근거
+
+보류 서식 도입 후 어댑터를 실제로 제거해보고 측정한 결과, **17개 파일 188개 테스트가 실패**했습니다
+(전체 1000개 중). 실패한 테스트들은 실제 선택을 만들지 않고 `execCommand`를 목킹하는 방식이라,
+네이티브 구현이 "판단 불가"를 올바르게 반환하고 어댑터가 이를 처리하던 경로였습니다.
+
+테스트 비용과 별개로, **어댑터는 프로덕션 안전망**이라는 점이 더 중요합니다. 네이티브가 판단할 수
+없는 상황(선택 없음, 편집 호스트 밖, 변환 불가 구조)에서 어댑터를 제거하면 커맨드가 브라우저 기본
+동작 대신 **조용히 아무것도 하지 않게** 됩니다. deprecated API를 지우려다 사용자에게는 "버튼이
+먹통"이 되는 트레이드입니다.
+
+따라서 **제거 대신 옵션화**했습니다:
+
+```typescript
+createEditor({ container, legacyFallback: false }) // execCommand 완전 배제
+```
+
+- 기본값(`true`)은 안전망을 유지하고 기존 동작·테스트가 그대로입니다.
+- `false`면 `execCommand`/`queryCommand*`를 **전혀 호출하지 않습니다** — 21개 서식 커맨드와 상태
+  조회 전부에 대해 테스트로 검증됩니다.
+- `registerDefaultCommands`/`createDefaultCommandRegistry`도 같은 옵션을 받습니다.
+
+`WysiwygArea.execCommand`는 레지스트리가 다루지 않는 브라우저 명령을 위한 `@deprecated` 탈출구로
+남습니다 (기본 경로에서는 사용되지 않음).
 
 ## 7. 리스크와 완화
 
@@ -177,7 +268,7 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 
 - 블록 기반 렌더링(ROADMAP Phase 8) 자체 — 본 문서는 contentEditable을 유지한 채 서식 엔진만 교체.
 - 협업 편집(CRDT/OT), 실시간 동기화.
-- Undo/Redo 재설계(현행 스냅샷 유지).
+- Undo/Redo 재설계(현행 스냅샷 유지). 델타 기반 undo 대안은 [`reference-codemirror-state.md`](./reference-codemirror-state.md) §2 참고.
 
 ---
 

@@ -133,6 +133,12 @@ export interface CreateEditorOptions {
   onError?: (data: EditorErrorData) => void
 
   /**
+   * Use the legacy execCommand fallback for undecidable cases
+   * (default: true). Set to false to never call execCommand.
+   */
+  legacyFallback?: boolean
+
+  /**
    * Additional plugins to include
    */
   plugins?: Plugin[]
@@ -230,6 +236,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     sanitize,
     logLevel,
     onError,
+    legacyFallback,
     plugins = [],
     replaceDefaultPlugins = false,
     autoSave = false,
@@ -254,6 +261,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
     sanitize,
     logLevel,
     onError,
+    legacyFallback,
     plugins: allPlugins,
   })
 

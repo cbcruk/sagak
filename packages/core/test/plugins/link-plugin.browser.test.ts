@@ -13,6 +13,9 @@ describe('LinkPlugin', () => {
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'
@@ -81,7 +84,6 @@ describe('LinkPlugin', () => {
 
     it('should execute createLink command with URL object', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -95,20 +97,15 @@ describe('LinkPlugin', () => {
         url: 'https://example.com',
       })
 
-      // Then: createLink가 호출되어야 함
+      // Then: 선택 구간이 링크로 감싸져야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'https://example.com'
-      )
-
-      execCommandSpy.mockRestore()
+      const anchor = element.querySelector('a') as HTMLAnchorElement
+      expect(anchor.getAttribute('href')).toBe('https://example.com')
+      expect(anchor.textContent).toBe('Hello')
     })
 
     it('should execute createLink command with direct URL string', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -120,15 +117,10 @@ describe('LinkPlugin', () => {
       // When: 직접 URL 문자열로 LINK_CHANGED 이벤트 발행
       const result = eventBus.emit('LINK_CHANGED', 'https://example.com')
 
-      // Then: createLink가 호출되어야 함
+      // Then: 선택 구간이 링크로 감싸져야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'https://example.com'
-      )
-
-      execCommandSpy.mockRestore()
+      const anchor = element.querySelector('a') as HTMLAnchorElement
+      expect(anchor.getAttribute('href')).toBe('https://example.com')
     })
 
     it('should emit STYLE_CHANGED event after successful link creation', () => {
@@ -178,7 +170,6 @@ describe('LinkPlugin', () => {
 
     it('should execute unlink command', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -190,11 +181,9 @@ describe('LinkPlugin', () => {
       // When: LINK_REMOVED 이벤트 발행
       const result = eventBus.emit('LINK_REMOVED')
 
-      // Then: unlink가 호출되어야 함
+      // Then: 링크 없이 성공해야 함 (링크가 없으면 no-op)
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('unlink', false)
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('a')).toBeNull()
     })
 
     it('should emit STYLE_CHANGED event after successful unlink', () => {

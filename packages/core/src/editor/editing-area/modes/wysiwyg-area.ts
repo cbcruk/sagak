@@ -4,6 +4,11 @@ import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 import { resolveSanitizer, type Sanitizer } from '../sanitizer'
+import {
+  insertHTMLAtSelection,
+  insertTextAtSelection,
+} from '@/core/commands/range-insert'
+import { installStoredMarks } from '@/core/commands/stored-marks'
 
 export interface WysiwygAreaConfig extends EditingAreaConfig {
   /**
@@ -27,6 +32,7 @@ export class WysiwygArea implements EditingArea {
   private resizeObserver?: ResizeObserver
   private sanitize: Sanitizer
   private reportError: ErrorReporter
+  private storedMarksCleanup?: () => void
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
@@ -62,6 +68,8 @@ export class WysiwygArea implements EditingArea {
 
     this.container.appendChild(this.element)
     this.initializeEventListeners()
+    // 보류 서식(stored marks): collapsed 커서 토글 후 입력에 서식을 적용합니다
+    this.storedMarksCleanup = installStoredMarks(this.element)
 
     if (config.autoResize) {
       this.setupAutoResize()
@@ -178,8 +186,7 @@ export class WysiwygArea implements EditingArea {
     }
 
     try {
-      document.execCommand('insertHTML', false, html)
-      return true
+      return insertHTMLAtSelection(html)
     } catch (e) {
       this.reportError(e, 'HTML 삽입 실패:')
       return false
@@ -196,8 +203,7 @@ export class WysiwygArea implements EditingArea {
     }
 
     try {
-      document.execCommand('insertText', false, text)
-      return true
+      return insertTextAtSelection(text)
     } catch (e) {
       this.reportError(e, '텍스트 삽입 실패:')
       return false
@@ -205,7 +211,11 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
-   * 서식 명령을 실행합니다 (굵게, 기울임 등)
+   * 네이티브 `execCommand`를 직접 실행합니다 (탈출구)
+   *
+   * @deprecated 서식은 커맨드 레지스트리(`EditorCore.getCommandRegistry()`)를
+   * 통해 실행하세요. 이 메서드는 레지스트리가 다루지 않는 브라우저 명령을
+   * 위한 하위 호환 탈출구로만 남아 있습니다.
    */
   execCommand(command: string, value?: string): boolean {
     try {
@@ -370,7 +380,12 @@ export class WysiwygArea implements EditingArea {
 
     event.preventDefault()
     const clean = this.sanitize(html)
-    document.execCommand('insertHTML', false, clean)
+
+    if (this.selectionManager) {
+      this.selectionManager.insertHTML(clean)
+    } else {
+      insertHTMLAtSelection(clean)
+    }
   }
 
   /**
@@ -401,6 +416,9 @@ export class WysiwygArea implements EditingArea {
    * 참조 해제되면 함께 정리됩니다.
    */
   destroy(): void {
+    this.storedMarksCleanup?.()
+    this.storedMarksCleanup = undefined
+
     if (this.documentSelectionChangeHandler) {
       document.removeEventListener(
         'selectionchange',

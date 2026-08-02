@@ -53,10 +53,9 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
       },
 
       // `ON` 단계: 밑줄 명령 실행
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('underline', false)
+          const result = runCommand('underline')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'underline' })
           }

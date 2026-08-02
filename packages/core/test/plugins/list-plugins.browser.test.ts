@@ -20,6 +20,9 @@ describe('OrderedListPlugin', () => {
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'
@@ -82,9 +85,7 @@ describe('OrderedListPlugin', () => {
     })
 
     it('should execute insertOrderedList command', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -99,9 +100,7 @@ describe('OrderedListPlugin', () => {
 
       // Then: insertOrderedList 명령이 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('insertOrderedList', false)
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('ol li')?.textContent).toBe('Hello World')
     })
 
     it('should emit STYLE_CHANGED event after successful list creation', () => {
@@ -358,9 +357,7 @@ describe('UnorderedListPlugin', () => {
     })
 
     it('should execute insertUnorderedList command', () => {
-      // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
-
+      // Given: 선택 영역
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -375,9 +372,7 @@ describe('UnorderedListPlugin', () => {
 
       // Then: insertUnorderedList 명령이 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('insertUnorderedList', false)
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('ul li')?.textContent).toBe('Hello World')
     })
 
     it('should emit STYLE_CHANGED event after successful list creation', () => {

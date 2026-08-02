@@ -133,7 +133,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
         return true
       },
 
-      on: ({ emit, reportError }, data?: unknown) => {
+      on: ({ emit, reportError, runCommand }, data?: unknown) => {
         try {
           const color = extractColor(data)
 
@@ -141,8 +141,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('foreColor', false, color)
+          const result = runCommand('foreColor', color)
 
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, {

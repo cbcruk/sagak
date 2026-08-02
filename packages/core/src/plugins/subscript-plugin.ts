@@ -53,10 +53,9 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
       },
 
       // `ON` 단계: 아래 첨자 명령 실행
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('subscript', false)
+          const result = runCommand('subscript')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
           }

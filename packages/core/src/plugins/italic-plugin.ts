@@ -53,10 +53,9 @@ export const createItalicPlugin = definePlugin<ItalicPluginOptions>({
       },
 
       // `ON` 단계: 기울임 명령 실행
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('italic', false)
+          const result = runCommand('italic')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'italic' })
           }

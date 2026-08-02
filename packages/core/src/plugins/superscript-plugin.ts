@@ -53,10 +53,9 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
       },
 
       // `ON` 단계: 위 첨자 명령 실행
-      on: ({ emit, reportError }) => {
+      on: ({ emit, reportError, runCommand }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const result = document.execCommand('superscript', false)
+          const result = runCommand('superscript')
           if (result) {
             emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
           }

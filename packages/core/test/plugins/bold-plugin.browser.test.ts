@@ -14,6 +14,9 @@ describe('BoldPlugin (굵게 텍스트 스타일 적용)', () => {
 
   beforeEach(() => {
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     element = document.createElement('div')
     element.contentEditable = 'true'
     element.innerHTML = '<p>Hello World</p>'
@@ -77,7 +80,6 @@ describe('BoldPlugin (굵게 텍스트 스타일 적용)', () => {
 
     it('BOLD_CLICKED 이벤트에서 굵게 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
       const textNode = element.firstChild!.firstChild as Text
       const range = document.createRange()
       range.setStart(textNode, 0)
@@ -90,11 +92,9 @@ describe('BoldPlugin (굵게 텍스트 스타일 적용)', () => {
       // When: BOLD_CLICKED 이벤트 발생
       const result = eventBus.emit('BOLD_CLICKED')
 
-      // Then: execCommand가 호출되고 성공 반환
+      // Then: 선택 구간이 strong으로 감싸져야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('bold', false)
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('strong')?.textContent).toBe('Hello')
     })
 
     it('굵게 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
@@ -171,10 +171,6 @@ describe('BoldPlugin (굵게 텍스트 스타일 적용)', () => {
 
     it('조합 종료 후에는 굵게를 허용해야 함', () => {
       // Given: IME 조합이 종료된 상태
-      const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
-        .mockReturnValue(true)
-
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
       expect(selectionManager.getIsComposing()).toBe(false)
@@ -191,11 +187,9 @@ describe('BoldPlugin (굵게 텍스트 스타일 적용)', () => {
       // When: 굵게 명령 실행
       const result = eventBus.emit('BOLD_CLICKED')
 
-      // Then: 정상적으로 실행됨
+      // Then: 정상적으로 실행되어 굵게가 적용됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalled()
-
-      execCommandSpy.mockRestore()
+      expect(element.querySelector('strong')?.textContent).toBe('Hello')
     })
 
     it('checkComposition이 false일 때 굵게를 허용해야 함', async () => {

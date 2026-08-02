@@ -14,6 +14,9 @@ describe('색상 플러그인 통합 (텍스트와 배경 색상 조합)', () =>
   let context: EditorContext
 
   beforeEach(() => {
+    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
+    window.getSelection()?.removeAllRanges()
+
     // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
     element = document.createElement('div')
     element.contentEditable = 'true'

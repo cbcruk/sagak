@@ -2,6 +2,8 @@ import type { EventBus, EventPhase } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
+import { runCommand } from './command-registry'
+import { createDefaultCommandRegistry } from './default-commands'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -22,6 +24,24 @@ export interface PluginHandlerContext<
   state: TState
   /** 이벤트 발행 헬퍼 */
   emit: (event: string, data?: unknown) => boolean
+  /**
+   * 커맨드 실행 헬퍼
+   *
+   * `document.execCommand`를 직접 호출하는 대신 사용합니다. 히스토리 스냅샷
+   * (`CAPTURE_SNAPSHOT`)을 발행한 뒤 커맨드 레지스트리로 실행을 위임합니다.
+   *
+   * @example
+   * ```typescript
+   * on: ({ runCommand, emit }) => {
+   *   const result = runCommand('bold')
+   *   if (result) emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
+   *   return result
+   * }
+   * ```
+   */
+  runCommand: (name: string, value?: string) => boolean
+  /** 커맨드 활성 상태 조회 헬퍼 */
+  queryState: (name: string) => boolean
   /**
    * 오류 보고 헬퍼
    *
@@ -236,6 +256,11 @@ export function definePlugin<
           `plugin:${definition.name}`
         )
 
+        // EditorCore가 공유 레지스트리를 제공하지 않은 경우(예: 단독 사용/테스트)
+        // 기본 커맨드 구성이 등록된 폴백 레지스트리를 생성합니다.
+        const commandRegistry =
+          context.commandRegistry ?? createDefaultCommandRegistry(context)
+
         const createHandlerContext = (): PluginHandlerContext<
           TOpts,
           TState
@@ -245,6 +270,9 @@ export function definePlugin<
           options: finalOptions,
           state,
           emit: (event, data) => eventBus.emit(event, data),
+          runCommand: (name, value) =>
+            runCommand(commandRegistry, eventBus, name, value),
+          queryState: (name) => commandRegistry.queryState(name),
           reportError,
         })
 
