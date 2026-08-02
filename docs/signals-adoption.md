@@ -94,7 +94,8 @@ EventBus와 signals가 겹치지 않도록 역할을 분리합니다.
 ## 일관성 규율 (glitch 방지)
 
 - 하나의 편집 동작이 여러 파생 값을 바꿀 때는 `batch()`로 묶어 **동작당 한 번만** 갱신되게 합니다
-  (중간 상태 노출 방지).
+  (중간 상태 노출 방지). CM6가 changes+effects를 한 트랜잭션에 담아 원자성을 보장하는 것과 같은
+  원칙입니다 — [`reference-codemirror-state.md`](./reference-codemirror-state.md) §4 참고.
 - signal 출력은 가능하면 값 동일성 비교로 안정화하여, 값이 그대로면 구독자가 재실행되지 않게 합니다
   (현재 `editor-core`의 `isStateEqual` 최적화와 같은 취지).
 

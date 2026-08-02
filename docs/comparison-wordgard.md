@@ -117,5 +117,7 @@ Wordgard를 통째로 베끼는 대신, 점진적으로 차용할 아이디어�
 
 ## 참고
 
+- CM6(Wordgard의 원류) 상태 계층의 상세 분석은 [`reference-codemirror-state.md`](./reference-codemirror-state.md) 참고 — 트랜잭션 개념이 PM에서 CM6로 역수입된 계보도 확인됨.
+
 - Wordgard는 외부 상용/독립 프로젝트이며, 본 문서는 공개 가이드를 바탕으로 한 아키텍처 비교입니다.
 - 코드/디자인 차용 시 라이선스 확인 필요.

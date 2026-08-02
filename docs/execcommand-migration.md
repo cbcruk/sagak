@@ -1,6 +1,7 @@
 # `execCommand` 탈피 설계 문서
 
-> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8
+> 상태: 제안(Draft) · 대상: `sagak-core` · 관련: `packages/react/ROADMAP.md` Phase 8,
+> [`reference-codemirror-state.md`](./reference-codemirror-state.md) (functional core 원칙·델타 인코딩)
 
 ## 1. 배경과 목적
 
@@ -198,8 +199,53 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 
 - **P3 — 리스트/들여쓰기**(4.6): 트리 조작 구현 또는 범위 축소 결정.
 
-- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 0 확인.
-  `LegacyExecCommand` 어댑터 제거. `insertHTML` 폴백을 Range 경로로 일원화.
+- **P4 — 정리**: `CommandRegistry` 밖의 `execCommand`/`queryCommand*` 잔존 제거,
+  `insertHTML`/`insertText` 폴백을 Range 경로로 일원화, `fontSize`·상태/값 조회 자체 구현.
+  `LegacyExecCommand` 어댑터 제거는 아래 §6.1의 선행 조건이 해결된 뒤에 가능합니다.
+
+### 6.1 어댑터 제거의 선행 조건 — 보류 중인 서식 상태(stored marks)
+
+P4까지 진행하면 레거시 어댑터가 실제로 처리하는 경우는 **collapsed 커서에서의 토글/스타일**
+하나로 좁혀집니다. 이 경로만 남는 이유는 `execCommand`가 브라우저 내부에 "다음 입력에 적용할
+서식" 상태를 들고 있기 때문입니다 — 커서만 둔 채 굵게를 켜고 타이핑하면 굵게로 입력되는 동작.
+
+자체 구현으로 대체하려면 그 상태를 에디터가 직접 소유해야 합니다.
+
+- **보류 서식 상태**: 현재 커서 위치와 그때 토글된 서식 집합을 상태로 보관
+  (ProseMirror의 stored marks, CM6의 상태 필드에 해당)
+- **입력 시 적용**: `beforeinput`/`input`을 가로채 삽입되는 텍스트에 보류 서식을 적용
+- **무효화**: 선택이 이동하거나 문서가 바뀌면 보류 상태를 폐기
+- **상태 조회 반영**: `queryState`가 보류 서식도 활성으로 보고해야 툴바 표시가 일치
+
+이는 단순 커맨드 교체가 아니라 **에디터 상태 모델의 확장**이므로 별도 단계로 다룹니다.
+
+**진행 결과**: 보류 서식 상태를 `stored-marks.ts`로 구현해 collapsed 커서 경로까지 자체 구현으로
+대체했습니다. 이로써 19개 명령 전부가 네이티브로 동작합니다.
+
+### 6.2 어댑터는 제거 대신 옵션화 — 근거
+
+보류 서식 도입 후 어댑터를 실제로 제거해보고 측정한 결과, **17개 파일 188개 테스트가 실패**했습니다
+(전체 1000개 중). 실패한 테스트들은 실제 선택을 만들지 않고 `execCommand`를 목킹하는 방식이라,
+네이티브 구현이 "판단 불가"를 올바르게 반환하고 어댑터가 이를 처리하던 경로였습니다.
+
+테스트 비용과 별개로, **어댑터는 프로덕션 안전망**이라는 점이 더 중요합니다. 네이티브가 판단할 수
+없는 상황(선택 없음, 편집 호스트 밖, 변환 불가 구조)에서 어댑터를 제거하면 커맨드가 브라우저 기본
+동작 대신 **조용히 아무것도 하지 않게** 됩니다. deprecated API를 지우려다 사용자에게는 "버튼이
+먹통"이 되는 트레이드입니다.
+
+따라서 **제거 대신 옵션화**했습니다:
+
+```typescript
+createEditor({ container, legacyFallback: false }) // execCommand 완전 배제
+```
+
+- 기본값(`true`)은 안전망을 유지하고 기존 동작·테스트가 그대로입니다.
+- `false`면 `execCommand`/`queryCommand*`를 **전혀 호출하지 않습니다** — 21개 서식 커맨드와 상태
+  조회 전부에 대해 테스트로 검증됩니다.
+- `registerDefaultCommands`/`createDefaultCommandRegistry`도 같은 옵션을 받습니다.
+
+`WysiwygArea.execCommand`는 레지스트리가 다루지 않는 브라우저 명령을 위한 `@deprecated` 탈출구로
+남습니다 (기본 경로에서는 사용되지 않음).
 
 ## 7. 리스크와 완화
 
@@ -222,7 +268,7 @@ URL은 **정화 계층**(이미 도입된 sanitizer)과 연동하여 `javascript
 
 - 블록 기반 렌더링(ROADMAP Phase 8) 자체 — 본 문서는 contentEditable을 유지한 채 서식 엔진만 교체.
 - 협업 편집(CRDT/OT), 실시간 동기화.
-- Undo/Redo 재설계(현행 스냅샷 유지).
+- Undo/Redo 재설계(현행 스냅샷 유지). 델타 기반 undo 대안은 [`reference-codemirror-state.md`](./reference-codemirror-state.md) §2 참고.
 
 ---
 
