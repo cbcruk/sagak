@@ -42,14 +42,20 @@ export function useFontState(): UseFontStateReturn {
   const updateFontState = useCallback(() => {
     if (!isSelectionInEditor()) return
 
-    const fontFamily = document.queryCommandValue('fontName')
-    const fontSize = document.queryCommandValue('fontSize')
+    // 커맨드 레지스트리를 통해 조회합니다 (자체 구현 → 레거시 순으로 위임)
+    const registry = context.commandRegistry
+    const fontFamily = registry
+      ? registry.queryValue('fontName')
+      : document.queryCommandValue('fontName')
+    const fontSize = registry
+      ? registry.queryValue('fontSize')
+      : document.queryCommandValue('fontSize')
 
     setState({
       fontFamily: normalizeFontFamily(fontFamily),
       fontSize,
     })
-  }, [isSelectionInEditor])
+  }, [isSelectionInEditor, context.commandRegistry])
 
   useEffect(() => {
     const handleSelectionChange = (): void => {
