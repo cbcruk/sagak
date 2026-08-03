@@ -3,6 +3,12 @@
 > 상태: 제안(Draft) · 대상: `sagak-core` + `sagak-editor`
 > 관련: [`execcommand-migration.md`](./execcommand-migration.md), [`comparison-wordgard.md`](./comparison-wordgard.md)
 
+> **갱신 (2026-08)** — 아래 "두 리액티비티의 경계"에서 EventBus를 명령 담당으로 **유지**한다고
+> 했으나, 이후 검토에서 CustomEvent가 그 자리를 대체할 수 있음을 확인했습니다. signals(상태) +
+> CustomEvent(명령·거부권·확장점) 분업으로 EventBus를 완전히 걷어내는 계획은
+> [`preact-migration.md`](./preact-migration.md) §3을 참고하세요. 이 노트의 나머지 내용
+> (파생 상태에만 signals를 쓰고 문서 모델에는 쓰지 않는다는 원칙)은 그대로 유효합니다.
+
 ## 요약 (결론 먼저)
 
 **파생 상태(derived state)에는 signals를 도입하고, 문서 모델(source of truth)에는 도입하지 않는다.**
@@ -90,6 +96,10 @@ EventBus와 signals가 겹치지 않도록 역할을 분리합니다.
 | **Signals** (신규) | 상태·파생 값 (`isBold`, `currentFont`, selection 파생) | 선언형 읽기 |
 
 원칙: **"무언가를 하라"는 EventBus, "무엇인가이다"는 signal.**
+
+> 이 표의 "EventBus (유지)"는 이후 갱신되었습니다 — 명령 자리는 CustomEvent가 가져가고 EventBus는
+> 제거하는 방향입니다. 원칙 자체("하라"와 "이다"를 다른 수단으로 나눈다)는 그대로이고, "하라" 쪽의
+> 구현만 바뀝니다. [`preact-migration.md`](./preact-migration.md) §3 참고.
 
 ## 일관성 규율 (glitch 방지)
 
