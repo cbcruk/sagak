@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
 import { Dialog } from '@base-ui/react/dialog'
-import { Link } from 'lucide-react'
+import { Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -127,7 +127,7 @@ export function LinkDialog(): ReactNode {
             <input
               type="text"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => setUrl(e.currentTarget.value)}
               placeholder="https://example.com"
               style={{
                 width: '100%',

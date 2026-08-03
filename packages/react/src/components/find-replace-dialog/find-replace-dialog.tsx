@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
 import { Dialog } from '@base-ui/react/dialog'
-import { Search } from 'lucide-react'
+import { Search } from 'lucide-preact'
 import { FindReplaceEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -192,7 +193,7 @@ export function FindReplaceDialog(): ReactNode {
             <input
               type="text"
               value={findText}
-              onChange={(e) => setFindText(e.target.value)}
+              onChange={(e) => setFindText(e.currentTarget.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -214,7 +215,7 @@ export function FindReplaceDialog(): ReactNode {
             <input
               type="text"
               value={replaceText}
-              onChange={(e) => setReplaceText(e.target.value)}
+              onChange={(e) => setReplaceText(e.currentTarget.value)}
               placeholder="Replace with..."
               style={inputStyle}
             />
@@ -225,7 +226,7 @@ export function FindReplaceDialog(): ReactNode {
               <input
                 type="checkbox"
                 checked={caseSensitive}
-                onChange={(e) => setCaseSensitive(e.target.checked)}
+                onChange={(e) => setCaseSensitive(e.currentTarget.checked)}
               />
               Case sensitive
             </label>
@@ -233,7 +234,7 @@ export function FindReplaceDialog(): ReactNode {
               <input
                 type="checkbox"
                 checked={wholeWord}
-                onChange={(e) => setWholeWord(e.target.checked)}
+                onChange={(e) => setWholeWord(e.currentTarget.checked)}
               />
               Whole word
             </label>

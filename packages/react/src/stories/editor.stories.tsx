@@ -1,4 +1,5 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type * as React from 'preact/compat'
+import type { Meta, StoryObj } from '@storybook/preact-vite'
 import { useEditor } from '../hooks'
 import { EditorProvider } from '../context/editor-context'
 import { Toolbar, EditorContainer, AutocompletePopover, AutoSaveIndicator } from '../components'

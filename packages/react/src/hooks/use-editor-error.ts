@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'preact/compat'
 import { CoreEvents, type EditorErrorData } from 'sagak-core'
 import { useEditorContext } from '../context/editor-context'
 

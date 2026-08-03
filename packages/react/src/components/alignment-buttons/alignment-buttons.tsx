@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
+import type * as React from 'preact/compat'
+import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-preact'
 import { ParagraphEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 

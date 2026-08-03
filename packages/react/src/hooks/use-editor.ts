@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import type * as React from 'preact/compat'
+import { useEffect, useRef, useState } from 'preact/compat'
 import { createEditor, type CreateEditorOptions, type Editor } from 'sagak-core'
 
 export type UseEditorOptions = Omit<CreateEditorOptions, 'container'>

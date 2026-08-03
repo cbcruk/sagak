@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import { useState, type ReactNode } from 'preact/compat'
 import { Dialog } from '@base-ui/react/dialog'
-import { Omega } from 'lucide-react'
+import { Omega } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 

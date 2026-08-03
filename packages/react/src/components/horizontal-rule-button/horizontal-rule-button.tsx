@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
-import { Minus } from 'lucide-react'
+import type * as React from 'preact/compat'
+import type { ReactNode } from 'preact/compat'
+import { Minus } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 

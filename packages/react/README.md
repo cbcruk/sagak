@@ -1,11 +1,11 @@
 # sagak-editor
 
-React용 WYSIWYG 에디터 컴포넌트입니다.
+Preact용 WYSIWYG 에디터 컴포넌트입니다.
 
 ## 설치
 
 ```bash
-npm install sagak-editor sagak-core react react-dom
+npm install sagak-editor sagak-core preact
 ```
 
 ## 사용법

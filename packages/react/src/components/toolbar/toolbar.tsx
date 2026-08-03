@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import type { ReactNode } from 'preact/compat'
 import { Toggle } from '@base-ui/react/toggle'
 import {
   Undo2,
@@ -7,7 +8,7 @@ import {
   Italic,
   Underline,
   Strikethrough,
-} from 'lucide-react'
+} from 'lucide-preact'
 import { useFormattingState, useHistoryState } from '../../hooks'
 import { FontFamilySelect } from '../font-family-select/font-family-select'
 import { FontSizeSelect } from '../font-size-select/font-size-select'

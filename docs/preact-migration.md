@@ -9,7 +9,8 @@
    4종(dialog·select·menu·toggle)이 실제 브라우저에서 React와 **동작 차이 없이** 렌더·조작됩니다.
    동일 앱을 React로 빌드한 대조군과 결과가 완전히 일치합니다.
 2. **뷰 전환의 자체 코드 비용은 거의 없습니다.** 이 저장소는 Preact에 없는 React API를 하나도
-   쓰지 않습니다.
+   쓰지 않습니다. (단서: 아래 §2는 *import된* 타입만 셌습니다. 전역 `React.` 네임스페이스
+   사용과 이벤트 타입 차이가 추가로 있었습니다 — §7 참고.)
 3. **EventBus는 signals 하나로는 대체되지 않습니다.** signals가 상태를, CustomEvent가
    명령·거부권·확장점을 가져가는 분업이어야 완전히 사라집니다.
 4. **남은 결정은 기술이 아니라 제품입니다** — React 소비자를 계속 지원할 것인가.
@@ -250,7 +251,7 @@ core는 `@preact/signals-core`, 뷰는 `@preact/signals`를 쓰면 임피던스�
 ## 5. 단계 계획
 
 - [x] **0. base-ui × `preact/compat` 스파이크** — 통과 (§1)
-- [ ] **1. 뷰 이전** — 자체 코드는 기계적. Storybook/테스트 러너 교체 포함
+- [x] **1. 뷰 이전** — 완료 (§7)
 - [ ] **2. signals로 역할 ②** — `FORMATTING_STATE_CHANGED` + rAF + 타입가드 15개 제거.
       이 시점엔 어댑터 없이 네이티브
 - [ ] **3. CustomEvent로 역할 ①③④** — 에러 안전망 재구현을 체크리스트에 명시. 파괴적 변경(major)
@@ -280,3 +281,92 @@ core는 `@preact/signals-core`, 뷰는 `@preact/signals`를 쓰면 임피던스�
 
 - 문서 데이터 모델의 signal화 — [`signals-adoption.md`](./signals-adoption.md) "부적합" 참조
 - 블록 기반 에디터(ROADMAP Phase 8)와의 결합
+
+---
+
+## 7. 1단계 실행 기록 — 뷰 이전 완료
+
+A안(React 지원 포기, Preact 단독)으로 진행했습니다.
+
+### 적용
+
+| 대상 | 변경 |
+| --- | --- |
+| `peerDependencies` | `react`/`react-dom` → **`preact`** |
+| 자체 소스 29파일 | `from 'react'` → `from 'preact/compat'` |
+| 전역 `React.` 네임스페이스 20파일 | `import type * as React from 'preact/compat'` 추가 |
+| 아이콘 19파일 | `lucide-react` → `lucide-preact` |
+| Storybook | `@storybook/react-vite` → `@storybook/preact-vite` |
+| vitest | `@vitejs/plugin-react` → `@preact/preset-vite` |
+| 제거된 devDeps | `react`, `react-dom`, `@types/react`, `@types/react-dom`, `@vitejs/plugin-react`, `vitest-browser-react` |
+
+자체 코드는 `preact/hooks`가 아니라 **`preact/compat`**에서 들여옵니다. base-ui가 어차피 compat을
+번들로 끌어오므로 크기 이득이 없고, 훅·타입·`React.` 네임스페이스가 한 경로로 해결되어 diff가
+기계적으로 유지되기 때문입니다.
+
+### 노트의 예측이 빗나간 부분
+
+§2에서 "자체 코드 비용은 거의 없다"고 했는데, **import된 타입만 셌고 전역 `React.` 네임스페이스
+사용을 세지 않았습니다.** 실제로는 `React.CSSProperties` 42회 등 20개 파일이 `@types/react`의
+전역 네임스페이스에 의존하고 있었습니다. type-only 네임스페이스 import 한 줄로 해결되긴 했지만,
+"React API를 하나도 안 쓴다"는 §2의 표현은 정확하지 않았습니다.
+
+### 기계적이지 않았던 것 — 이벤트 타입
+
+React의 `SyntheticEvent`와 Preact의 `TargetedEvent`는 의미가 다릅니다.
+
+| | React | Preact |
+| --- | --- | --- |
+| `e.target` | 요소 타입으로 좁혀짐 | `EventTarget \| null` (DOM 스펙 그대로) |
+| `e.currentTarget` | 요소 타입 | **요소 타입** ← 이쪽을 써야 함 |
+| `DragEvent` | 타입 인자 선택 | `TargetedDragEvent<Target>` 필수 |
+| `dataTransfer` | non-null | `DataTransfer \| null` |
+
+`e.target.value` 12곳을 `e.currentTarget.value`로 옮겼습니다. **동작이 바뀌는 수정이 아니라
+타입이 정확해지는 수정입니다** — 이벤트 위임 상황에서 `target`은 원래 자식 요소일 수 있으므로
+Preact 쪽 타입이 DOM 스펙에 더 충실합니다.
+
+JSX 속성 차이도 둘 있었습니다: `suppressContentEditableWarning`(React 전용 경고 억제 prop, Preact는
+경고하지 않으므로 제거), `spellCheck` → `spellcheck`(Preact는 DOM 속성명 그대로).
+
+### 패키징 — base-ui를 번들에 포함
+
+첫 빌드 결과 `dist`가 `@base-ui/react`를 외부 의존으로 남겼습니다. base-ui는 내부에서 `react`를
+import하므로, 이 상태로 배포하면 **소비자가 직접 `react` → `preact/compat` 별칭을 설정해야
+합니다.** Preact 전용 라이브러리로는 부적절합니다.
+
+`noExternal: [/^@base-ui\//]`로 번들에 포함시키고 `dependencies` → `devDependencies`로 옮겼습니다.
+결과적으로 `dist`가 요구하는 외부 모듈은 `preact`, `lucide-preact`, `sagak-core` 셋뿐입니다.
+
+대가는 번들 크기입니다: ESM 109 KB → 664 KB (gzip 127 KB). base-ui가 통째로 들어간 값입니다.
+소비자가 별도로 base-ui를 쓰면 중복되지만, Preact 앱에서 React용 base-ui를 직접 쓸 일은 없습니다.
+
+### 검증
+
+| 관문 | 결과 |
+| --- | --- |
+| typecheck | 통과 |
+| lint | 0 errors (기존 `no-explicit-any` 경고 62건 유지) |
+| build | 통과 |
+| core 테스트 | **1009개 통과** (46파일) |
+| editor 테스트 | **4개 통과** |
+| Storybook 빌드 | 통과 |
+| Storybook 실제 렌더 | **7/7 통과** (아래) |
+
+빌드 성공이 렌더 성공은 아니므로, `storybook-static`을 띄워 headless Chromium으로 구동했습니다.
+
+- Preact VDOM 마커(`__k`) 확인 — React가 아님을 DOM 수준에서 검증
+- contentEditable 영역 렌더 + 초기 콘텐츠 표시
+- base-ui Toggle 4개 렌더
+- **Bold 적용 → `<p><strong>Hello, Sagak Editor!</strong></p>`** — core 커맨드 경로가 Preact 위에서 정상 동작
+- base-ui Select 드롭다운 열림 (Portal) + floating-ui 위치 계산 (120x196)
+
+콘솔 에러는 favicon 404 하나뿐입니다.
+
+### 남겨둔 것
+
+- **디렉터리 이름 `packages/react`**는 그대로입니다. 패키지 이름(`sagak-editor`)과 무관하고,
+  변경 시 `deploy-storybook.yml`의 경로 2곳과 `repository.directory`를 함께 고쳐야 합니다.
+  기능적 이득이 없어 이번 범위에서 제외했습니다.
+- `ANALYSIS.md`·`signals-adoption.md`의 "React" 언급은 당시 작업 기록이므로 그대로 뒀습니다.
+

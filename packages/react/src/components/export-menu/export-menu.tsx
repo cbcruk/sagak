@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'preact/compat'
 import { Menu } from '@base-ui/react/menu'
-import { Download, FileText, FileCode, FileType } from 'lucide-react'
+import { Download, FileText, FileCode, FileType } from 'lucide-preact'
 import { ExportEvents, type ExportFormat } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
