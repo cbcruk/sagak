@@ -299,7 +299,9 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 빈 데이터로 이벤트 발생
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('FONT_FAMILY_CHANGED', {})
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('FONT_SIZE_CHANGED', {})
 
       // Then: 두 명령 모두 차단되고 경고 발생

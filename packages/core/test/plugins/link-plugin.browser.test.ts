@@ -323,6 +323,7 @@ describe('LinkPlugin', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: URL 없이 이벤트 발행
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('LINK_CHANGED', {})
 
       // Then: 차단되고 경고가 출력되어야 함
@@ -339,6 +340,7 @@ describe('LinkPlugin', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 데이터 없이 이벤트 발행
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('LINK_CHANGED')
 
       // Then: 차단되고 경고가 출력되어야 함

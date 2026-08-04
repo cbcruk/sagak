@@ -273,6 +273,7 @@ describe('AlignmentPlugin', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 빈 객체 전달
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('ALIGNMENT_CHANGED', {})
 
       // Then: 경고 메시지 발생 및 명령 미실행
@@ -291,6 +292,7 @@ describe('AlignmentPlugin', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: undefined 전달
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('ALIGNMENT_CHANGED')
 
       // Then: 경고 발생 및 명령 미실행

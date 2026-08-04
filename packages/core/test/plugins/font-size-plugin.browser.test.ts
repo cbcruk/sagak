@@ -178,6 +178,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: fontSize 없이 이벤트 발생
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       const result = eventBus.emit('FONT_SIZE_CHANGED', {})
 
       // Then: 차단됨
@@ -198,6 +199,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 데이터 없이 이벤트 발생
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       const result = eventBus.emit('FONT_SIZE_CHANGED')
 
       // Then: 차단됨

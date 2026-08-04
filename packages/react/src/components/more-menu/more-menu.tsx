@@ -13,7 +13,7 @@ import {
   CaseSensitive,
 } from 'lucide-react'
 import { useEditorContext } from '../../context/editor-context'
-import { ContentEvents, TextStyleEvents, FindReplaceEvents } from 'sagak-core'
+import { ContentEvents, TextStyleEvents } from 'sagak-core'
 
 interface MoreMenuItem {
   icon: React.ReactNode
@@ -149,7 +149,8 @@ export function MoreMenu(): React.ReactNode {
           icon: <Search size={ICON_SIZE} />,
           label: 'Find & Replace',
           action: () => {
-            context?.eventBus?.emit(FindReplaceEvents.FIND)
+            // Find/Replace dialog will be triggered separately.
+            // 여기서 FIND 를 발행하면 검색어가 없어 플러그인이 거부합니다.
           },
         },
       ],
