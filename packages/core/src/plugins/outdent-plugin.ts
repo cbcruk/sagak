@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,6 +35,8 @@ export interface OutdentPluginOptions extends BasePluginOptions {
 export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
   name: 'paragraph:outdent',
 
+  compositionLabel: 'Outdent',
+
   defaultOptions: {
     eventName: ParagraphEvents.OUTDENT_CLICKED,
     checkComposition: true,
@@ -44,14 +45,6 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.OUTDENT_CLICKED]: {
       // `BEFORE` 단계: 검증
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Outdent blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
-
       // `ON` 단계: 내어쓰기 명령 실행
       on: ({ emit, reportError, runCommand }) => {
         try {
@@ -67,7 +60,6 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
       },
 
       // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
-      after: () => {},
     },
   }),
 })

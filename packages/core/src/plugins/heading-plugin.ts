@@ -95,6 +95,8 @@ function extractHeadingLevel(data: unknown): unknown {
 export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
   name: 'paragraph:heading',
 
+  compositionLabel: 'Heading',
+
   defaultOptions: {
     eventName: ParagraphEvents.HEADING_CHANGED,
     checkComposition: true,
@@ -104,12 +106,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.HEADING_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Heading blocked: IME composition in progress')
-          return false
-        }
-
+      before: ({ options: opts }, data?: unknown) => {
         const level = extractHeadingLevel(data)
 
         if (level === null || level === undefined) {
@@ -166,8 +163,6 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

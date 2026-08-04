@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { FindReplaceEvents, CoreEvents } from '@/core'
@@ -303,7 +304,10 @@ export function createFindReplacePlugin(
 
     initialize(context: EditorContext) {
       const { eventBus, config } = context
-      const reportError = createErrorReporter(eventBus, 'plugin:utility:find-replace')
+      const reportError = createErrorReporter(
+        eventBus,
+        'plugin:utility:find-replace'
+      )
       const selectionManager = context.selectionManager
 
       editorElement =
@@ -317,11 +321,11 @@ export function createFindReplacePlugin(
         findEventName,
         'before',
         (data?: unknown) => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Find blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(selectionManager, checkComposition, 'Find')
+          ) {
             return false
           }
-
           if (!isFindData(data)) {
             logger.warn('Find blocked: Invalid find data')
             return false
@@ -386,10 +390,6 @@ export function createFindReplacePlugin(
       })
 
       unsubscribers.push(unsubFindOn)
-
-      const unsubFindAfter = eventBus.on(findEventName, 'after', () => {})
-
-      unsubscribers.push(unsubFindAfter)
 
       const unsubFindNext = eventBus.on(findNextEventName, 'on', () => {
         if (currentMatches.length === 0) {
@@ -466,11 +466,15 @@ export function createFindReplacePlugin(
         replaceEventName,
         'before',
         (data?: unknown) => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Replace blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Replace'
+            )
+          ) {
             return false
           }
-
           if (!isReplaceData(data)) {
             logger.warn('Replace blocked: Invalid replace data')
             return false
@@ -537,19 +541,19 @@ export function createFindReplacePlugin(
 
       unsubscribers.push(unsubReplaceOn)
 
-      const unsubReplaceAfter = eventBus.on(replaceEventName, 'after', () => {})
-
-      unsubscribers.push(unsubReplaceAfter)
-
       const unsubReplaceAllBefore = eventBus.on(
         replaceAllEventName,
         'before',
         (data?: unknown) => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Replace all blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Replace all'
+            )
+          ) {
             return false
           }
-
           if (!isReplaceData(data)) {
             logger.warn('Replace all blocked: Invalid replace data')
             return false
@@ -612,14 +616,6 @@ export function createFindReplacePlugin(
       )
 
       unsubscribers.push(unsubReplaceAllOn)
-
-      const unsubReplaceAllAfter = eventBus.on(
-        replaceAllEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubReplaceAllAfter)
 
       const unsubClearFind = eventBus.on(clearFindEventName, 'on', () => {
         try {

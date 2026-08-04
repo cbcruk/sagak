@@ -25,7 +25,18 @@ function extractLineHeight(data: unknown): string | null {
 }
 
 function getBlockParent(node: Node | null): HTMLElement | null {
-  const blockTags = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']
+  const blockTags = [
+    'P',
+    'DIV',
+    'LI',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'BLOCKQUOTE',
+  ]
 
   while (node) {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -43,6 +54,8 @@ function getBlockParent(node: Node | null): HTMLElement | null {
 export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
   name: 'text-style:line-height',
 
+  compositionLabel: 'Line height',
+
   defaultOptions: {
     eventName: FontEvents.LINE_HEIGHT_CHANGED,
     checkComposition: true,
@@ -50,12 +63,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Line height blocked: IME composition in progress')
-          return false
-        }
-
+      before: (_ctx, data?: unknown) => {
         const lineHeight = extractLineHeight(data)
 
         if (lineHeight === null) {
@@ -104,7 +112,9 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
             // If common ancestor is a block, check its children
             if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
               const element = commonAncestor as HTMLElement
-              const blockChildren = element.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote')
+              const blockChildren = element.querySelectorAll(
+                'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
+              )
               blockChildren.forEach((child) => {
                 if (selection.containsNode(child, true)) {
                   blocksToStyle.add(child as HTMLElement)
@@ -132,8 +142,6 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

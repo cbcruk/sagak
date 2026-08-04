@@ -94,6 +94,8 @@ function extractAlignment(data: unknown): unknown {
 export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
   name: 'paragraph:alignment',
 
+  compositionLabel: 'Alignment',
+
   defaultOptions: {
     eventName: ParagraphEvents.ALIGNMENT_CHANGED,
     checkComposition: true,
@@ -101,12 +103,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Alignment blocked: IME composition in progress')
-          return false
-        }
-
+      before: ({ options: opts }, data?: unknown) => {
         const align = extractAlignment(data)
 
         if (!align) {
@@ -155,8 +152,6 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

@@ -115,7 +115,10 @@ function findSuggestions(
   const suggestions: string[] = []
 
   for (const word of words) {
-    if (word.toLowerCase().startsWith(lowerPrefix) && word.toLowerCase() !== lowerPrefix) {
+    if (
+      word.toLowerCase().startsWith(lowerPrefix) &&
+      word.toLowerCase() !== lowerPrefix
+    ) {
       suggestions.push(word)
 
       if (suggestions.length >= maxSuggestions) {
@@ -212,7 +215,11 @@ export function createAutocompletePlugin(
           return
         }
 
-        const suggestions = findSuggestions(wordInfo.prefix, words, maxSuggestions)
+        const suggestions = findSuggestions(
+          wordInfo.prefix,
+          words,
+          maxSuggestions
+        )
 
         if (suggestions.length === 0) {
           hideAutocomplete()
@@ -239,7 +246,11 @@ export function createAutocompletePlugin(
 
           const event = (data as { event: KeyboardEvent }).event
 
-          if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
+          if (
+            ['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(
+              event.key
+            )
+          ) {
             return
           }
 

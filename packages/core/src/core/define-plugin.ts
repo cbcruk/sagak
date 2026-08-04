@@ -4,6 +4,7 @@ import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
 import { runCommand } from './command-registry'
 import { createDefaultCommandRegistry } from './default-commands'
+import { isBlockedByComposition } from './composition-guard'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -134,6 +135,16 @@ export interface PluginDefinition<
 > {
   /** 플러그인 이름 (예: `'text:bold'`) */
   name: string
+
+  /**
+   * IME 조합 중 차단될 때 로그에 표시할 이름 (예: `'Bold'`)
+   *
+   * 조합 가드는 `checkComposition` 옵션이 켜져 있으면 모든 핸들러 앞에 자동으로
+   * 등록됩니다. 플러그인이 직접 검사할 필요가 없습니다.
+   *
+   * 생략하면 `name`이 쓰입니다.
+   */
+  compositionLabel?: string
 
   /** 플러그인 의존성 */
   dependencies?: string[]
@@ -282,7 +293,25 @@ export function definePlugin<
               ? definition.handlers(finalOptions)
               : definition.handlers
 
+          const compositionLabel =
+            definition.compositionLabel ?? definition.name
+
           for (const [eventName, phases] of Object.entries(resolvedHandlers)) {
+            // IME 조합 가드를 `before` 단계 맨 앞에 자동 등록합니다.
+            // 플러그인마다 복사되던 동일한 검사를 한 곳으로 모은 것으로,
+            // 플러그인 자신의 `before`(페이로드 검증 등)보다 먼저 실행됩니다.
+            const unsubGuard = eventBus.on(
+              eventName,
+              'before',
+              () =>
+                !isBlockedByComposition(
+                  selectionManager,
+                  finalOptions.checkComposition,
+                  compositionLabel
+                )
+            )
+            cleanups.push(unsubGuard)
+
             const phaseOrder: EventPhase[] = ['before', 'on', 'after']
 
             for (const phase of phaseOrder) {

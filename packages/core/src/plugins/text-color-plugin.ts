@@ -96,6 +96,8 @@ function extractColor(data: unknown): string | null {
 export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
   name: 'text-style:text-color',
 
+  compositionLabel: 'Text color',
+
   defaultOptions: {
     eventName: FontEvents.TEXT_COLOR_CHANGED,
     checkComposition: true,
@@ -104,12 +106,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Text color blocked: IME composition in progress')
-          return false
-        }
-
+      before: ({ options: opts }, data?: unknown) => {
         const color = extractColor(data)
 
         if (!color) {
@@ -124,9 +121,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
         }
 
         if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-          logger.warn(
-            `Text color blocked: "${color}" is not in allowed colors`
-          )
+          logger.warn(`Text color blocked: "${color}" is not in allowed colors`)
           return false
         }
 
@@ -156,8 +151,6 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

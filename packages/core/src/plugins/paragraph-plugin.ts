@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,6 +35,8 @@ export interface ParagraphPluginOptions extends BasePluginOptions {
 export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
   name: 'paragraph:format',
 
+  compositionLabel: 'Paragraph format',
+
   defaultOptions: {
     eventName: ParagraphEvents.FORMAT_PARAGRAPH,
     checkComposition: true,
@@ -44,14 +45,6 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.FORMAT_PARAGRAPH]: {
       // `BEFORE` 단계: 형식화 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Paragraph format blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
-
       // `ON` 단계: 단락 형식화 실행
       on: ({ emit, reportError, runCommand }) => {
         try {
@@ -67,7 +60,6 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
       },
 
       // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
-      after: () => {},
     },
   }),
 })

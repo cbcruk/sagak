@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,6 +35,8 @@ export interface SubscriptPluginOptions extends BasePluginOptions {
 export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
   name: 'text-style:subscript',
 
+  compositionLabel: 'Subscript',
+
   defaultOptions: {
     eventName: TextStyleEvents.TOGGLE_SUBSCRIPT,
     checkComposition: true,
@@ -44,14 +45,6 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: {
       // `BEFORE` 단계: 아래 첨자 서식 적용 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Subscript blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
-
       // `ON` 단계: 아래 첨자 명령 실행
       on: ({ emit, reportError, runCommand }) => {
         try {
@@ -67,7 +60,6 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
       },
 
       // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
-      after: () => {},
     },
   }),
 })

@@ -81,6 +81,8 @@ function extractFontSize(data: unknown): number | null {
 export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
   name: 'text-style:font-size',
 
+  compositionLabel: 'Font size',
+
   defaultOptions: {
     eventName: FontEvents.FONT_SIZE_CHANGED,
     checkComposition: true,
@@ -90,12 +92,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.FONT_SIZE_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Font size blocked: IME composition in progress')
-          return false
-        }
-
+      before: ({ options: opts }, data?: unknown) => {
         const size = extractFontSize(data)
 
         if (size === null) {
@@ -139,8 +136,6 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

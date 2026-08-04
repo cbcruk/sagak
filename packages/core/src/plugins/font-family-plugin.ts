@@ -63,6 +63,8 @@ function extractFontFamily(data: unknown): string | null {
 export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
   name: 'text-style:font-family',
 
+  compositionLabel: 'Font family',
+
   defaultOptions: {
     eventName: FontEvents.FONT_FAMILY_CHANGED,
     checkComposition: true,
@@ -70,12 +72,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Font family blocked: IME composition in progress')
-          return false
-        }
-
+      before: ({ options: opts }, data?: unknown) => {
         const fontFamily = extractFontFamily(data)
 
         if (!fontFamily) {
@@ -116,8 +113,6 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
           return false
         }
       },
-
-      after: () => {},
     },
   }),
 })

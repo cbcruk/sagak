@@ -160,11 +160,9 @@ function convertListToMarkdown(
         const childTag = childEl.tagName.toLowerCase()
 
         if (childTag === 'ul') {
-          content +=
-            '\n' + convertListToMarkdown(childEl, 'ul', depth + 1)
+          content += '\n' + convertListToMarkdown(childEl, 'ul', depth + 1)
         } else if (childTag === 'ol') {
-          content +=
-            '\n' + convertListToMarkdown(childEl, 'ol', depth + 1)
+          content += '\n' + convertListToMarkdown(childEl, 'ol', depth + 1)
         } else {
           content += getInlineContent(childEl)
         }
@@ -187,7 +185,9 @@ function convertTableToMarkdown(table: HTMLElement): string {
   rows.forEach((row, rowIndex) => {
     const cells = Array.from(row.querySelectorAll('th, td'))
     const cellContents = cells.map((cell) =>
-      getInlineContent(cell as HTMLElement).trim().replace(/\|/g, '\\|')
+      getInlineContent(cell as HTMLElement)
+        .trim()
+        .replace(/\|/g, '\\|')
     )
 
     result += `| ${cellContents.join(' | ')} |\n`
@@ -206,7 +206,11 @@ function htmlToText(html: string): string {
   return doc.body.textContent || ''
 }
 
-function downloadFile(content: string, filename: string, mimeType: string): void {
+function downloadFile(
+  content: string,
+  filename: string,
+  mimeType: string
+): void {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -267,7 +271,6 @@ export function createExportPlugin(options: ExportPluginOptions = {}): Plugin {
             return htmlToText(html)
         }
       }
-
 
       const unsubDownload = eventBus.on(
         ExportEvents.EXPORT_DOWNLOAD,

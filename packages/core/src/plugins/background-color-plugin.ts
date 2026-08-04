@@ -97,6 +97,8 @@ export const createBackgroundColorPlugin =
   definePlugin<BackgroundColorPluginOptions>({
     name: 'text-style:background-color',
 
+    compositionLabel: 'Background color',
+
     defaultOptions: {
       eventName: FontEvents.BACKGROUND_COLOR_CHANGED,
       checkComposition: true,
@@ -105,14 +107,7 @@ export const createBackgroundColorPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? FontEvents.BACKGROUND_COLOR_CHANGED]: {
-        before: ({ selectionManager, options: opts }, data?: unknown) => {
-          if (opts.checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn(
-              'Background color blocked: IME composition in progress'
-            )
-            return false
-          }
-
+        before: ({ options: opts }, data?: unknown) => {
           const color = extractColor(data)
 
           if (!color) {
@@ -161,8 +156,6 @@ export const createBackgroundColorPlugin =
             return false
           }
         },
-
-        after: () => {},
       },
     }),
   })

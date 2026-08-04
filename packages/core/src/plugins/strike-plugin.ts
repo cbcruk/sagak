@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,6 +35,8 @@ export interface StrikePluginOptions extends BasePluginOptions {
 export const createStrikePlugin = definePlugin<StrikePluginOptions>({
   name: 'text-style:strike',
 
+  compositionLabel: 'Strike',
+
   defaultOptions: {
     eventName: TextStyleEvents.STRIKE_CLICKED,
     checkComposition: true,
@@ -44,14 +45,6 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.STRIKE_CLICKED]: {
       // `BEFORE` 단계: 취소선 서식 적용 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Strike blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
-
       // `ON` 단계: 취소선 명령 실행
       on: ({ emit, reportError, runCommand }) => {
         try {
@@ -67,7 +60,6 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
       },
 
       // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
-      after: () => {},
     },
   }),
 })

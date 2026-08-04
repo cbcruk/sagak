@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,6 +35,8 @@ export interface UnderlinePluginOptions extends BasePluginOptions {
 export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
   name: 'text-style:underline',
 
+  compositionLabel: 'Underline',
+
   defaultOptions: {
     eventName: TextStyleEvents.UNDERLINE_CLICKED,
     checkComposition: true,
@@ -44,14 +45,6 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.UNDERLINE_CLICKED]: {
       // `BEFORE` 단계: 밑줄 서식 적용 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Underline blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
-
       // `ON` 단계: 밑줄 명령 실행
       on: ({ emit, reportError, runCommand }) => {
         try {
@@ -67,7 +60,6 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
       },
 
       // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
-      after: () => {},
     },
   }),
 })

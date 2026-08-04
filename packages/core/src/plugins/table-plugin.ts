@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
@@ -303,11 +304,15 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         createEventName,
         'before',
         (data?: unknown) => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Table create blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table create'
+            )
+          ) {
             return false
           }
-
           const { rows, cols } = extractTableCreateData(data, {
             rows: defaultRows,
             cols: defaultColumns,
@@ -384,21 +389,19 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubCreateOn)
 
-      const unsubCreateAfter = eventBus.on(createEventName, 'after', () => {})
-
-      unsubscribers.push(unsubCreateAfter)
-
       const unsubInsertRowBefore = eventBus.on(
         insertRowEventName,
         'before',
         () => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn(
-              'Table insert row blocked: IME composition in progress'
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table insert row'
             )
+          ) {
             return false
           }
-
           const cell = findCellAtSelection()
 
           if (!cell) {
@@ -474,25 +477,19 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubInsertRowOn)
 
-      const unsubInsertRowAfter = eventBus.on(
-        insertRowEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubInsertRowAfter)
-
       const unsubDeleteRowBefore = eventBus.on(
         deleteRowEventName,
         'before',
         () => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn(
-              'Table delete row blocked: IME composition in progress'
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table delete row'
             )
+          ) {
             return false
           }
-
           const cell = findCellAtSelection()
 
           if (!cell) {
@@ -542,25 +539,19 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubDeleteRowOn)
 
-      const unsubDeleteRowAfter = eventBus.on(
-        deleteRowEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubDeleteRowAfter)
-
       const unsubInsertColumnBefore = eventBus.on(
         insertColumnEventName,
         'before',
         () => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn(
-              'Table insert column blocked: IME composition in progress'
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table insert column'
             )
+          ) {
             return false
           }
-
           const cell = findCellAtSelection()
 
           if (!cell) {
@@ -635,25 +626,19 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubInsertColumnOn)
 
-      const unsubInsertColumnAfter = eventBus.on(
-        insertColumnEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubInsertColumnAfter)
-
       const unsubDeleteColumnBefore = eventBus.on(
         deleteColumnEventName,
         'before',
         () => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn(
-              'Table delete column blocked: IME composition in progress'
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table delete column'
             )
+          ) {
             return false
           }
-
           const cell = findCellAtSelection()
 
           if (!cell) {
@@ -719,23 +704,19 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubDeleteColumnOn)
 
-      const unsubDeleteColumnAfter = eventBus.on(
-        deleteColumnEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubDeleteColumnAfter)
-
       const unsubDeleteTableBefore = eventBus.on(
         deleteTableEventName,
         'before',
         () => {
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Table delete blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Table delete'
+            )
+          ) {
             return false
           }
-
           const table = findTableAtSelection()
 
           if (!table) {
@@ -771,14 +752,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
       })
 
       unsubscribers.push(unsubDeleteTableOn)
-
-      const unsubDeleteTableAfter = eventBus.on(
-        deleteTableEventName,
-        'after',
-        () => {}
-      )
-
-      unsubscribers.push(unsubDeleteTableAfter)
     },
 
     destroy() {

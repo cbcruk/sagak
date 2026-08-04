@@ -6,7 +6,8 @@
 ## 요약 (결론 먼저)
 
 1. **3단계(`before`/`on`/`after`) 생명주기는 실제로 거의 비어 있습니다.** `after` 40개 중 35개가
-   빈 함수이고, `before` 35개는 **전부 동일한 IME composition 가드**입니다.
+   빈 함수이고, `before` 35개는 **전부 동일한 IME composition 가드로 시작**합니다(그중 9개만
+   가드 뒤에 고유한 페이로드 검증을 덧붙입니다).
 2. **주요 에디터 5종을 소스로 확인한 결과, 단계 모델을 쓰는 곳이 하나도 없습니다.** 버스를
    유지한 두 곳(Quill, Editor.js)조차 단계는 없습니다.
 3. **레퍼런스가 IME를 덜 다루는 게 아닙니다.** 오히려 더 많이 다루되, 가드를 **디스패치 경계
@@ -31,14 +32,14 @@
 살아있는 5개가 하는 일은 전부 **"작업이 끝난 뒤 실행"**이라는 순서뿐입니다. 단일 단계에서 작업
 후에 알림을 발행해도 동일합니다.
 
-### `before` — 35개 전부 동일한 IME 가드
+### `before` — 35개 전부 동일한 IME 가드로 시작
 
 | 위치 | 개수 |
 | --- | --- |
 | `definePlugin`의 `before:` | 21 |
 | 수동 `eventBus.on(…, 'before', …)` | 14 (image 3, table 6, link 2, find-replace 3) |
 
-모두 이 형태로 시작합니다.
+**모두** 이 형태로 시작합니다.
 
 ```ts
 if (opts.checkComposition && selectionManager?.getIsComposing()) {
@@ -48,8 +49,16 @@ if (opts.checkComposition && selectionManager?.getIsComposing()) {
 ```
 
 로그 문구만 다릅니다. `checkComposition`을 `false`로 두는 플러그인은 **하나도 없습니다.**
-일부(`find-replace`, `image`)가 가드 뒤에 페이로드 검증을 덧붙이지만, 그건 해당 핸들러의 고유
-로직이지 단계가 필요한 근거가 아닙니다.
+
+가드 뒤에 고유 로직이 붙는 경우도 있습니다. `definePlugin` 21개 중:
+
+- **12개는 IME 가드만** — bold, italic, underline, strike, subscript, superscript,
+  indent, outdent, paragraph, horizontal-rule, ordered-list, unordered-list
+- **9개는 페이로드 검증도** — alignment, background-color, font-family, font-size, heading,
+  letter-spacing, line-height, special-character, text-color
+
+즉 가드를 걷어내면 12개는 `before`가 통째로 사라지고, 9개는 검증만 남습니다. 어느 쪽이든
+**IME 가드가 단계를 요구하는 유일한 이유**라는 점은 그대로입니다.
 
 ### 취소 결과를 보는 곳은 1군데
 
@@ -177,7 +186,7 @@ sagak의 커맨드는 **툴바 버튼 클릭에서 발원**합니다 — `eventB
 
 ## 4. 계획
 
-### A단계 — 가드를 제자리로 (비파괴적, 공개 API 불변)
+### A단계 — 가드를 제자리로 (비파괴적, 공개 API 불변) — **완료 (§8)**
 
 1. IME 가드를 `define-plugin.ts`의 핸들러 래퍼로 이관
    - `definePlugin` 플러그인 21개의 `before` 가드가 한 번에 사라짐
@@ -232,12 +241,10 @@ A단계에서 깨지는 건 주로 `'after'` 35회와 "차단 시 BEFORE 단계�
 ([`execcommand-migration.md`](./execcommand-migration.md) §6.2). 같은 규율을 적용하면 남은 것이
 있습니다.
 
-- **A단계를 실제로 적용했을 때의 테스트 파급.** 위 수치는 정적 참조 횟수이지 실패 개수가
-  아닙니다. 착수 시 측정해야 합니다.
-- **IME 가드를 래퍼로 올렸을 때의 동작 동일성.** 현재 가드는 핸들러보다 먼저 실행되고 `false`를
-  반환해 체인을 끊습니다. 래퍼에서도 같은 시점·같은 의미가 되는지 브라우저 테스트로 확인이
-  필요합니다.
-- **C단계 노선 선택.** A·B 완료 후 재평가.
+- ~~A단계의 테스트 파급~~ → 측정 완료: **테스트 수정 0건** (§8)
+- ~~IME 가드를 래퍼로 올렸을 때의 동작 동일성~~ → 확인 완료 (§8)
+- **B단계의 테스트 파급.** `'on'` 참조 148회가 어떻게 되는지는 아직 미측정입니다.
+- **C단계 노선 선택.** B 완료 후 재평가.
 
 ## 7. 곁가지로 발견한 것
 
@@ -255,3 +262,67 @@ A단계에서 깨지는 건 주로 `'after'` 35회와 "차단 시 BEFORE 단계�
 - `packages/react`(뷰) 쪽 버스 사용 — 뷰 계층 결정과 얽혀 있음
   ([`preact-migration.md`](./preact-migration.md) 참고)
 - signals 도입 — [`signals-adoption.md`](./signals-adoption.md)
+
+---
+
+## 8. A단계 실행 기록
+
+### 구현
+
+**`core/composition-guard.ts` (신규)** — `isBlockedByComposition(selectionManager, checkComposition, label)`
+하나로 IME 검사 로직을 모았습니다.
+
+**`define-plugin.ts`** — `PluginDefinition`에 `compositionLabel?: string`을 추가하고, 핸들러를
+등록할 때 이벤트마다 가드를 **`before` 단계 맨 앞에 자동 등록**합니다.
+
+```ts
+const unsubGuard = eventBus.on(eventName, 'before', () =>
+  !isBlockedByComposition(selectionManager, finalOptions.checkComposition, compositionLabel)
+)
+```
+
+`on` 단계로 옮기지 않고 `before`에 등록한 것이 핵심입니다. 그래야 **실행 시점과 체인 중단
+의미가 기존과 완전히 같습니다** — 플러그인 자신의 `before`(페이로드 검증)보다 먼저 돌고,
+`false`면 `on`·`after`가 모두 건너뛰어지며 `emit`이 `false`를 반환합니다.
+
+`EventBus`는 단계별 핸들러를 `Set`에 등록 순서대로 보관하므로, 가드를 먼저 등록하면 먼저
+실행됩니다.
+
+### 결과
+
+| 항목 | 수치 |
+| --- | --- |
+| IME 가드 제거 (`definePlugin`) | 21곳 |
+| → `before` 통째 삭제 | 12개 |
+| → 페이로드 검증만 남음 | 9개 |
+| IME 가드 → 공유 헬퍼 (수동 구독 4개 플러그인) | 14곳 |
+| 빈 `after` 삭제 | 35개 (`definePlugin` 21 + 수동 14) |
+| **코드 변화** | **33 files, +403 / −514** |
+
+수동 구독 4개(image·table·link·find-replace)는 `definePlugin`을 쓰지 않아 자동 등록 대상이
+아닙니다. 대신 같은 헬퍼를 호출하도록 바꿔 5줄짜리 중복을 1줄로 줄였습니다. 이들을
+`definePlugin`으로 옮기는 것은 `onInit` 구조가 복잡해 B단계 이후로 미룹니다.
+
+### 검증 — 테스트 수정 0건
+
+**1009개 전부 통과, 테스트 파일은 한 줄도 고치지 않았습니다.**
+
+이게 이 작업에서 가장 중요한 지점입니다. 테스트들이 IME 차단 시 로그 문구를 **정확히**
+단언합니다.
+
+```ts
+expect(consoleWarn).toHaveBeenCalledWith('Bold blocked: IME composition in progress')
+```
+
+그래서 `compositionLabel`로 문구를 플러그인별로 보존했습니다. 문구를 일괄 변경했다면 테스트
+10여 개를 고쳐야 했을 것이고, 그러면 **"동작이 같다"는 증거가 사라집니다.** 기존 테스트가
+그대로 통과한다는 사실 자체가 리팩터링이 동작을 보존했다는 증거입니다.
+
+typecheck 통과 / lint 0 errors(기존 `no-explicit-any` 경고 62건 유지) / build 통과.
+
+### 중간에 드러난 것
+
+작업 중 `before` 핸들러 21개가 "전부 IME 가드뿐"이 아니라 **9개는 페이로드 검증도 한다**는
+사실이 드러나 §1을 정정했습니다. 처음 측정에서 핸들러 본문을 130자까지만 보고 판단한 것이
+원인입니다. 결론(가드가 단계를 요구하는 유일한 이유)은 바뀌지 않지만, 수치는 정확해야 합니다.
+

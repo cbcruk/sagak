@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import {
@@ -206,11 +207,11 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
         runCmd(commandRegistry, eventBus, name, value)
 
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
-        if (checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Link blocked: IME composition in progress')
+        if (
+          isBlockedByComposition(selectionManager, checkComposition, 'Link')
+        ) {
           return false
         }
-
         const { url } = extractLinkData(data)
 
         if (!url) {
@@ -278,16 +279,12 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubOn)
 
-      const unsubAfter = eventBus.on(eventName, 'after', () => {})
-
-      unsubscribers.push(unsubAfter)
-
       const unsubUnlinkBefore = eventBus.on(unlinkEventName, 'before', () => {
-        if (checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Unlink blocked: IME composition in progress')
+        if (
+          isBlockedByComposition(selectionManager, checkComposition, 'Unlink')
+        ) {
           return false
         }
-
         return true
       })
 
@@ -312,10 +309,6 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
       })
 
       unsubscribers.push(unsubUnlinkOn)
-
-      const unsubUnlinkAfter = eventBus.on(unlinkEventName, 'after', () => {})
-
-      unsubscribers.push(unsubUnlinkAfter)
     },
 
     destroy() {

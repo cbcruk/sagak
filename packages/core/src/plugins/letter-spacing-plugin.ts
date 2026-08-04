@@ -25,7 +25,18 @@ function extractLetterSpacing(data: unknown): string | null {
 }
 
 function getBlockParent(node: Node | null): HTMLElement | null {
-  const blockTags = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']
+  const blockTags = [
+    'P',
+    'DIV',
+    'LI',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'BLOCKQUOTE',
+  ]
 
   while (node) {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -40,99 +51,98 @@ function getBlockParent(node: Node | null): HTMLElement | null {
   return null
 }
 
-export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions>({
-  name: 'text-style:letter-spacing',
+export const createLetterSpacingPlugin =
+  definePlugin<LetterSpacingPluginOptions>({
+    name: 'text-style:letter-spacing',
 
-  defaultOptions: {
-    eventName: FontEvents.LETTER_SPACING_CHANGED,
-    checkComposition: true,
-  },
+    compositionLabel: 'Letter spacing',
 
-  handlers: (options) => ({
-    [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Letter spacing blocked: IME composition in progress')
-          return false
-        }
+    defaultOptions: {
+      eventName: FontEvents.LETTER_SPACING_CHANGED,
+      checkComposition: true,
+    },
 
-        const letterSpacing = extractLetterSpacing(data)
-
-        if (letterSpacing === null) {
-          logger.warn('Letter spacing blocked: Invalid letter spacing')
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError }, data?: unknown) => {
-        try {
+    handlers: (options) => ({
+      [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: {
+        before: (_ctx, data?: unknown) => {
           const letterSpacing = extractLetterSpacing(data)
 
           if (letterSpacing === null) {
+            logger.warn('Letter spacing blocked: Invalid letter spacing')
             return false
           }
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
+          return true
+        },
 
-          const selection = window.getSelection()
-          if (!selection || selection.rangeCount === 0) {
-            return false
-          }
+        on: ({ emit, reportError }, data?: unknown) => {
+          try {
+            const letterSpacing = extractLetterSpacing(data)
 
-          const range = selection.getRangeAt(0)
-          const commonAncestor = range.commonAncestorContainer
-
-          const blocksToStyle = new Set<HTMLElement>()
-
-          if (range.collapsed) {
-            const block = getBlockParent(commonAncestor)
-            if (block) {
-              blocksToStyle.add(block)
+            if (letterSpacing === null) {
+              return false
             }
-          } else {
-            const startBlock = getBlockParent(range.startContainer)
-            const endBlock = getBlockParent(range.endContainer)
 
-            if (startBlock) blocksToStyle.add(startBlock)
-            if (endBlock) blocksToStyle.add(endBlock)
+            emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-            if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
-              const element = commonAncestor as HTMLElement
-              const blockChildren = element.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote')
-              blockChildren.forEach((child) => {
-                if (selection.containsNode(child, true)) {
-                  blocksToStyle.add(child as HTMLElement)
-                }
-              })
+            const selection = window.getSelection()
+            if (!selection || selection.rangeCount === 0) {
+              return false
             }
-          }
 
-          const cssValue = letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
+            const range = selection.getRangeAt(0)
+            const commonAncestor = range.commonAncestorContainer
 
-          blocksToStyle.forEach((block) => {
-            block.style.letterSpacing = cssValue
-          })
+            const blocksToStyle = new Set<HTMLElement>()
 
-          if (blocksToStyle.size > 0) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'letterSpacing',
-              value: letterSpacing,
+            if (range.collapsed) {
+              const block = getBlockParent(commonAncestor)
+              if (block) {
+                blocksToStyle.add(block)
+              }
+            } else {
+              const startBlock = getBlockParent(range.startContainer)
+              const endBlock = getBlockParent(range.endContainer)
+
+              if (startBlock) blocksToStyle.add(startBlock)
+              if (endBlock) blocksToStyle.add(endBlock)
+
+              if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
+                const element = commonAncestor as HTMLElement
+                const blockChildren = element.querySelectorAll(
+                  'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
+                )
+                blockChildren.forEach((child) => {
+                  if (selection.containsNode(child, true)) {
+                    blocksToStyle.add(child as HTMLElement)
+                  }
+                })
+              }
+            }
+
+            const cssValue =
+              letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
+
+            blocksToStyle.forEach((block) => {
+              block.style.letterSpacing = cssValue
             })
-            return true
+
+            if (blocksToStyle.size > 0) {
+              emit(CoreEvents.STYLE_CHANGED, {
+                style: 'letterSpacing',
+                value: letterSpacing,
+              })
+              return true
+            }
+
+            return false
+          } catch (error) {
+            reportError(error, 'Failed to apply letter spacing:')
+            return false
           }
-
-          return false
-        } catch (error) {
-          reportError(error, 'Failed to apply letter spacing:')
-          return false
-        }
+        },
       },
-
-      after: () => {},
-    },
-  }),
-})
+    }),
+  })
 
 export const LetterSpacingPlugin = createLetterSpacingPlugin()
