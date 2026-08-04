@@ -1,4 +1,4 @@
-import { createRoot } from 'react-dom/client'
+import { render } from 'preact'
 import { App } from './app'
 import 'sagak-editor/styles'
 import './index.css'
@@ -9,4 +9,4 @@ if (!container) {
   throw new Error('#root 요소를 찾을 수 없습니다')
 }
 
-createRoot(container).render(<App />)
+render(<App />, container)

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
 import { Dialog } from '@base-ui/react/dialog'
-import { Table } from 'lucide-react'
+import { Table } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -154,7 +155,7 @@ export function TableDialog(): ReactNode {
                     min="1"
                     max="100"
                     value={rows}
-                    onChange={(e) => setRows(e.target.value)}
+                    onChange={(e) => setRows(e.currentTarget.value)}
                     style={inputStyle}
                   />
                 </div>
@@ -165,7 +166,7 @@ export function TableDialog(): ReactNode {
                     min="1"
                     max="50"
                     value={cols}
-                    onChange={(e) => setCols(e.target.value)}
+                    onChange={(e) => setCols(e.currentTarget.value)}
                     style={inputStyle}
                   />
                 </div>

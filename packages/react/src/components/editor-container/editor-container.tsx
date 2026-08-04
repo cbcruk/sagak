@@ -1,4 +1,4 @@
-import type { ReactNode, CSSProperties } from 'react'
+import type { ReactNode, CSSProperties } from 'preact/compat'
 
 export interface EditorContainerProps {
   children: ReactNode

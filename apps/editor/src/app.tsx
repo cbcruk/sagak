@@ -1,3 +1,4 @@
+import type { JSX } from 'preact'
 import {
   useEditor,
   EditorProvider,
@@ -17,7 +18,7 @@ const INITIAL_CONTENT = `
 </ul>
 `
 
-export function App(): React.ReactNode {
+export function App(): JSX.Element {
   const { containerRef, editor, ready, error } = useEditor({
     initialContent: INITIAL_CONTENT,
   })

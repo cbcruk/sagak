@@ -1,4 +1,4 @@
-import { useRef, useEffect, type ReactNode } from 'react'
+import { useRef, useEffect, type ReactNode } from 'preact/compat'
 import type { EditingMode } from 'sagak-core'
 
 export interface EditingAreaProps {
@@ -27,7 +27,6 @@ export function EditingArea({
           ref={wysiwygRef}
           data-part="wysiwyg"
           contentEditable
-          suppressContentEditableWarning
           dangerouslySetInnerHTML={{ __html: initialContent }}
         />
       )}
@@ -35,7 +34,7 @@ export function EditingArea({
         <textarea
           data-part="html"
           defaultValue={initialContent}
-          spellCheck={false}
+          spellcheck={false}
         />
       )}
       {mode === 'text' && <textarea data-part="text" defaultValue="" />}

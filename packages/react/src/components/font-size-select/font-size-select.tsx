@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import type { ReactNode } from 'preact/compat'
 import { Select } from '@base-ui/react/select'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-preact'
 import { useEditorContext } from '../../context/editor-context'
 import { useFontState } from '../../hooks'
 

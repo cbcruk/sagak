@@ -1,9 +1,9 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import preact from '@preact/preset-vite'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [preact()],
   resolve: {
     alias: {
       'sagak-core': fileURLToPath(new URL('../core/src/index.ts', import.meta.url)),
@@ -11,6 +11,9 @@ export default defineConfig({
       '@/core': fileURLToPath(new URL('../core/src/core', import.meta.url)),
       '@/plugins': fileURLToPath(new URL('../core/src/plugins', import.meta.url)),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      react: 'preact/compat',
+      'react-dom': 'preact/compat',
+      'react/jsx-runtime': 'preact/jsx-runtime',
     },
   },
   test: {

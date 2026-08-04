@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
-import { IndentDecrease, IndentIncrease } from 'lucide-react'
+import type * as React from 'preact/compat'
+import type { ReactNode } from 'preact/compat'
+import { IndentDecrease, IndentIncrease } from 'lucide-preact'
 import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 

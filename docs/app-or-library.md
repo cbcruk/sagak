@@ -100,8 +100,7 @@
 
 - [x] **1. 배포 장비 제거** (§3) — 완료 (§8)
 - [x] **2. 앱 진입점 추가** — 완료 (§8)
-- [ ] **3. #9 재개** — A/B/C 결정 없이 Preact 전환만. `main`에서 리베이스 필요
-      (`more-menu.tsx` 충돌 예상)
+- [x] **3. Preact 전환** — 완료 (§9). #9는 이 커밋으로 대체되므로 닫아야 합니다
 - [ ] **4. EventBus 제거(Lexical 노선) 재평가** — 공개 API 제약이 사라진 뒤
 
 ## 7. 이 결정이 무효화하는 기존 문서
@@ -180,4 +179,72 @@ apps/editor/
   쪽이 자연스럽지만, Storybook을 개발 도구로 계속 둘지와 함께 판단할 문제라 손대지 않았습니다.
 - **`packages/react`의 tsup 빌드를 유지할지.** 앱이 소스를 직접 참조하므로 지금은 쓰이지
   않습니다. `build:packages`로 남겨두었습니다.
+
+---
+
+## 9. 실행 기록 — 3단계 Preact 전환
+
+### #9를 리베이스하지 않고 다시 적용한 이유
+
+#9(`721c054`)와 현재 트리가 겹치는 파일이 4개인데, 그중 둘은 **앱 결정으로 이미 다르게
+처리된 부분**입니다.
+
+| 파일 | #9의 변경 | 지금 |
+| --- | --- | --- |
+| `packages/react/package.json` | `peerDependencies`를 `react` → `preact`로 | `peerDependencies` 자체가 없음 (§3) |
+| `packages/react/tsup.config.ts` | base-ui를 `noExternal`로 번들 | 소비자가 없어 무의미 |
+| `more-menu.tsx` | import 경로 치환 | #10에서 버그 수정 |
+| `pnpm-lock.yaml` | — | — |
+
+즉 리베이스하면 **이미 폐기된 결정을 놓고 충돌을 푸는** 작업이 됩니다. 게다가 `apps/editor`는
+#9에 존재하지 않으므로 어차피 별도 작업이 필요합니다. #9에서 검증된 코드모드를 현재 트리에
+다시 적용하는 편이 깨끗합니다.
+
+**#9는 이 작업으로 대체되므로 닫아야 합니다.**
+
+### 적용
+
+| 대상 | 변경 |
+| --- | --- |
+| 소스 29파일 | `from 'react'` → `preact/compat` |
+| 전역 `React.` 21파일 | `import type * as React from 'preact/compat'` |
+| 아이콘 19파일 | `lucide-react` → `lucide-preact` |
+| Storybook / vitest | `@storybook/preact-vite`, `@preact/preset-vite` |
+| `apps/editor` | `render()` + `JSX.Element` — **compat 이 아니라 Preact 네이티브** |
+
+앱 진입점만 네이티브인 이유는 새로 쓴 코드라 compat을 거칠 이유가 없어서입니다. 기존
+`packages/react`는 base-ui가 어차피 compat을 끌어오므로 compat으로 통일했습니다.
+
+### 기계적이지 않았던 부분 (#9와 동일)
+
+React의 `SyntheticEvent`는 `e.target`을 요소 타입으로 좁히지만 Preact의 `TargetedEvent`는 DOM
+스펙대로 `EventTarget | null`로 두고 요소 타입을 `currentTarget`에 둡니다. `e.target.value` 12곳을
+`e.currentTarget`으로 옮겼습니다 — **타입이 정확해지는 수정**입니다.
+
+JSX 속성 차이 둘: `suppressContentEditableWarning`(React 전용) 제거, `spellCheck` → `spellcheck`.
+
+### 검증
+
+| 관문 | 결과 |
+| --- | --- |
+| typecheck (3패키지) | 0 오류 |
+| lint | 0 errors |
+| 앱 빌드 / Storybook 빌드 | 통과 |
+| core 테스트 | **1009개 통과** |
+| editor 테스트 | **4개 통과** |
+| **앱 브라우저 구동** | **8/8 통과** |
+
+브라우저 구동에서 **Preact VDOM 마커(`__k`)를 실제 DOM 노드에서 확인**했습니다 — 번들에 React
+내부 마커가 없다는 것과 합쳐, 렌더러가 실제로 Preact임을 두 층위에서 검증한 셈입니다. 타이핑,
+툴바, Bold(`<h1><strong>사각사각</strong></h1>`)까지 동작합니다.
+
+### 앱 번들
+
+363 KB / **gzip 113.6 KB** (base-ui·lucide·에디터 전체 포함).
+
+### 남은 것
+
+`packages/react`가 여전히 `sagak-editor`라는 이름과 `packages/react` 경로를 씁니다. 이름은 이미
+React를 가리키지 않고, 경로 변경은 `deploy-storybook.yml` 2곳을 함께 고쳐야 해서 이번 범위에서
+제외했습니다.
 

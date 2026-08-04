@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import type * as React from 'preact/compat'
+import { useState, useRef, useEffect, useCallback } from 'preact/compat'
 import {
   MoreHorizontal,
   Link,
@@ -11,7 +12,7 @@ import {
   Superscript,
   ALargeSmall,
   CaseSensitive,
-} from 'lucide-react'
+} from 'lucide-preact'
 import { useEditorContext } from '../../context/editor-context'
 import { ContentEvents, TextStyleEvents } from 'sagak-core'
 
