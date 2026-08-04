@@ -3,31 +3,6 @@
   "version": "0.1.0",
   "description": "A modern, feature-rich WYSIWYG editor for React",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./styles": "./src/styles/index.css",
-    "./styles.css": "./src/styles/index.css"
-  },
-  "files": [
-    "dist",
-    "src/styles",
-    "README.md"
-  ],
-  "sideEffects": [
-    "**/*.css"
-  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -35,8 +10,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "prepublishOnly": "pnpm build"
+    "build-storybook": "storybook build"
   },
   "keywords": [
     "editor",
@@ -58,10 +32,6 @@
     "lucide-react": "^0.562.0",
     "sagak-core": "workspace:*"
   },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
-  },
   "devDependencies": {
     "@storybook/react": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
@@ -80,5 +50,6 @@
     "vitest-browser-react": "^2.0.2",
     "eslint-plugin-storybook": "10.1.11",
     "@storybook/addon-docs": "^10.1.11"
-  }
+  },
+  "private": true
 }

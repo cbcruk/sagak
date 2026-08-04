@@ -98,9 +98,8 @@
 
 ## 6. 진행 순서
 
-- [ ] **1. 배포 장비 제거** (§3) — 프레임워크와 무관하므로 먼저
-- [ ] **2. 앱 진입점 추가** — 지금은 Storybook 말고 띄울 방법이 없습니다. **이게 "앱으로
-      정의"의 실질**입니다
+- [x] **1. 배포 장비 제거** (§3) — 완료 (§8)
+- [x] **2. 앱 진입점 추가** — 완료 (§8)
 - [ ] **3. #9 재개** — A/B/C 결정 없이 Preact 전환만. `main`에서 리베이스 필요
       (`more-menu.tsx` 충돌 예상)
 - [ ] **4. EventBus 제거(Lexical 노선) 재평가** — 공개 API 제약이 사라진 뒤
@@ -117,3 +116,68 @@
 
 - 앱의 제품 방향(무엇을 하는 앱인가)은 이 노트의 주제가 아닙니다. 여기서는 **저장소를 어떤
   종류의 소프트웨어로 다룰지**만 정합니다.
+
+---
+
+## 8. 실행 기록 — 1·2단계
+
+### 1. 배포 장비 제거
+
+| 대상 | 처리 |
+| --- | --- |
+| `main`/`module`/`types`/`exports`/`files`/`sideEffects` | 두 패키지에서 제거 |
+| `peerDependencies` (`sagak-editor`) | 제거 |
+| `prepublishOnly` | 제거 |
+| `private: true` | 두 패키지에 명시 |
+| tsup `format` | `['esm','cjs']` → `['esm']` |
+| tsup `dts` | 제거 |
+| changesets | `.changeset/` 삭제, 루트 스크립트 3개 제거, `@changesets/cli` 제거 |
+
+### 2. 앱 진입점 — `apps/editor`
+
+워크스페이스에 `apps/*`를 추가하고 `sagak-app`을 만들었습니다.
+
+```
+apps/editor/
+  index.html
+  vite.config.ts     워크스페이스 패키지를 dist 가 아니라 소스로 alias
+  src/{main,app}.tsx
+  src/index.css
+```
+
+**패키지를 빌드 산출물이 아니라 소스로 참조합니다.** 앱이므로 `dist`를 거칠 이유가 없고, 수정이
+즉시 반영됩니다. 이 선택 덕분에 §3에서 `exports`를 걷어내도 아무 문제가 없습니다 — 오히려
+`exports`가 남아 있었다면 소스 참조와 충돌했을 것입니다.
+
+루트 스크립트를 앱 기준으로 바꿨습니다.
+
+| 스크립트 | 의미 |
+| --- | --- |
+| `dev` / `build` / `preview` | 앱 (`sagak-app`) |
+| `build:packages` | 패키지 tsup 빌드 (필요할 때만) |
+
+### 검증 — 빌드가 아니라 동작으로
+
+빌드 성공은 동작이 아니므로 `dist`를 띄워 headless Chromium으로 구동했습니다.
+
+| 검증 | 결과 |
+| --- | --- |
+| 앱 셸 렌더 / 에러 배너 없음 | PASS |
+| 편집 영역 마운트 + 초기 콘텐츠 | PASS |
+| **타이핑 반영** | PASS |
+| 툴바 렌더 (4개) | PASS |
+| **Bold 적용 → `<h1><strong>사각사각</strong></h1>`** | PASS |
+
+첫 시도는 실패했습니다 — `AutoSaveIndicator`를 헤더(`EditorProvider` 바깥)에 뒀는데 이 컴포넌트가
+컨텍스트를 요구해서 앱 전체가 마운트되지 않았습니다. 프로바이더 안으로 옮겨 해결했고, **빌드는
+성공하는데 화면이 비는** 종류라 브라우저 구동 없이는 못 잡았을 문제입니다.
+
+코어 테스트 1009개 통과 / typecheck 3패키지 전부 통과 / lint 0 errors.
+
+### 후속으로 정할 것
+
+- **GitHub Pages가 무엇을 배포할지.** 지금은 Storybook입니다. 앱으로 정의했으니 앱을 배포하는
+  쪽이 자연스럽지만, Storybook을 개발 도구로 계속 둘지와 함께 판단할 문제라 손대지 않았습니다.
+- **`packages/react`의 tsup 빌드를 유지할지.** 앱이 소스를 직접 참조하므로 지금은 쓰이지
+  않습니다. `build:packages`로 남겨두었습니다.
+
