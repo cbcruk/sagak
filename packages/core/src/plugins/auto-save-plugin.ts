@@ -3,19 +3,7 @@ import type { Plugin, EditorContext } from '@/core'
 import { WysiwygEvents, CoreEvents } from '@/core'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 
-/**
- * Auto-save status
- */
-export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
-/**
- * Auto-save event data
- */
-export interface AutoSaveEventData {
-  status: AutoSaveStatus
-  timestamp?: number
-  error?: Error
-}
 
 /**
  * Auto-save plugin options
@@ -61,14 +49,12 @@ export interface AutoSavePluginOptions {
   restoreOnInit?: boolean
 }
 
-/**
- * Auto-save events
- */
-export const AutoSaveEvents = {
-  AUTO_SAVE_STATUS_CHANGED: 'AUTO_SAVE_STATUS_CHANGED',
-  AUTO_SAVE_RESTORE: 'AUTO_SAVE_RESTORE',
-  AUTO_SAVE_CLEAR: 'AUTO_SAVE_CLEAR',
-} as const
+// 이벤트 상수는 core/events.ts 에 모여 있습니다 (EditorEventMap 과 함께 관리)
+import { AutoSaveEvents } from '@/core/events'
+import type { AutoSaveStatus, AutoSaveEventData } from '@/core/event-map'
+
+export { AutoSaveEvents }
+export type { AutoSaveStatus, AutoSaveEventData }
 
 /**
  * Create auto-save plugin

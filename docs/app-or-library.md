@@ -101,7 +101,7 @@
 - [x] **1. 배포 장비 제거** (§3) — 완료 (§8)
 - [x] **2. 앱 진입점 추가** — 완료 (§8)
 - [x] **3. Preact 전환** — 완료 (§9). #9는 이 커밋으로 대체되므로 닫아야 합니다
-- [ ] **4. EventBus 제거(Lexical 노선) 재평가** — 공개 API 제약이 사라진 뒤
+- [x] **4. EventBus 제거(Lexical 노선) 재평가** — 완료 (§10). **결론: 제거하지 않습니다**
 
 ## 7. 이 결정이 무효화하는 기존 문서
 
@@ -247,4 +247,99 @@ JSX 속성 차이 둘: `suppressContentEditableWarning`(React 전용) 제거, `s
 `packages/react`가 여전히 `sagak-editor`라는 이름과 `packages/react` 경로를 씁니다. 이름은 이미
 React를 가리키지 않고, 경로 변경은 `deploy-storybook.yml` 2곳을 함께 고쳐야 해서 이번 범위에서
 제외했습니다.
+
+---
+
+## 10. 4단계 — EventBus 제거 재평가
+
+### 결론: 제거하지 않습니다
+
+앱으로 정의하면서 역할 ④(호스트 앱 확장점) 제약이 사라졌으니 제거가 싸질 것으로 봤는데,
+다시 재보니 **제거의 이득이 이미 대부분 회수됐습니다.**
+
+### 현재 실태 (A·B·C 이후)
+
+| 항목 | 수치 |
+| --- | --- |
+| 참조 파일 | core 41 / react 21 |
+| `emit` 호출 | 157 |
+| `on` 구독 | 76 |
+| 진짜 fan-out | `STYLE_CHANGED` 10곳, `CONTENT_RESTORED` 6곳 |
+
+### 왜 이득이 줄었나
+
+`event-bus-refactor.md`가 제거 근거로 든 것은 두 가지였습니다.
+
+1. **타입 부재** — C단계가 해결했습니다. 페이로드가 컴파일 시점에 검사됩니다.
+2. **이중 디스패치** — 여전히 남아 있지만, 아래 측정 결과 비용이 이득을 넘습니다.
+
+즉 **제거로만 얻을 수 있는 것은 이제 이중 디스패치 해소뿐**입니다.
+
+### 이중 디스패치를 걷어내는 비용 (실측)
+
+`definePlugin` 기반 16개 중 **10개가 순수 통과**입니다 — `runCommand(x)` 호출과
+`STYLE_CHANGED` 발행이 전부입니다.
+
+```
+bold, italic, underline, strike, subscript, superscript,
+indent, outdent, paragraph, ordered-list
+```
+
+이들을 없애고 툴바가 `CommandRegistry`를 직접 호출하게 하면 플러그인 10개 + 이벤트 10종이
+사라집니다. 하지만:
+
+| 비용 | 실측 |
+| --- | --- |
+| 삭제될 테스트 | **약 100개** (bold 17, italic 17, underline 16, strike 16, …) |
+| 성격 | 등록·명령 실행·`STYLE_CHANGED` 발행·**IME 차단** 검증 |
+
+**IME 차단 테스트가 여기 섞여 있습니다.** A단계에서 가드를 중앙화했으므로 이 10개는 같은 코드를
+10번 검증하는 셈이라 중복이긴 합니다. 하지만 **중복된 안전망을 100개 걷어내는 대가로 얻는 것이
+"플러그인 파일 10개 감소"**라면 수지가 맞지 않습니다. 이중 디스패치는 지금까지 버그를 하나도
+만들지 않았습니다.
+
+### 부수 확인 — 페이로드를 읽는 구독자
+
+`STYLE_CHANGED` 구독자 10곳 중 페이로드를 읽는 곳은 **find-replace 다이얼로그 하나**이고, 그마저
+`style !== 'find'`면 무시합니다. 순수 통과 10개가 발행하는 `{ style: 'bold' }` 같은 값은 사실상
+아무도 보지 않습니다. 나중에 이 층을 걷어낼 때 페이로드 호환을 걱정할 필요가 없다는 뜻이라
+기록해 둡니다.
+
+### 대신 한 것 — 타입 커버리지의 구멍 메우기
+
+C단계에서 "**65종 전부** 등록"이라고 적었는데, 그건 `events.ts` 기준이었습니다. 실제로는
+**플러그인이 자체 정의한 이벤트 10종이 맵 밖에 있어 `unknown`으로 남아 있었습니다.**
+
+| 출처 | 이벤트 |
+| --- | --- |
+| `auto-save-plugin` | `AUTO_SAVE_STATUS_CHANGED`, `AUTO_SAVE_RESTORE`, `AUTO_SAVE_CLEAR` |
+| `export-plugin` | `EXPORT_DOWNLOAD` |
+| `image-resize-plugin` | `IMAGE_RESIZE_START`, `IMAGE_RESIZE_END` |
+| `image-upload-plugin` | `IMAGE_UPLOAD_START`/`COMPLETE`/`ERROR`/`FROM_FILE` |
+
+**이벤트 상수를 `events.ts`로 모으고** 맵에 등록했습니다. 상수를 옮긴 이유는 순환 의존
+때문입니다 — 계산된 키는 값 참조가 필요해서 `import type`으로는 안 되고, `event-map`이
+`plugins/`를 값으로 import하면 순환이 생깁니다.
+
+**결과: 75종 / 75종.** 이제 "이벤트 상수는 `events.ts`에 있다"는 규칙에 예외가 없어서, 같은
+구멍이 다시 생기지 않습니다.
+
+페이로드 타입도 실제와 어긋난 것을 바로잡았습니다 — 처음 쓸 때 `savedAt`으로 적었으나 실제는
+`timestamp`였고, `format`을 `string`으로 뒀으나 실제는 `'html' | 'markdown' | 'text'`
+유니온이었습니다. 중복을 남기지 않으려고 `AutoSaveEventData`·`ExportDownloadData`·
+`ExportFormat`·`AutoSaveStatus`의 **정의를 `event-map.ts`로 옮기고 플러그인이 재export**하도록
+했습니다. 이벤트 계약의 단일 출처가 `event-map.ts`가 됩니다.
+
+### 검증
+
+typecheck 3패키지 통과 / lint 0 errors / build 통과 / **core 테스트 1009개 통과**.
+
+타입이 실제로 무는지는 probe로 확인했습니다 — 잘못된 `status` 값, 페이로드 없는 이벤트에 전달,
+필수 페이로드 누락이 모두 컴파일 오류가 되고 구독 핸들러의 페이로드 타입도 좁혀집니다.
+
+### 언제 다시 볼 것인가
+
+이중 디스패치 제거는 **테스트를 먼저 정리한 뒤**가 맞습니다. 순수 통과 10개의 테스트가
+중복이라는 판단이 서면 그때 함께 걷어내면 비용이 맞아떨어집니다. 지금 순서로 하면 안전망을
+먼저 버리는 셈이 됩니다.
 

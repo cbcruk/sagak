@@ -48,12 +48,10 @@ export interface ImageUploadPluginOptions {
   onUploadError?: (error: Error) => void
 }
 
-export const ImageUploadEvents = {
-  IMAGE_UPLOAD_START: 'IMAGE_UPLOAD_START',
-  IMAGE_UPLOAD_COMPLETE: 'IMAGE_UPLOAD_COMPLETE',
-  IMAGE_UPLOAD_ERROR: 'IMAGE_UPLOAD_ERROR',
-  IMAGE_UPLOAD_FROM_FILE: 'IMAGE_UPLOAD_FROM_FILE',
-} as const
+// 이벤트 상수는 core/events.ts 에 모여 있습니다 (EditorEventMap 과 함께 관리)
+import { ImageUploadEvents } from '@/core/events'
+
+export { ImageUploadEvents }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

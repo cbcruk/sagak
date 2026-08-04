@@ -1,6 +1,5 @@
 import type { Plugin, EditorContext } from '@/core'
 
-export type ExportFormat = 'html' | 'markdown' | 'text'
 
 export interface ExportPluginOptions {
   /**
@@ -10,14 +9,13 @@ export interface ExportPluginOptions {
   defaultFilename?: string
 }
 
-export const ExportEvents = {
-  EXPORT_DOWNLOAD: 'EXPORT_DOWNLOAD',
-} as const
+// 이벤트 상수는 core/events.ts 에 모여 있습니다 (EditorEventMap 과 함께 관리)
+import { ExportEvents } from '@/core/events'
+import type { ExportFormat, ExportDownloadData } from '@/core/event-map'
 
-export interface ExportDownloadData {
-  format: ExportFormat
-  filename?: string
-}
+export { ExportEvents }
+export type { ExportFormat, ExportDownloadData }
+
 
 function htmlToMarkdown(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html')

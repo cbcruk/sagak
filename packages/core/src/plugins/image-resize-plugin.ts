@@ -27,10 +27,10 @@ export interface ImageResizePluginOptions {
   maintainAspectRatio?: boolean
 }
 
-export const ImageResizeEvents = {
-  IMAGE_RESIZE_START: 'IMAGE_RESIZE_START',
-  IMAGE_RESIZE_END: 'IMAGE_RESIZE_END',
-} as const
+// 이벤트 상수는 core/events.ts 에 모여 있습니다 (EditorEventMap 과 함께 관리)
+import { ImageResizeEvents } from '@/core/events'
+
+export { ImageResizeEvents }
 
 export function createImageResizePlugin(
   options: ImageResizePluginOptions = {}

@@ -156,6 +156,40 @@ export const WysiwygEvents = {
 } as const
 
 /**
+ * 자동 저장 플러그인 이벤트
+ */
+export const AutoSaveEvents = {
+  AUTO_SAVE_STATUS_CHANGED: 'AUTO_SAVE_STATUS_CHANGED',
+  AUTO_SAVE_RESTORE: 'AUTO_SAVE_RESTORE',
+  AUTO_SAVE_CLEAR: 'AUTO_SAVE_CLEAR',
+} as const
+
+/**
+ * 내보내기 플러그인 이벤트
+ */
+export const ExportEvents = {
+  EXPORT_DOWNLOAD: 'EXPORT_DOWNLOAD',
+} as const
+
+/**
+ * 이미지 크기 조절 플러그인 이벤트
+ */
+export const ImageResizeEvents = {
+  IMAGE_RESIZE_START: 'IMAGE_RESIZE_START',
+  IMAGE_RESIZE_END: 'IMAGE_RESIZE_END',
+} as const
+
+/**
+ * 이미지 업로드 플러그인 이벤트
+ */
+export const ImageUploadEvents = {
+  IMAGE_UPLOAD_START: 'IMAGE_UPLOAD_START',
+  IMAGE_UPLOAD_COMPLETE: 'IMAGE_UPLOAD_COMPLETE',
+  IMAGE_UPLOAD_ERROR: 'IMAGE_UPLOAD_ERROR',
+  IMAGE_UPLOAD_FROM_FILE: 'IMAGE_UPLOAD_FROM_FILE',
+} as const
+
+/**
  * 모든 이벤트 이름 결합
  */
 export const EditorEvents = {
@@ -169,6 +203,10 @@ export const EditorEvents = {
   ...AutocompleteEvents,
   ...EditingAreaEvents,
   ...WysiwygEvents,
+  ...AutoSaveEvents,
+  ...ExportEvents,
+  ...ImageResizeEvents,
+  ...ImageUploadEvents,
 } as const
 
 /**
