@@ -43,23 +43,21 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.UNDERLINE_CLICKED]: {
-      // `BEFORE` 단계: 밑줄 서식 적용 가능 여부 확인
-      // `ON` 단계: 밑줄 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('underline')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'underline' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute underline command:')
-          return false
+    [options.eventName ?? TextStyleEvents.UNDERLINE_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('underline')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'underline' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute underline command:')
+        return false
+      }
     },
   }),
 })

@@ -43,19 +43,21 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.BOLD_CLICKED]: {
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('bold')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute bold command:')
-          return false
+    [options.eventName ?? TextStyleEvents.BOLD_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('bold')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
         }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute bold command:')
+        return false
+      }
     },
   }),
 })

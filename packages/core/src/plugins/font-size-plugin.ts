@@ -91,51 +91,42 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.FONT_SIZE_CHANGED]: {
-      before: ({ options: opts }, data?: unknown) => {
-        const size = extractFontSize(data)
+    [options.eventName ?? FontEvents.FONT_SIZE_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const size = extractFontSize(data)
 
-        if (size === null) {
-          logger.warn('Font size blocked: Invalid font size')
-          return false
+      if (size === null) {
+        logger.warn('Font size blocked: Invalid font size')
+        return false
+      }
+
+      const minSize = opts.minSize ?? 1
+      const maxSize = opts.maxSize ?? 7
+      if (size < minSize || size > maxSize) {
+        logger.warn(
+          `Font size blocked: Size ${size} is outside range ${minSize}-${maxSize}`
+        )
+        return false
+      }
+
+      try {
+        const sizeStr = String(size)
+        const result = runCommand('fontSize', sizeStr)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'fontSize',
+            value: size,
+          })
         }
 
-        const minSize = opts.minSize ?? 1
-        const maxSize = opts.maxSize ?? 7
-        if (size < minSize || size > maxSize) {
-          logger.warn(
-            `Font size blocked: Size ${size} is outside range ${minSize}-${maxSize}`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const fontSize = extractFontSize(data)
-
-          if (fontSize === null) {
-            return false
-          }
-
-          const sizeStr = String(fontSize)
-          const result = runCommand('fontSize', sizeStr)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'fontSize',
-              value: fontSize,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute font size command:')
-          return false
-        }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute font size command:')
+        return false
+      }
     },
   }),
 })

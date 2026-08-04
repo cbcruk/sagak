@@ -43,23 +43,21 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: {
-      // `BEFORE` 단계: 아래 첨자 서식 적용 가능 여부 확인
-      // `ON` 단계: 아래 첨자 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('subscript')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute subscript command:')
-          return false
+    [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('subscript')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute subscript command:')
+        return false
+      }
     },
   }),
 })

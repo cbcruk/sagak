@@ -10,7 +10,6 @@ export type {
   PluginFactory,
   PluginHandlerContext,
   PluginInitContext,
-  PluginEventHandlers,
   BasePluginOptions,
 } from './define-plugin'
 

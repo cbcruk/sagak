@@ -43,23 +43,21 @@ export const createItalicPlugin = definePlugin<ItalicPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.ITALIC_CLICKED]: {
-      // `BEFORE` 단계: 기울임 서식 적용 가능 여부 확인
-      // `ON` 단계: 기울임 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('italic')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'italic' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute italic command:')
-          return false
+    [options.eventName ?? TextStyleEvents.ITALIC_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('italic')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'italic' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute italic command:')
+        return false
+      }
     },
   }),
 })

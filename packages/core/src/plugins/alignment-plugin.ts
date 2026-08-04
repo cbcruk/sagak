@@ -102,56 +102,47 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: {
-      before: ({ options: opts }, data?: unknown) => {
-        const align = extractAlignment(data)
+    [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const align = extractAlignment(data)
 
-        if (!align) {
-          logger.warn('Alignment blocked: No alignment provided')
-          return false
+      if (!align) {
+        logger.warn('Alignment blocked: No alignment provided')
+        return false
+      }
+
+      if (!isValidAlignment(align)) {
+        logger.warn(
+          `Alignment blocked: Invalid alignment "${align}" (must be left, center, right, or justify)`
+        )
+        return false
+      }
+
+      if (opts.allowedAlignments && !opts.allowedAlignments.includes(align)) {
+        logger.warn(
+          `Alignment blocked: "${align}" is not in allowed alignments`
+        )
+        return false
+      }
+
+      try {
+        const command = ALIGNMENT_COMMANDS[align]
+        const result = runCommand(command)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'alignment',
+            value: align,
+          })
         }
 
-        if (!isValidAlignment(align)) {
-          logger.warn(
-            `Alignment blocked: Invalid alignment "${align}" (must be left, center, right, or justify)`
-          )
-          return false
-        }
-
-        if (opts.allowedAlignments && !opts.allowedAlignments.includes(align)) {
-          logger.warn(
-            `Alignment blocked: "${align}" is not in allowed alignments`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const align = extractAlignment(data)
-
-          if (!isValidAlignment(align)) {
-            return false
-          }
-
-          const command = ALIGNMENT_COMMANDS[align]
-          const result = runCommand(command)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'alignment',
-              value: align,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute alignment command:')
-          return false
-        }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute alignment command:')
+        return false
+      }
     },
   }),
 })

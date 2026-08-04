@@ -106,56 +106,47 @@ export const createBackgroundColorPlugin =
     },
 
     handlers: (options) => ({
-      [options.eventName ?? FontEvents.BACKGROUND_COLOR_CHANGED]: {
-        before: ({ options: opts }, data?: unknown) => {
-          const color = extractColor(data)
+      [options.eventName ?? FontEvents.BACKGROUND_COLOR_CHANGED]: (
+        { options: opts, emit, reportError, runCommand },
+        data?: unknown
+      ) => {
+        const color = extractColor(data)
 
-          if (!color) {
-            logger.warn('Background color blocked: No color provided')
-            return false
+        if (!color) {
+          logger.warn('Background color blocked: No color provided')
+          return false
+        }
+
+        const validateFormat = opts.validateFormat ?? true
+        if (validateFormat && !isValidColor(color)) {
+          logger.warn(
+            `Background color blocked: Invalid color format "${color}"`
+          )
+          return false
+        }
+
+        if (opts.allowedColors && !opts.allowedColors.includes(color)) {
+          logger.warn(
+            `Background color blocked: "${color}" is not in allowed colors`
+          )
+          return false
+        }
+
+        try {
+          const result = runCommand('backColor', color)
+
+          if (result) {
+            emit(CoreEvents.STYLE_CHANGED, {
+              style: 'backgroundColor',
+              value: color,
+            })
           }
 
-          const validateFormat = opts.validateFormat ?? true
-          if (validateFormat && !isValidColor(color)) {
-            logger.warn(
-              `Background color blocked: Invalid color format "${color}"`
-            )
-            return false
-          }
-
-          if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-            logger.warn(
-              `Background color blocked: "${color}" is not in allowed colors`
-            )
-            return false
-          }
-
-          return true
-        },
-
-        on: ({ emit, reportError, runCommand }, data?: unknown) => {
-          try {
-            const color = extractColor(data)
-
-            if (!color) {
-              return false
-            }
-
-            const result = runCommand('backColor', color)
-
-            if (result) {
-              emit(CoreEvents.STYLE_CHANGED, {
-                style: 'backgroundColor',
-                value: color,
-              })
-            }
-
-            return result
-          } catch (error) {
-            reportError(error, 'Failed to execute background color command:')
-            return false
-          }
-        },
+          return result
+        } catch (error) {
+          reportError(error, 'Failed to execute background color command:')
+          return false
+        }
       },
     }),
   })

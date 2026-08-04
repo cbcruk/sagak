@@ -43,23 +43,21 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: {
-      // `BEFORE` 단계: 위 첨자 서식 적용 가능 여부 확인
-      // `ON` 단계: 위 첨자 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('superscript')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute superscript command:')
-          return false
+    [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('superscript')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute superscript command:')
+        return false
+      }
     },
   }),
 })

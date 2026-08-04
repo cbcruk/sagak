@@ -62,86 +62,77 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: {
-      before: (_ctx, data?: unknown) => {
-        const lineHeight = extractLineHeight(data)
+    [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: (
+      { emit, reportError },
+      data?: unknown
+    ) => {
+      const lineHeight = extractLineHeight(data)
 
-        if (lineHeight === null) {
-          logger.warn('Line height blocked: Invalid line height')
+      if (lineHeight === null) {
+        logger.warn('Line height blocked: Invalid line height')
+        return false
+      }
+
+      try {
+        emit(CoreEvents.CAPTURE_SNAPSHOT)
+
+        const selection = window.getSelection()
+        if (!selection || selection.rangeCount === 0) {
           return false
         }
 
-        return true
-      },
+        const range = selection.getRangeAt(0)
+        const commonAncestor = range.commonAncestorContainer
 
-      on: ({ emit, reportError }, data?: unknown) => {
-        try {
-          const lineHeight = extractLineHeight(data)
+        // Get all block elements in the selection
+        const blocksToStyle = new Set<HTMLElement>()
 
-          if (lineHeight === null) {
-            return false
+        if (range.collapsed) {
+          // If no selection, apply to current block
+          const block = getBlockParent(commonAncestor)
+          if (block) {
+            blocksToStyle.add(block)
           }
+        } else {
+          // Get start and end blocks
+          const startBlock = getBlockParent(range.startContainer)
+          const endBlock = getBlockParent(range.endContainer)
 
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
+          if (startBlock) blocksToStyle.add(startBlock)
+          if (endBlock) blocksToStyle.add(endBlock)
 
-          const selection = window.getSelection()
-          if (!selection || selection.rangeCount === 0) {
-            return false
-          }
-
-          const range = selection.getRangeAt(0)
-          const commonAncestor = range.commonAncestorContainer
-
-          // Get all block elements in the selection
-          const blocksToStyle = new Set<HTMLElement>()
-
-          if (range.collapsed) {
-            // If no selection, apply to current block
-            const block = getBlockParent(commonAncestor)
-            if (block) {
-              blocksToStyle.add(block)
-            }
-          } else {
-            // Get start and end blocks
-            const startBlock = getBlockParent(range.startContainer)
-            const endBlock = getBlockParent(range.endContainer)
-
-            if (startBlock) blocksToStyle.add(startBlock)
-            if (endBlock) blocksToStyle.add(endBlock)
-
-            // If common ancestor is a block, check its children
-            if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
-              const element = commonAncestor as HTMLElement
-              const blockChildren = element.querySelectorAll(
-                'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
-              )
-              blockChildren.forEach((child) => {
-                if (selection.containsNode(child, true)) {
-                  blocksToStyle.add(child as HTMLElement)
-                }
-              })
-            }
-          }
-
-          // Apply line-height to all affected blocks
-          blocksToStyle.forEach((block) => {
-            block.style.lineHeight = lineHeight
-          })
-
-          if (blocksToStyle.size > 0) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'lineHeight',
-              value: lineHeight,
+          // If common ancestor is a block, check its children
+          if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
+            const element = commonAncestor as HTMLElement
+            const blockChildren = element.querySelectorAll(
+              'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
+            )
+            blockChildren.forEach((child) => {
+              if (selection.containsNode(child, true)) {
+                blocksToStyle.add(child as HTMLElement)
+              }
             })
-            return true
           }
-
-          return false
-        } catch (error) {
-          reportError(error, 'Failed to apply line height:')
-          return false
         }
-      },
+
+        // Apply line-height to all affected blocks
+        blocksToStyle.forEach((block) => {
+          block.style.lineHeight = lineHeight
+        })
+
+        if (blocksToStyle.size > 0) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'lineHeight',
+            value: lineHeight,
+          })
+          return true
+        }
+
+        return false
+      } catch (error) {
+        reportError(error, 'Failed to apply line height:')
+        return false
+      }
     },
   }),
 })

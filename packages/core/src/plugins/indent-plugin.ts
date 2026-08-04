@@ -43,23 +43,21 @@ export const createIndentPlugin = definePlugin<IndentPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.INDENT_CLICKED]: {
-      // `BEFORE` 단계: 검증
-      // `ON` 단계: 들여쓰기 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('indent')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute indent command:')
-          return false
+    [options.eventName ?? ParagraphEvents.INDENT_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('indent')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute indent command:')
+        return false
+      }
     },
   }),
 })

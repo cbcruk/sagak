@@ -43,23 +43,21 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.STRIKE_CLICKED]: {
-      // `BEFORE` 단계: 취소선 서식 적용 가능 여부 확인
-      // `ON` 단계: 취소선 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('strikeThrough')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'strike' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute strike command:')
-          return false
+    [options.eventName ?? TextStyleEvents.STRIKE_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('strikeThrough')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'strike' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute strike command:')
+        return false
+      }
     },
   }),
 })

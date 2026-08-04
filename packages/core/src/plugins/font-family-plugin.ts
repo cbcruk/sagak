@@ -71,48 +71,39 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: {
-      before: ({ options: opts }, data?: unknown) => {
-        const fontFamily = extractFontFamily(data)
+    [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const fontFamily = extractFontFamily(data)
 
-        if (!fontFamily) {
-          logger.warn('Font family blocked: No font family provided')
-          return false
+      if (!fontFamily) {
+        logger.warn('Font family blocked: No font family provided')
+        return false
+      }
+
+      if (opts.allowedFonts && !opts.allowedFonts.includes(fontFamily)) {
+        logger.warn(
+          `Font family blocked: "${fontFamily}" is not in allowed fonts`
+        )
+        return false
+      }
+
+      try {
+        const result = runCommand('fontName', fontFamily)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'fontFamily',
+            value: fontFamily,
+          })
         }
 
-        if (opts.allowedFonts && !opts.allowedFonts.includes(fontFamily)) {
-          logger.warn(
-            `Font family blocked: "${fontFamily}" is not in allowed fonts`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const fontFamily = extractFontFamily(data)
-
-          if (!fontFamily) {
-            return false
-          }
-
-          const result = runCommand('fontName', fontFamily)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'fontFamily',
-              value: fontFamily,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute font family command:')
-          return false
-        }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute font family command:')
+        return false
+      }
     },
   }),
 })

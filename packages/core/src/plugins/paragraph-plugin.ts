@@ -43,23 +43,21 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.FORMAT_PARAGRAPH]: {
-      // `BEFORE` 단계: 형식화 가능 여부 확인
-      // `ON` 단계: 단락 형식화 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('formatBlock', '<p>')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'paragraph' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute paragraph format command:')
-          return false
+    [options.eventName ?? ParagraphEvents.FORMAT_PARAGRAPH]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('formatBlock', '<p>')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'paragraph' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute paragraph format command:')
+        return false
+      }
     },
   }),
 })

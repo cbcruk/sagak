@@ -43,19 +43,21 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.ORDERED_LIST_CLICKED]: {
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('insertOrderedList')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'orderedList' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute ordered list command:')
-          return false
+    [options.eventName ?? ParagraphEvents.ORDERED_LIST_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('insertOrderedList')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'orderedList' })
         }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute ordered list command:')
+        return false
+      }
     },
   }),
 })

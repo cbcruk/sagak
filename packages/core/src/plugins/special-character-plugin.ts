@@ -34,53 +34,45 @@ export const createSpecialCharacterPlugin =
     },
 
     handlers: (options) => ({
-      [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: {
-        before: (_ctx, data?: unknown) => {
-          const character = extractCharacter(data)
-          if (!character) {
-            logger.warn('Special character blocked: No character provided')
+      [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: (
+        { emit, reportError },
+        data?: unknown
+      ) => {
+        const character = extractCharacter(data)
+        if (!character) {
+          logger.warn('Special character blocked: No character provided')
+          return false
+        }
+
+        try {
+          emit(CoreEvents.CAPTURE_SNAPSHOT)
+
+          const selection = window.getSelection()
+          if (!selection || selection.rangeCount === 0) {
             return false
           }
 
+          const range = selection.getRangeAt(0)
+          range.deleteContents()
+
+          const textNode = document.createTextNode(character)
+          range.insertNode(textNode)
+
+          const newRange = document.createRange()
+          newRange.setStartAfter(textNode)
+          newRange.collapse(true)
+          selection.removeAllRanges()
+          selection.addRange(newRange)
+
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'specialCharacter',
+            value: character,
+          })
           return true
-        },
-
-        on: ({ emit, reportError }, data?: unknown) => {
-          try {
-            const character = extractCharacter(data)
-            if (!character) {
-              return false
-            }
-
-            emit(CoreEvents.CAPTURE_SNAPSHOT)
-
-            const selection = window.getSelection()
-            if (!selection || selection.rangeCount === 0) {
-              return false
-            }
-
-            const range = selection.getRangeAt(0)
-            range.deleteContents()
-
-            const textNode = document.createTextNode(character)
-            range.insertNode(textNode)
-
-            const newRange = document.createRange()
-            newRange.setStartAfter(textNode)
-            newRange.collapse(true)
-            selection.removeAllRanges()
-            selection.addRange(newRange)
-
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'specialCharacter',
-              value: character,
-            })
-            return true
-          } catch (error) {
-            reportError(error, 'Failed to insert special character:')
-            return false
-          }
-        },
+        } catch (error) {
+          reportError(error, 'Failed to insert special character:')
+          return false
+        }
       },
     }),
   })

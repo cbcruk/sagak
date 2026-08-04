@@ -119,11 +119,9 @@ describe('error reporting', () => {
       const failingPlugin = definePlugin({
         name: 'test:failing',
         handlers: {
-          DO_FAIL: {
-            on: ({ reportError }) => {
-              reportError(new Error('nope'), 'Failed to do thing:')
-              return false
-            },
+          DO_FAIL: ({ reportError }) => {
+            reportError(new Error('nope'), 'Failed to do thing:')
+            return false
           },
         },
       })()

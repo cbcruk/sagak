@@ -105,52 +105,43 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: {
-      before: ({ options: opts }, data?: unknown) => {
-        const color = extractColor(data)
+    [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const color = extractColor(data)
 
-        if (!color) {
-          logger.warn('Text color blocked: No color provided')
-          return false
+      if (!color) {
+        logger.warn('Text color blocked: No color provided')
+        return false
+      }
+
+      const validateFormat = opts.validateFormat ?? true
+      if (validateFormat && !isValidColor(color)) {
+        logger.warn(`Text color blocked: Invalid color format "${color}"`)
+        return false
+      }
+
+      if (opts.allowedColors && !opts.allowedColors.includes(color)) {
+        logger.warn(`Text color blocked: "${color}" is not in allowed colors`)
+        return false
+      }
+
+      try {
+        const result = runCommand('foreColor', color)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'textColor',
+            value: color,
+          })
         }
 
-        const validateFormat = opts.validateFormat ?? true
-        if (validateFormat && !isValidColor(color)) {
-          logger.warn(`Text color blocked: Invalid color format "${color}"`)
-          return false
-        }
-
-        if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-          logger.warn(`Text color blocked: "${color}" is not in allowed colors`)
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const color = extractColor(data)
-
-          if (!color) {
-            return false
-          }
-
-          const result = runCommand('foreColor', color)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'textColor',
-              value: color,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute text color command:')
-          return false
-        }
-      },
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute text color command:')
+        return false
+      }
     },
   }),
 })

@@ -43,23 +43,21 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.OUTDENT_CLICKED]: {
-      // `BEFORE` 단계: 검증
-      // `ON` 단계: 내어쓰기 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('outdent')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'outdent' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute outdent command:')
-          return false
+    [options.eventName ?? ParagraphEvents.OUTDENT_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('outdent')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'outdent' })
         }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute outdent command:')
+        return false
+      }
     },
   }),
 })
