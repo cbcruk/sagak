@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import type * as React from 'preact/compat'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'preact/compat'
 import { Dialog } from '@base-ui/react/dialog'
-import { Image, Upload, Link } from 'lucide-react'
+import { Image, Upload, Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -174,22 +175,22 @@ export function ImageDialog(): ReactNode {
   }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0]
+    const file = e.currentTarget.files?.[0]
     if (file) {
       handleFileSelect(file)
     }
   }
 
-  const handleDrop = (e: React.DragEvent): void => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     e.stopPropagation()
-    const file = e.dataTransfer.files?.[0]
+    const file = e.dataTransfer?.files?.[0]
     if (file && file.type.startsWith('image/')) {
       handleFileSelect(file)
     }
   }
 
-  const handleDragOver = (e: React.DragEvent): void => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     e.stopPropagation()
   }
@@ -347,7 +348,7 @@ export function ImageDialog(): ReactNode {
               <input
                 type="text"
                 value={src}
-                onChange={(e) => setSrc(e.target.value)}
+                onChange={(e) => setSrc(e.currentTarget.value)}
                 placeholder="https://example.com/image.jpg"
                 style={inputStyle}
               />
@@ -439,7 +440,7 @@ export function ImageDialog(): ReactNode {
             <input
               type="text"
               value={alt}
-              onChange={(e) => setAlt(e.target.value)}
+              onChange={(e) => setAlt(e.currentTarget.value)}
               placeholder="Image description"
               style={inputStyle}
             />
@@ -451,7 +452,7 @@ export function ImageDialog(): ReactNode {
               <input
                 type="text"
                 value={width}
-                onChange={(e) => setWidth(e.target.value)}
+                onChange={(e) => setWidth(e.currentTarget.value)}
                 placeholder="300px or 50%"
                 style={inputStyle}
               />
@@ -461,7 +462,7 @@ export function ImageDialog(): ReactNode {
               <input
                 type="text"
                 value={height}
-                onChange={(e) => setHeight(e.target.value)}
+                onChange={(e) => setHeight(e.currentTarget.value)}
                 placeholder="auto"
                 style={inputStyle}
               />

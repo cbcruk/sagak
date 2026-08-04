@@ -3,34 +3,13 @@
   "version": "0.1.0",
   "description": "Core library for Sagak Editor - a modern WYSIWYG editor",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui",
-    "prepublishOnly": "pnpm build"
+    "test:ui": "vitest --ui"
   },
   "keywords": [
     "editor",
@@ -51,5 +30,6 @@
   },
   "dependencies": {
     "dompurify": "^3.4.11"
-  }
+  },
+  "private": true
 }

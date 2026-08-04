@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import type * as React from 'preact/compat'
+import { useState, useEffect, useCallback, useRef } from 'preact/compat'
 import { AutocompleteEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 

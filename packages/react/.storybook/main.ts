@@ -1,5 +1,5 @@
 // This file has been automatically migrated to valid ESM format by Storybook.
-import type { StorybookConfig } from '@storybook/react-vite'
+import type { StorybookConfig } from '@storybook/preact-vite'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -12,7 +12,7 @@ const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
   addons: ['@storybook/addon-docs'],
   framework: {
-    name: '@storybook/react-vite',
+    name: '@storybook/preact-vite',
     options: {},
   },
   viteFinal: async (config) => {
@@ -23,6 +23,9 @@ const config: StorybookConfig = {
       '@/core': resolve(coreDir, 'core'),
       '@/plugins': resolve(coreDir, 'plugins'),
       '@/editor': resolve(coreDir, 'editor'),
+      react: 'preact/compat',
+      'react-dom': 'preact/compat',
+      'react/jsx-runtime': 'preact/jsx-runtime',
     }
     return config
   },

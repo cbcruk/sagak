@@ -9,6 +9,10 @@ import {
   AutocompleteEvents,
   EditingAreaEvents,
   WysiwygEvents,
+  AutoSaveEvents,
+  ExportEvents,
+  ImageResizeEvents,
+  ImageUploadEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
@@ -83,6 +87,25 @@ export interface TableCreatePayload {
   columns?: number
   border?: string
   width?: string
+}
+
+/** 자동 저장 상태 */
+export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+
+/** `AUTO_SAVE_STATUS_CHANGED` 페이로드 */
+export interface AutoSaveEventData {
+  status: AutoSaveStatus
+  timestamp?: number
+  error?: Error
+}
+
+/** 내보내기 형식 */
+export type ExportFormat = 'html' | 'markdown' | 'text'
+
+/** `EXPORT_DOWNLOAD` 페이로드 */
+export interface ExportDownloadData {
+  format: ExportFormat
+  filename?: string
 }
 
 export interface AutocompleteShowPayload {
@@ -198,6 +221,24 @@ export interface EditorEventMap {
   [WysiwygEvents.WYSIWYG_KEYDOWN]: { event: KeyboardEvent }
   [WysiwygEvents.WYSIWYG_KEYUP]: { event: KeyboardEvent }
   [WysiwygEvents.WYSIWYG_RESIZED]: { width: number; height: number }
+
+  // --- 자동 저장 ---
+  [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: AutoSaveEventData
+  [AutoSaveEvents.AUTO_SAVE_RESTORE]: void
+  [AutoSaveEvents.AUTO_SAVE_CLEAR]: void
+
+  // --- 내보내기 ---
+  [ExportEvents.EXPORT_DOWNLOAD]: ExportDownloadData
+
+  // --- 이미지 크기 조절 ---
+  [ImageResizeEvents.IMAGE_RESIZE_START]: { image: HTMLElement }
+  [ImageResizeEvents.IMAGE_RESIZE_END]: void
+
+  // --- 이미지 업로드 ---
+  [ImageUploadEvents.IMAGE_UPLOAD_START]: { file: File }
+  [ImageUploadEvents.IMAGE_UPLOAD_COMPLETE]: { url: string }
+  [ImageUploadEvents.IMAGE_UPLOAD_ERROR]: { error: Error }
+  [ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE]: { file: File }
 }
 
 /**

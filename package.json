@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter sagak-editor dev",
-    "build": "pnpm -r build",
+    "dev": "pnpm --filter sagak-app dev",
+    "build": "pnpm --filter sagak-app build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter sagak-core test",
     "test:run": "pnpm --filter sagak-core test:run",
@@ -13,12 +13,10 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "storybook": "pnpm --filter sagak-editor storybook",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "preview": "pnpm --filter sagak-app preview",
+    "build:packages": "pnpm --filter \"./packages/*\" build"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.8",
     "@eslint/js": "9.39.1",
     "@preact/preset-vite": "^2.10.2",
     "@preact/signals": "^2.5.1",

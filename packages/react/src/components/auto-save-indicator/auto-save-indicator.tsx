@@ -1,4 +1,5 @@
-import { Cloud, CloudOff, Loader2, Check, AlertCircle } from 'lucide-react'
+import type * as React from 'preact/compat'
+import { Cloud, CloudOff, Loader2, Check, AlertCircle } from 'lucide-preact'
 import { useAutoSave } from '../../hooks'
 
 const ICON_SIZE = 14
