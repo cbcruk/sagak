@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, ContentEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -6,25 +5,22 @@ export interface HorizontalRulePluginOptions extends BasePluginOptions {
   eventName?: string
 }
 
-export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptions>({
-  name: 'content:horizontal-rule',
+export const createHorizontalRulePlugin =
+  definePlugin<HorizontalRulePluginOptions>({
+    name: 'content:horizontal-rule',
 
-  defaultOptions: {
-    eventName: ContentEvents.HORIZONTAL_RULE_INSERT,
-    checkComposition: true,
-  },
+    compositionLabel: 'Horizontal rule',
 
-  handlers: (options) => ({
-    [options.eventName ?? ContentEvents.HORIZONTAL_RULE_INSERT]: {
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Horizontal rule blocked: IME composition in progress')
-          return false
-        }
-        return true
-      },
+    defaultOptions: {
+      eventName: ContentEvents.HORIZONTAL_RULE_INSERT,
+      checkComposition: true,
+    },
 
-      on: ({ emit, reportError }) => {
+    handlers: (options) => ({
+      [options.eventName ?? ContentEvents.HORIZONTAL_RULE_INSERT]: ({
+        emit,
+        reportError,
+      }) => {
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
 
@@ -56,10 +52,7 @@ export const createHorizontalRulePlugin = definePlugin<HorizontalRulePluginOptio
           return false
         }
       },
-
-      after: () => {},
-    },
-  }),
-})
+    }),
+  })
 
 export const HorizontalRulePlugin = createHorizontalRulePlugin()

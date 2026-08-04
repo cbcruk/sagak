@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,38 +35,29 @@ export interface IndentPluginOptions extends BasePluginOptions {
 export const createIndentPlugin = definePlugin<IndentPluginOptions>({
   name: 'paragraph:indent',
 
+  compositionLabel: 'Indent',
+
   defaultOptions: {
     eventName: ParagraphEvents.INDENT_CLICKED,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.INDENT_CLICKED]: {
-      // `BEFORE` 단계: 검증
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Indent blocked: IME composition in progress')
-          return false
+    [options.eventName ?? ParagraphEvents.INDENT_CLICKED]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('indent')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
         }
-        return true
-      },
-
-      // `ON` 단계: 들여쓰기 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('indent')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute indent command:')
-          return false
-        }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등 가능
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute indent command:')
+        return false
+      }
     },
   }),
 })

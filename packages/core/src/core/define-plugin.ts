@@ -1,9 +1,10 @@
-import type { EventBus, EventPhase } from './event-bus'
+import type { EventBus } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
 import { runCommand } from './command-registry'
 import { createDefaultCommandRegistry } from './default-commands'
+import { isBlockedByComposition } from './composition-guard'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -32,10 +33,12 @@ export interface PluginHandlerContext<
    *
    * @example
    * ```typescript
-   * on: ({ runCommand, emit }) => {
-   *   const result = runCommand('bold')
-   *   if (result) emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
-   *   return result
+   * handlers: {
+   *   BOLD_CLICKED: ({ runCommand, emit }) => {
+   *     const result = runCommand('bold')
+   *     if (result) emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
+   *     return result
+   *   }
    * }
    * ```
    */
@@ -50,10 +53,12 @@ export interface PluginHandlerContext<
    *
    * @example
    * ```typescript
-   * on: ({ emit, reportError }) => {
-   *   try { ... } catch (error) {
-   *     reportError(error, 'Failed to execute command:')
-   *     return false
+   * handlers: {
+   *   BOLD_CLICKED: ({ emit, reportError }) => {
+   *     try { ... } catch (error) {
+   *       reportError(error, 'Failed to execute command:')
+   *       return false
+   *     }
    *   }
    * }
    * ```
@@ -104,26 +109,16 @@ export interface BasePluginOptions {
 
 /**
  * 이벤트 핸들러 타입
+ *
+ * 검증과 실행을 한 함수에서 처리합니다. `false`를 반환하면 이벤트가 취소되어
+ * 이후 구독자에게 전달되지 않고 `emit`이 `false`를 반환합니다.
+ *
+ * IME 조합 가드는 `definePlugin`이 자동으로 걸어주므로 직접 검사하지 않습니다.
  */
 export type PluginEventHandler<
   TOpts extends BasePluginOptions = BasePluginOptions,
   TState extends object = object,
 > = (ctx: PluginHandlerContext<TOpts, TState>, data?: unknown) => boolean | void
-
-/**
- * 이벤트별 핸들러 정의
- */
-export interface PluginEventHandlers<
-  TOpts extends BasePluginOptions = BasePluginOptions,
-  TState extends object = object,
-> {
-  /** `before` 단계 핸들러 - 검증 및 취소 가능 */
-  before?: PluginEventHandler<TOpts, TState>
-  /** `on` 단계 핸들러 - 메인 로직 */
-  on?: PluginEventHandler<TOpts, TState>
-  /** `after` 단계 핸들러 - 후처리 */
-  after?: PluginEventHandler<TOpts, TState>
-}
 
 /**
  * 플러그인 정의 객체
@@ -134,6 +129,16 @@ export interface PluginDefinition<
 > {
   /** 플러그인 이름 (예: `'text:bold'`) */
   name: string
+
+  /**
+   * IME 조합 중 차단될 때 로그에 표시할 이름 (예: `'Bold'`)
+   *
+   * 조합 가드는 `checkComposition` 옵션이 켜져 있으면 모든 핸들러 앞에 자동으로
+   * 등록됩니다. 플러그인이 직접 검사할 필요가 없습니다.
+   *
+   * 생략하면 `name`이 쓰입니다.
+   */
+  compositionLabel?: string
 
   /** 플러그인 의존성 */
   dependencies?: string[]
@@ -151,24 +156,24 @@ export interface PluginDefinition<
   /**
    * 이벤트 핸들러 맵
    *
-   * 키: 이벤트 이름, 값: `before`/`on`/`after` 핸들러
+   * 키: 이벤트 이름, 값: 핸들러 함수
    *
    * 함수로 전달하면 옵션에 따라 동적으로 이벤트 이름을 결정할 수 있습니다
    *
    * @example
    * ```typescript
    * // 고정 이벤트 이름
-   * handlers: { 'BOLD_CLICKED': { on: ... } }
+   * handlers: { 'BOLD_CLICKED': (ctx, data) => { ... } }
    *
    * // 옵션에 따라 동적 이벤트 이름
    * handlers: (options) => ({
-   *   [options.eventName ?? 'BOLD_CLICKED']: { on: ... }
+   *   [options.eventName ?? 'BOLD_CLICKED']: (ctx, data) => { ... }
    * })
    * ```
    */
   handlers?:
-    | Record<string, PluginEventHandlers<TOpts, TState>>
-    | ((options: TOpts) => Record<string, PluginEventHandlers<TOpts, TState>>)
+    | Record<string, PluginEventHandler<TOpts, TState>>
+    | ((options: TOpts) => Record<string, PluginEventHandler<TOpts, TState>>)
 
   /**
    * 초기화 훅
@@ -211,15 +216,12 @@ export type PluginFactory<TOpts extends BasePluginOptions = BasePluginOptions> =
  * const createBoldPlugin = definePlugin({
  *   name: 'text:bold',
  *   defaultOptions: { checkComposition: true },
+ *   compositionLabel: 'Bold',
  *   handlers: {
- *     TOGGLE_BOLD: {
- *       before: ({ selectionManager, options }) =>
- *         !(options.checkComposition && selectionManager?.getIsComposing()),
- *       on: ({ emit }) => {
- *         const result = document.execCommand('bold')
- *         if (result) emit('STYLE_CHANGED', { style: 'bold' })
- *         return result
- *       }
+ *     TOGGLE_BOLD: ({ emit, runCommand }) => {
+ *       const result = runCommand('bold')
+ *       if (result) emit('STYLE_CHANGED', { style: 'bold' })
+ *       return result
  *     }
  *   }
  * })
@@ -282,18 +284,25 @@ export function definePlugin<
               ? definition.handlers(finalOptions)
               : definition.handlers
 
-          for (const [eventName, phases] of Object.entries(resolvedHandlers)) {
-            const phaseOrder: EventPhase[] = ['before', 'on', 'after']
+          const compositionLabel =
+            definition.compositionLabel ?? definition.name
 
-            for (const phase of phaseOrder) {
-              const handler = phases[phase]
-              if (!handler) continue
+          for (const [eventName, handler] of Object.entries(resolvedHandlers)) {
+            // IME 조합 가드를 `before` 단계에 등록합니다. 플러그인 핸들러(`on`)보다
+            // 먼저 실행되며, 차단 시 `on`이 건너뛰어지고 `emit`이 `false`를 반환합니다.
+            const unsubGuard = eventBus.on(eventName, 'before', () =>
+              !isBlockedByComposition(
+                selectionManager,
+                finalOptions.checkComposition,
+                compositionLabel
+              )
+            )
+            cleanups.push(unsubGuard)
 
-              const unsub = eventBus.on(eventName, phase, (data?: unknown) => {
-                return handler(createHandlerContext(), data)
-              })
-              cleanups.push(unsub)
-            }
+            const unsub = eventBus.on(eventName, 'on', (data?: unknown) =>
+              handler(createHandlerContext(), data)
+            )
+            cleanups.push(unsub)
           }
         }
 

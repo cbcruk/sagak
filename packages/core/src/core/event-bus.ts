@@ -1,5 +1,6 @@
 import { logger } from '@/core/logger'
 import { CoreEvents } from './events'
+import type { EditorEventMap, KnownEventName, PayloadOf } from './event-map'
 
 /**
  * `EventBus` 생명주기의 이벤트 단계
@@ -60,6 +61,11 @@ export class EventBus {
    * });
    * ```
    */
+  on<E extends string>(
+    event: E,
+    phase: EventPhase,
+    handler: (payload: PayloadOf<E>) => boolean | void
+  ): Unsubscribe
   on(event: string, phase: EventPhase, handler: EventHandler): Unsubscribe {
     if (!this.handlers.has(event)) {
       this.handlers.set(event, new Map())
@@ -126,6 +132,14 @@ export class EventBus {
    * const result = bus.emit('SAVE'); // false if cancelled
    * ```
    */
+  emit<E extends string>(
+    event: E,
+    ...args: E extends KnownEventName
+      ? EditorEventMap[E] extends void
+        ? []
+        : [payload: EditorEventMap[E]]
+      : unknown[]
+  ): boolean
   emit(event: string, ...args: unknown[]): boolean {
     if (!this.execPhase(event, 'before', args)) {
       return false

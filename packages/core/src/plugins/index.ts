@@ -102,10 +102,7 @@ export {
 } from './horizontal-rule-plugin'
 export type { HorizontalRulePluginOptions } from './horizontal-rule-plugin'
 
-export {
-  createLineHeightPlugin,
-  LineHeightPlugin,
-} from './line-height-plugin'
+export { createLineHeightPlugin, LineHeightPlugin } from './line-height-plugin'
 export type { LineHeightPluginOptions } from './line-height-plugin'
 
 export {

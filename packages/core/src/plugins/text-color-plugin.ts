@@ -96,6 +96,8 @@ function extractColor(data: unknown): string | null {
 export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
   name: 'text-style:text-color',
 
+  compositionLabel: 'Text color',
+
   defaultOptions: {
     eventName: FontEvents.TEXT_COLOR_CHANGED,
     checkComposition: true,
@@ -103,61 +105,43 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Text color blocked: IME composition in progress')
-          return false
+    [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const color = extractColor(data)
+
+      if (!color) {
+        logger.warn('Text color blocked: No color provided')
+        return false
+      }
+
+      const validateFormat = opts.validateFormat ?? true
+      if (validateFormat && !isValidColor(color)) {
+        logger.warn(`Text color blocked: Invalid color format "${color}"`)
+        return false
+      }
+
+      if (opts.allowedColors && !opts.allowedColors.includes(color)) {
+        logger.warn(`Text color blocked: "${color}" is not in allowed colors`)
+        return false
+      }
+
+      try {
+        const result = runCommand('foreColor', color)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'textColor',
+            value: color,
+          })
         }
 
-        const color = extractColor(data)
-
-        if (!color) {
-          logger.warn('Text color blocked: No color provided')
-          return false
-        }
-
-        const validateFormat = opts.validateFormat ?? true
-        if (validateFormat && !isValidColor(color)) {
-          logger.warn(`Text color blocked: Invalid color format "${color}"`)
-          return false
-        }
-
-        if (opts.allowedColors && !opts.allowedColors.includes(color)) {
-          logger.warn(
-            `Text color blocked: "${color}" is not in allowed colors`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const color = extractColor(data)
-
-          if (!color) {
-            return false
-          }
-
-          const result = runCommand('foreColor', color)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'textColor',
-              value: color,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute text color command:')
-          return false
-        }
-      },
-
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute text color command:')
+        return false
+      }
     },
   }),
 })

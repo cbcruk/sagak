@@ -25,7 +25,18 @@ function extractLetterSpacing(data: unknown): string | null {
 }
 
 function getBlockParent(node: Node | null): HTMLElement | null {
-  const blockTags = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']
+  const blockTags = [
+    'P',
+    'DIV',
+    'LI',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'BLOCKQUOTE',
+  ]
 
   while (node) {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -40,22 +51,22 @@ function getBlockParent(node: Node | null): HTMLElement | null {
   return null
 }
 
-export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions>({
-  name: 'text-style:letter-spacing',
+export const createLetterSpacingPlugin =
+  definePlugin<LetterSpacingPluginOptions>({
+    name: 'text-style:letter-spacing',
 
-  defaultOptions: {
-    eventName: FontEvents.LETTER_SPACING_CHANGED,
-    checkComposition: true,
-  },
+    compositionLabel: 'Letter spacing',
 
-  handlers: (options) => ({
-    [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Letter spacing blocked: IME composition in progress')
-          return false
-        }
+    defaultOptions: {
+      eventName: FontEvents.LETTER_SPACING_CHANGED,
+      checkComposition: true,
+    },
 
+    handlers: (options) => ({
+      [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: (
+        { emit, reportError },
+        data?: unknown
+      ) => {
         const letterSpacing = extractLetterSpacing(data)
 
         if (letterSpacing === null) {
@@ -63,17 +74,7 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
           return false
         }
 
-        return true
-      },
-
-      on: ({ emit, reportError }, data?: unknown) => {
         try {
-          const letterSpacing = extractLetterSpacing(data)
-
-          if (letterSpacing === null) {
-            return false
-          }
-
           emit(CoreEvents.CAPTURE_SNAPSHOT)
 
           const selection = window.getSelection()
@@ -100,7 +101,9 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
 
             if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
               const element = commonAncestor as HTMLElement
-              const blockChildren = element.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote')
+              const blockChildren = element.querySelectorAll(
+                'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
+              )
               blockChildren.forEach((child) => {
                 if (selection.containsNode(child, true)) {
                   blocksToStyle.add(child as HTMLElement)
@@ -109,7 +112,8 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
             }
           }
 
-          const cssValue = letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
+          const cssValue =
+            letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
 
           blocksToStyle.forEach((block) => {
             block.style.letterSpacing = cssValue
@@ -129,10 +133,7 @@ export const createLetterSpacingPlugin = definePlugin<LetterSpacingPluginOptions
           return false
         }
       },
-
-      after: () => {},
-    },
-  }),
-})
+    }),
+  })
 
 export const LetterSpacingPlugin = createLetterSpacingPlugin()

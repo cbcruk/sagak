@@ -94,69 +94,55 @@ function extractAlignment(data: unknown): unknown {
 export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
   name: 'paragraph:alignment',
 
+  compositionLabel: 'Alignment',
+
   defaultOptions: {
     eventName: ParagraphEvents.ALIGNMENT_CHANGED,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Alignment blocked: IME composition in progress')
-          return false
+    [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const align = extractAlignment(data)
+
+      if (!align) {
+        logger.warn('Alignment blocked: No alignment provided')
+        return false
+      }
+
+      if (!isValidAlignment(align)) {
+        logger.warn(
+          `Alignment blocked: Invalid alignment "${align}" (must be left, center, right, or justify)`
+        )
+        return false
+      }
+
+      if (opts.allowedAlignments && !opts.allowedAlignments.includes(align)) {
+        logger.warn(
+          `Alignment blocked: "${align}" is not in allowed alignments`
+        )
+        return false
+      }
+
+      try {
+        const command = ALIGNMENT_COMMANDS[align]
+        const result = runCommand(command)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'alignment',
+            value: align,
+          })
         }
 
-        const align = extractAlignment(data)
-
-        if (!align) {
-          logger.warn('Alignment blocked: No alignment provided')
-          return false
-        }
-
-        if (!isValidAlignment(align)) {
-          logger.warn(
-            `Alignment blocked: Invalid alignment "${align}" (must be left, center, right, or justify)`
-          )
-          return false
-        }
-
-        if (opts.allowedAlignments && !opts.allowedAlignments.includes(align)) {
-          logger.warn(
-            `Alignment blocked: "${align}" is not in allowed alignments`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const align = extractAlignment(data)
-
-          if (!isValidAlignment(align)) {
-            return false
-          }
-
-          const command = ALIGNMENT_COMMANDS[align]
-          const result = runCommand(command)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'alignment',
-              value: align,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute alignment command:')
-          return false
-        }
-      },
-
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute alignment command:')
+        return false
+      }
     },
   }),
 })

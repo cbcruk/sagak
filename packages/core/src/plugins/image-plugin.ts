@@ -1,4 +1,5 @@
 import { logger } from '@/core/logger'
+import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
@@ -287,20 +288,22 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
         (args?: unknown) => {
           const data = args as ImageData | undefined
 
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Image insert blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Image insert'
+            )
+          ) {
             return false
           }
-
           if (!data || !data.src) {
             logger.warn('Image insert blocked: No src provided')
             return false
           }
 
           if (validateUrl && !isValidImageUrl(data.src, { allowedProtocols })) {
-            logger.warn(
-              `Image insert blocked: Invalid image URL "${data.src}"`
-            )
+            logger.warn(`Image insert blocked: Invalid image URL "${data.src}"`)
             return false
           }
 
@@ -390,21 +393,21 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubInsertOn)
 
-      const unsubInsertAfter = eventBus.on(insertEventName, 'after', () => {})
-
-      unsubscribers.push(unsubInsertAfter)
-
       const unsubUpdateBefore = eventBus.on(
         updateEventName,
         'before',
         (args?: unknown) => {
           const data = args as Partial<ImageData> | undefined
 
-          if (checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Image update blocked: IME composition in progress')
+          if (
+            isBlockedByComposition(
+              selectionManager,
+              checkComposition,
+              'Image update'
+            )
+          ) {
             return false
           }
-
           if (!data) {
             logger.warn('Image update blocked: No data provided')
             return false
@@ -501,16 +504,16 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
       )
       unsubscribers.push(unsubUpdateOn)
 
-      const unsubUpdateAfter = eventBus.on(updateEventName, 'after', () => {})
-
-      unsubscribers.push(unsubUpdateAfter)
-
       const unsubDeleteBefore = eventBus.on(deleteEventName, 'before', () => {
-        if (checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Image delete blocked: IME composition in progress')
+        if (
+          isBlockedByComposition(
+            selectionManager,
+            checkComposition,
+            'Image delete'
+          )
+        ) {
           return false
         }
-
         const img = findImageAtSelection()
 
         if (!img) {
@@ -547,10 +550,6 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
       })
 
       unsubscribers.push(unsubDeleteOn)
-
-      const unsubDeleteAfter = eventBus.on(deleteEventName, 'after', () => {})
-
-      unsubscribers.push(unsubDeleteAfter)
     },
 
     destroy() {

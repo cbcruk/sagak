@@ -412,6 +412,7 @@ describe('TextColorPlugin (텍스트 색상 설정)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 색상 없이 이벤트 발생
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       const result = eventBus.emit('TEXT_COLOR_CHANGED', {})
 
       // Then: 명령이 차단됨
@@ -431,6 +432,7 @@ describe('TextColorPlugin (텍스트 색상 설정)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: data 없이 이벤트 발생
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       const result = eventBus.emit('TEXT_COLOR_CHANGED')
 
       // Then: 명령이 차단됨

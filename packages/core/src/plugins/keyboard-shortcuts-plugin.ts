@@ -1,9 +1,5 @@
 import type { Plugin, EditorContext } from '@/core'
-import {
-  WysiwygEvents,
-  TextStyleEvents,
-  HistoryEvents,
-} from '@/core'
+import { WysiwygEvents, TextStyleEvents, HistoryEvents } from '@/core'
 
 /**
  * Shortcut definition
@@ -58,7 +54,10 @@ const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
 /**
  * Check if keyboard event matches shortcut definition
  */
-function matchesShortcut(event: KeyboardEvent, shortcut: ShortcutDefinition): boolean {
+function matchesShortcut(
+  event: KeyboardEvent,
+  shortcut: ShortcutDefinition
+): boolean {
   const key = event.key.toLowerCase()
 
   if (key !== shortcut.key.toLowerCase()) {

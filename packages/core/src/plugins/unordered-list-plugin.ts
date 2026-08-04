@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -37,35 +36,29 @@ export const createUnorderedListPlugin =
   definePlugin<UnorderedListPluginOptions>({
     name: 'paragraph:unordered-list',
 
+    compositionLabel: 'Unordered list',
+
     defaultOptions: {
       eventName: ParagraphEvents.UNORDERED_LIST_CLICKED,
       checkComposition: true,
     },
 
     handlers: (options) => ({
-      [options.eventName ?? ParagraphEvents.UNORDERED_LIST_CLICKED]: {
-        before: ({ selectionManager, options: opts }) => {
-          if (opts.checkComposition && selectionManager?.getIsComposing()) {
-            logger.warn('Unordered list blocked: IME composition in progress')
-            return false
+      [options.eventName ?? ParagraphEvents.UNORDERED_LIST_CLICKED]: ({
+        emit,
+        reportError,
+        runCommand,
+      }) => {
+        try {
+          const result = runCommand('insertUnorderedList')
+          if (result) {
+            emit(CoreEvents.STYLE_CHANGED, { style: 'unorderedList' })
           }
-          return true
-        },
-
-        on: ({ emit, reportError, runCommand }) => {
-          try {
-            const result = runCommand('insertUnorderedList')
-            if (result) {
-              emit(CoreEvents.STYLE_CHANGED, { style: 'unorderedList' })
-            }
-            return result
-          } catch (error) {
-            reportError(error, 'Failed to execute unordered list command:')
-            return false
-          }
-        },
-
-        after: () => {},
+          return result
+        } catch (error) {
+          reportError(error, 'Failed to execute unordered list command:')
+          return false
+        }
       },
     }),
   })

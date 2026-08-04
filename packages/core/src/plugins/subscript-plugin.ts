@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,38 +35,29 @@ export interface SubscriptPluginOptions extends BasePluginOptions {
 export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
   name: 'text-style:subscript',
 
+  compositionLabel: 'Subscript',
+
   defaultOptions: {
     eventName: TextStyleEvents.TOGGLE_SUBSCRIPT,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: {
-      // `BEFORE` 단계: 아래 첨자 서식 적용 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Subscript blocked: IME composition in progress')
-          return false
+    [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('subscript')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
         }
-        return true
-      },
-
-      // `ON` 단계: 아래 첨자 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('subscript')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute subscript command:')
-          return false
-        }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute subscript command:')
+        return false
+      }
     },
   }),
 })

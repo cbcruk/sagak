@@ -95,6 +95,8 @@ function extractHeadingLevel(data: unknown): unknown {
 export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
   name: 'paragraph:heading',
 
+  compositionLabel: 'Heading',
+
   defaultOptions: {
     eventName: ParagraphEvents.HEADING_CHANGED,
     checkComposition: true,
@@ -103,71 +105,53 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
   },
 
   handlers: (options) => ({
-    [options.eventName ?? ParagraphEvents.HEADING_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Heading blocked: IME composition in progress')
-          return false
+    [options.eventName ?? ParagraphEvents.HEADING_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const level = extractHeadingLevel(data)
+
+      if (level === null || level === undefined) {
+        logger.warn('Heading blocked: No heading level provided')
+        return false
+      }
+
+      if (!isValidHeadingLevel(level)) {
+        logger.warn(
+          `Heading blocked: Invalid heading level "${level}" (must be 1-6)`
+        )
+        return false
+      }
+
+      const minLevel = opts.minLevel ?? 1
+      const maxLevel = opts.maxLevel ?? 6
+      if (level < minLevel || level > maxLevel) {
+        logger.warn(
+          `Heading blocked: Level ${level} is outside range ${minLevel}-${maxLevel}`
+        )
+        return false
+      }
+
+      if (opts.allowedLevels && !opts.allowedLevels.includes(level)) {
+        logger.warn(`Heading blocked: Level ${level} is not in allowed levels`)
+        return false
+      }
+
+      try {
+        const result = runCommand('formatBlock', `<h${level}>`)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'heading',
+            value: level,
+          })
         }
 
-        const level = extractHeadingLevel(data)
-
-        if (level === null || level === undefined) {
-          logger.warn('Heading blocked: No heading level provided')
-          return false
-        }
-
-        if (!isValidHeadingLevel(level)) {
-          logger.warn(
-            `Heading blocked: Invalid heading level "${level}" (must be 1-6)`
-          )
-          return false
-        }
-
-        const minLevel = opts.minLevel ?? 1
-        const maxLevel = opts.maxLevel ?? 6
-        if (level < minLevel || level > maxLevel) {
-          logger.warn(
-            `Heading blocked: Level ${level} is outside range ${minLevel}-${maxLevel}`
-          )
-          return false
-        }
-
-        if (opts.allowedLevels && !opts.allowedLevels.includes(level)) {
-          logger.warn(
-            `Heading blocked: Level ${level} is not in allowed levels`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const level = extractHeadingLevel(data)
-
-          if (!isValidHeadingLevel(level)) {
-            return false
-          }
-
-          const result = runCommand('formatBlock', `<h${level}>`)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'heading',
-              value: level,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute heading command:')
-          return false
-        }
-      },
-
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute heading command:')
+        return false
+      }
     },
   }),
 })

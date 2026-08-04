@@ -250,7 +250,9 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
       // When: 정수가 아닌 값 전달
       eventBus.emit('HEADING_CHANGED', { level: 1.5 })
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('HEADING_CHANGED', { level: '2' })
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('HEADING_CHANGED', { level: 'h1' })
 
       // Then: 명령이 실행되지 않고 경고만 발생
@@ -267,6 +269,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: 빈 객체 전달
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('HEADING_CHANGED', {})
 
       // Then: 경고 메시지 발생 및 명령 미실행
@@ -285,6 +288,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand')
 
       // When: undefined 전달
+      // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
       eventBus.emit('HEADING_CHANGED')
 
       // Then: 경고 발생 및 명령 미실행

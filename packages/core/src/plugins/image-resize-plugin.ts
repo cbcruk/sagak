@@ -107,7 +107,10 @@ export function createImageResizePlugin(
     return overlay
   }
 
-  function positionOverlay(img: HTMLImageElement, overlay: HTMLDivElement): void {
+  function positionOverlay(
+    img: HTMLImageElement,
+    overlay: HTMLDivElement
+  ): void {
     overlay.style.width = `${img.offsetWidth}px`
     overlay.style.height = `${img.offsetHeight}px`
   }

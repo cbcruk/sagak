@@ -63,61 +63,47 @@ function extractFontFamily(data: unknown): string | null {
 export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
   name: 'text-style:font-family',
 
+  compositionLabel: 'Font family',
+
   defaultOptions: {
     eventName: FontEvents.FONT_FAMILY_CHANGED,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Font family blocked: IME composition in progress')
-          return false
+    [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: (
+      { options: opts, emit, reportError, runCommand },
+      data?: unknown
+    ) => {
+      const fontFamily = extractFontFamily(data)
+
+      if (!fontFamily) {
+        logger.warn('Font family blocked: No font family provided')
+        return false
+      }
+
+      if (opts.allowedFonts && !opts.allowedFonts.includes(fontFamily)) {
+        logger.warn(
+          `Font family blocked: "${fontFamily}" is not in allowed fonts`
+        )
+        return false
+      }
+
+      try {
+        const result = runCommand('fontName', fontFamily)
+
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'fontFamily',
+            value: fontFamily,
+          })
         }
 
-        const fontFamily = extractFontFamily(data)
-
-        if (!fontFamily) {
-          logger.warn('Font family blocked: No font family provided')
-          return false
-        }
-
-        if (opts.allowedFonts && !opts.allowedFonts.includes(fontFamily)) {
-          logger.warn(
-            `Font family blocked: "${fontFamily}" is not in allowed fonts`
-          )
-          return false
-        }
-
-        return true
-      },
-
-      on: ({ emit, reportError, runCommand }, data?: unknown) => {
-        try {
-          const fontFamily = extractFontFamily(data)
-
-          if (!fontFamily) {
-            return false
-          }
-
-          const result = runCommand('fontName', fontFamily)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'fontFamily',
-              value: fontFamily,
-            })
-          }
-
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute font family command:')
-          return false
-        }
-      },
-
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute font family command:')
+        return false
+      }
     },
   }),
 })

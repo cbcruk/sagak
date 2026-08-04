@@ -581,7 +581,10 @@ export class EditorCore {
           cleanupEmptyFormatting()
           if (!isStateEqual(emptyFormattingState, lastFormattingState)) {
             lastFormattingState = emptyFormattingState
-            this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, emptyFormattingState)
+            this.eventBus.emit(
+              CoreEvents.FORMATTING_STATE_CHANGED,
+              emptyFormattingState
+            )
           }
           return
         }
@@ -597,7 +600,10 @@ export class EditorCore {
 
         if (!isStateEqual(formattingState, lastFormattingState)) {
           lastFormattingState = formattingState
-          this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, formattingState)
+          this.eventBus.emit(
+            CoreEvents.FORMATTING_STATE_CHANGED,
+            formattingState
+          )
         }
       })
     }

@@ -118,17 +118,13 @@ export function createTableResizePlugin(
           const newWidths = [...resizeState.startWidths]
 
           const currentWidth = resizeState.startWidths[resizeState.columnIndex]
-          const nextWidth =
-            resizeState.startWidths[resizeState.columnIndex + 1]
+          const nextWidth = resizeState.startWidths[resizeState.columnIndex + 1]
 
           const newCurrentWidth = Math.max(
             minColumnWidth,
             currentWidth + deltaX
           )
-          const newNextWidth = Math.max(
-            minColumnWidth,
-            nextWidth - deltaX
-          )
+          const newNextWidth = Math.max(minColumnWidth, nextWidth - deltaX)
 
           if (
             newCurrentWidth >= minColumnWidth &&

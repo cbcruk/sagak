@@ -22,38 +22,29 @@ function extractCharacter(data: unknown): string | null {
   return null
 }
 
-export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginOptions>({
-  name: 'content:special-character',
+export const createSpecialCharacterPlugin =
+  definePlugin<SpecialCharacterPluginOptions>({
+    name: 'content:special-character',
 
-  defaultOptions: {
-    eventName: ContentEvents.SPECIAL_CHARACTER_INSERT,
-    checkComposition: true,
-  },
+    compositionLabel: 'Special character',
 
-  handlers: (options) => ({
-    [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: {
-      before: ({ selectionManager, options: opts }, data?: unknown) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Special character blocked: IME composition in progress')
-          return false
-        }
+    defaultOptions: {
+      eventName: ContentEvents.SPECIAL_CHARACTER_INSERT,
+      checkComposition: true,
+    },
 
+    handlers: (options) => ({
+      [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: (
+        { emit, reportError },
+        data?: unknown
+      ) => {
         const character = extractCharacter(data)
         if (!character) {
           logger.warn('Special character blocked: No character provided')
           return false
         }
 
-        return true
-      },
-
-      on: ({ emit, reportError }, data?: unknown) => {
         try {
-          const character = extractCharacter(data)
-          if (!character) {
-            return false
-          }
-
           emit(CoreEvents.CAPTURE_SNAPSHOT)
 
           const selection = window.getSelection()
@@ -73,17 +64,17 @@ export const createSpecialCharacterPlugin = definePlugin<SpecialCharacterPluginO
           selection.removeAllRanges()
           selection.addRange(newRange)
 
-          emit(CoreEvents.STYLE_CHANGED, { style: 'specialCharacter', value: character })
+          emit(CoreEvents.STYLE_CHANGED, {
+            style: 'specialCharacter',
+            value: character,
+          })
           return true
         } catch (error) {
           reportError(error, 'Failed to insert special character:')
           return false
         }
       },
-
-      after: () => {},
-    },
-  }),
-})
+    }),
+  })
 
 export const SpecialCharacterPlugin = createSpecialCharacterPlugin()

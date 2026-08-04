@@ -1,4 +1,3 @@
-import { logger } from '@/core/logger'
 import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -36,38 +35,29 @@ export interface SuperscriptPluginOptions extends BasePluginOptions {
 export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
   name: 'text-style:superscript',
 
+  compositionLabel: 'Superscript',
+
   defaultOptions: {
     eventName: TextStyleEvents.TOGGLE_SUPERSCRIPT,
     checkComposition: true,
   },
 
   handlers: (options) => ({
-    [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: {
-      // `BEFORE` 단계: 위 첨자 서식 적용 가능 여부 확인
-      before: ({ selectionManager, options: opts }) => {
-        if (opts.checkComposition && selectionManager?.getIsComposing()) {
-          logger.warn('Superscript blocked: IME composition in progress')
-          return false
+    [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: ({
+      emit,
+      reportError,
+      runCommand,
+    }) => {
+      try {
+        const result = runCommand('superscript')
+        if (result) {
+          emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
         }
-        return true
-      },
-
-      // `ON` 단계: 위 첨자 명령 실행
-      on: ({ emit, reportError, runCommand }) => {
-        try {
-          const result = runCommand('superscript')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
-          }
-          return result
-        } catch (error) {
-          reportError(error, 'Failed to execute superscript command:')
-          return false
-        }
-      },
-
-      // `AFTER` 단계: UI 상태 업데이트, 분석 로깅 등
-      after: () => {},
+        return result
+      } catch (error) {
+        reportError(error, 'Failed to execute superscript command:')
+        return false
+      }
     },
   }),
 })
