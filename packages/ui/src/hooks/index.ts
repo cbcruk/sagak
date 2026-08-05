@@ -19,6 +19,9 @@ export { useSelectionDerived } from './use-selection-derived'
 
 export { useEditorEvent } from './use-editor-event'
 
+export { useDialogHandle } from './use-dialog-handle'
+export type { DialogHandle } from './use-dialog-handle'
+
 export { useFindState } from './use-find-state'
 export type { FindState, UseFindStateReturn } from './use-find-state'
 

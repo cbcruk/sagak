@@ -1,5 +1,4 @@
 import type { ComponentChildren } from 'preact'
-import { useId } from 'preact/hooks'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,6 +8,7 @@ import {
 import { Download, FileText, FileCode, FileType } from 'lucide-preact'
 import { ExportEvents, type ExportFormat } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -49,15 +49,11 @@ export function ExportMenu({
   filename = 'document',
 }: ExportMenuProps): ComponentChildren {
   const { eventBus } = useEditorContext()
-  // `DropdownMenuItem` 은 항목을 눌러도 메뉴를 닫지 않습니다.
-  // `link-dialog` 와 같은 이유로 id 를 직접 잡아 `<dialog>` 를 닫습니다.
-  const menuId = useId()
+  // `DropdownMenuItem` 은 항목을 눌러도 메뉴를 닫지 않습니다
+  const { id: menuId, close } = useDialogHandle()
 
   const handleExport = (format: ExportFormat): void => {
-    const menu = document.getElementById(menuId)
-    if (menu instanceof HTMLDialogElement) {
-      menu.close()
-    }
+    close()
     eventBus.emit(ExportEvents.EXPORT_DOWNLOAD, { format, filename })
   }
 

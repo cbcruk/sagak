@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useId, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label } from 'kinu'
 import { Table } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
@@ -31,34 +32,17 @@ function findTableAtSelection(): HTMLTableElement | null {
 const rowStyle = { display: 'flex', gap: 8 } as const
 
 export function TableDialog(): ComponentChildren {
-  const { eventBus, selectionManager } = useEditorContext()
+  const { eventBus } = useEditorContext()
   const [rows, setRows] = useState('3')
   const [cols, setCols] = useState('3')
   const hasTable = useSelectionDerived(() => !!findTableAtSelection(), false)
-  // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
-  const dialogId = useId()
+  const { id: dialogId, save, restoreThen } = useDialogHandle()
 
   /** `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */
   const handleOpen = (): void => {
-    selectionManager?.saveSelection()
+    save()
     setRows('3')
     setCols('3')
-  }
-
-  /**
-   * 표 편집 동작은 전부 같은 순서를 따릅니다 —
-   * 다이얼로그를 닫고, 다음 프레임에 선택 영역을 되살린 뒤 이벤트를 보냅니다.
-   * `emit` 을 감싸지 않고 콜백으로 받아야 이벤트 페이로드 타입이 살아 있습니다.
-   */
-  const closeThen = (emit: () => void): void => {
-    const dialog = document.getElementById(dialogId)
-    if (dialog instanceof HTMLDialogElement) {
-      dialog.close()
-    }
-    requestAnimationFrame(() => {
-      selectionManager?.restoreSelection()
-      emit()
-    })
   }
 
   const rowCount = parseInt(rows, 10)
@@ -68,7 +52,7 @@ export function TableDialog(): ComponentChildren {
 
   const handleSubmit = (): void => {
     if (!isValidInput) return
-    closeThen(() =>
+    restoreThen(() =>
       eventBus.emit(ContentEvents.TABLE_CREATE, {
         rows: rowCount,
         cols: colCount,
@@ -129,7 +113,11 @@ export function TableDialog(): ComponentChildren {
                   Cancel
                 </Button>
               </Dialog.Close>
-              <Button type="button" onClick={handleSubmit} disabled={!isValidInput}>
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isValidInput}
+              >
                 Insert
               </Button>
             </div>
@@ -145,7 +133,7 @@ export function TableDialog(): ComponentChildren {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    closeThen(() =>
+                    restoreThen(() =>
                       eventBus.emit(ContentEvents.TABLE_INSERT_ROW, {
                         position: 'above',
                       })
@@ -158,7 +146,7 @@ export function TableDialog(): ComponentChildren {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    closeThen(() =>
+                    restoreThen(() =>
                       eventBus.emit(ContentEvents.TABLE_INSERT_ROW, {
                         position: 'below',
                       })
@@ -170,7 +158,11 @@ export function TableDialog(): ComponentChildren {
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => closeThen(() => eventBus.emit(ContentEvents.TABLE_DELETE_ROW))}
+                  onClick={() =>
+                    restoreThen(() =>
+                      eventBus.emit(ContentEvents.TABLE_DELETE_ROW)
+                    )
+                  }
                 >
                   Delete
                 </Button>
@@ -184,7 +176,7 @@ export function TableDialog(): ComponentChildren {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    closeThen(() =>
+                    restoreThen(() =>
                       eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, {
                         position: 'left',
                       })
@@ -197,7 +189,7 @@ export function TableDialog(): ComponentChildren {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    closeThen(() =>
+                    restoreThen(() =>
                       eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, {
                         position: 'right',
                       })
@@ -210,7 +202,7 @@ export function TableDialog(): ComponentChildren {
                   type="button"
                   variant="destructive"
                   onClick={() =>
-                    closeThen(() =>
+                    restoreThen(() =>
                       eventBus.emit(ContentEvents.TABLE_DELETE_COLUMN)
                     )
                   }
@@ -229,7 +221,9 @@ export function TableDialog(): ComponentChildren {
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => closeThen(() => eventBus.emit(ContentEvents.TABLE_DELETE))}
+                onClick={() =>
+                  restoreThen(() => eventBus.emit(ContentEvents.TABLE_DELETE))
+                }
               >
                 Delete Table
               </Button>
