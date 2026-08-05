@@ -1,6 +1,6 @@
 import type * as React from 'preact/compat'
 import type { ReactNode } from 'preact/compat'
-import { Toggle } from '@base-ui/react/toggle'
+import { Toggle, ToggleGroup } from 'kinu'
 import {
   Undo2,
   Redo2,
@@ -29,25 +29,18 @@ import { ExportMenu } from '../export-menu/export-menu'
 
 const ICON_SIZE = 16
 
-const segmentGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-}
-
-const segmentButtonStyle = (isActive: boolean, isFirst?: boolean, isLast?: boolean): React.CSSProperties => ({
+/**
+ * kinu 의 `ToggleGroup` 이 이어붙인 모서리와 눌림 상태를 담당합니다.
+ * 아이콘 버튼이라 크기만 정사각형에 가깝게 맞춥니다.
+ */
+const segmentButtonStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   width: 28,
   height: 26,
-  border: '1px solid #d4d4d4',
-  borderLeft: isFirst ? '1px solid #d4d4d4' : 'none',
-  borderRadius: isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0,
-  background: isActive ? '#007AFF' : '#fff',
-  color: isActive ? '#fff' : '#333',
-  cursor: 'pointer',
   padding: 0,
-})
+}
 
 const actionButtonStyle = (disabled: boolean): React.CSSProperties => ({
   display: 'flex',
@@ -119,48 +112,44 @@ export function Toolbar(): ReactNode {
       <div style={dividerStyle} data-part="separator" />
 
       {/* Text Style: B I U S */}
-      <div style={segmentGroupStyle} role="group" aria-label="Text style">
+      <ToggleGroup role="group" aria-label="Text style">
         <Toggle
           pressed={isBold}
-          onPressedChange={toggleBold}
-          style={segmentButtonStyle(isBold, true)}
+          onClick={toggleBold}
+          style={segmentButtonStyle}
           title="Bold (⌘B)"
           aria-label="Bold"
-          aria-pressed={isBold}
         >
           <Bold size={ICON_SIZE} strokeWidth={2.5} aria-hidden="true" />
         </Toggle>
         <Toggle
           pressed={isItalic}
-          onPressedChange={toggleItalic}
-          style={segmentButtonStyle(isItalic)}
+          onClick={toggleItalic}
+          style={segmentButtonStyle}
           title="Italic (⌘I)"
           aria-label="Italic"
-          aria-pressed={isItalic}
         >
           <Italic size={ICON_SIZE} aria-hidden="true" />
         </Toggle>
         <Toggle
           pressed={isUnderline}
-          onPressedChange={toggleUnderline}
-          style={segmentButtonStyle(isUnderline)}
+          onClick={toggleUnderline}
+          style={segmentButtonStyle}
           title="Underline (⌘U)"
           aria-label="Underline"
-          aria-pressed={isUnderline}
         >
           <Underline size={ICON_SIZE} aria-hidden="true" />
         </Toggle>
         <Toggle
           pressed={isStrikeThrough}
-          onPressedChange={toggleStrikeThrough}
-          style={segmentButtonStyle(isStrikeThrough, false, true)}
+          onClick={toggleStrikeThrough}
+          style={segmentButtonStyle}
           title="Strikethrough"
           aria-label="Strikethrough"
-          aria-pressed={isStrikeThrough}
         >
           <Strikethrough size={ICON_SIZE} aria-hidden="true" />
         </Toggle>
-      </div>
+      </ToggleGroup>
 
       {/* Colors */}
       <ColorPicker type="text" />
