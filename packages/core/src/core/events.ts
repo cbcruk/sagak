@@ -29,6 +29,16 @@ export const CoreEvents = {
   CAPTURE_SNAPSHOT: 'CAPTURE_SNAPSHOT',
 
   /**
+   * 편집 영역으로 포커스 복귀 요청
+   *
+   * 툴바 버튼을 누르면 포커스가 그 버튼으로 옮겨갑니다. 커맨드는 저장된
+   * 선택 영역으로 동작하므로 편집 자체는 되지만, 이어서 타이핑하면 키 입력이
+   * 편집 영역에 닿지 않고 사라집니다. 커맨드가 성공한 뒤 이 이벤트로
+   * 포커스를 되돌립니다.
+   */
+  FOCUS_REQUESTED: 'FOCUS_REQUESTED',
+
+  /**
    * 에디터 오류 발생 - 플러그인/코어에서 오류가 포착될 때 발행
    * 페이로드: `EditorErrorData`
    */

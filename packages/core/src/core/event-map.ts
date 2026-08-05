@@ -130,6 +130,7 @@ export interface EditorEventMap {
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
   [CoreEvents.CONTENT_RESTORED]: { action: 'undo' | 'redo' } | void
   [CoreEvents.CAPTURE_SNAPSHOT]: void
+  [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
 
   // --- 텍스트 스타일 (페이로드 없음) ---

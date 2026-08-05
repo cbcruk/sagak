@@ -19,6 +19,29 @@ describe('EditorCore', () => {
     document.body.removeChild(element)
   })
 
+  describe('FOCUS_REQUESTED', () => {
+    it('이벤트를 받으면 편집 영역에 포커스해야 함', async () => {
+      const core = new EditorCore({ element })
+      const focusSpy = vi.spyOn(core, 'focus')
+
+      core.getEventBus().emit(CoreEvents.FOCUS_REQUESTED)
+
+      expect(focusSpy).toHaveBeenCalledTimes(1)
+      core.destroy()
+    })
+
+    it('destroy 뒤에는 더 이상 포커스하지 않아야 함', () => {
+      const core = new EditorCore({ element })
+      const eventBus = core.getEventBus()
+      const focusSpy = vi.spyOn(core, 'focus')
+
+      core.destroy()
+      eventBus.emit(CoreEvents.FOCUS_REQUESTED)
+
+      expect(focusSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('초기화 (유연한 설정 지원)', () => {
     it('설정 없이 인스턴스를 생성할 수 있어야 함', () => {
       // Given: 설정이 제공되지 않음
