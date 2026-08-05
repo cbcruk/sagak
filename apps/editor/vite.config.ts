@@ -7,6 +7,8 @@ import preact from '@preact/preset-vite'
 const coreSrc = fileURLToPath(new URL('../../packages/core/src', import.meta.url))
 
 export default defineConfig({
+  // GitHub Pages 는 프로젝트 하위 경로(/sagak/)로 서빙되므로 상대 경로로 둡니다.
+  base: './',
   plugins: [preact()],
   resolve: {
     alias: {
