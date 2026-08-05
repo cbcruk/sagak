@@ -6,7 +6,7 @@ import {
   Toolbar,
   AutocompletePopover,
   AutoSaveIndicator,
-} from 'sagak-editor'
+} from 'sagak-ui'
 
 const INITIAL_CONTENT = `
 <h1>사각사각</h1>

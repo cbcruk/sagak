@@ -17,7 +17,7 @@
     "paths": {
       "react": ["../../node_modules/preact/compat"],
       "react-dom": ["../../node_modules/preact/compat"],
-      "sagak-editor": ["../../packages/react/src/index.ts"],
+      "sagak-ui": ["../../packages/ui/src/index.ts"],
       "sagak-core": ["../../packages/core/src/index.ts"],
       "@/*": ["../../packages/core/src/*"]
     }

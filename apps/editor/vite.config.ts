@@ -12,11 +12,11 @@ export default defineConfig({
   plugins: [preact()],
   resolve: {
     alias: {
-      'sagak-editor/styles': fileURLToPath(
-        new URL('../../packages/react/src/styles/index.css', import.meta.url)
+      'sagak-ui/styles': fileURLToPath(
+        new URL('../../packages/ui/src/styles/index.css', import.meta.url)
       ),
-      'sagak-editor': fileURLToPath(
-        new URL('../../packages/react/src/index.ts', import.meta.url)
+      'sagak-ui': fileURLToPath(
+        new URL('../../packages/ui/src/index.ts', import.meta.url)
       ),
       'sagak-core': `${coreSrc}/index.ts`,
       '@/core': `${coreSrc}/core`,

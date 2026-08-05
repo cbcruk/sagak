@@ -1,12 +1,12 @@
-# sagak-editor
+# sagak-ui
 
 Preact용 WYSIWYG 에디터 컴포넌트입니다. (워크스페이스 내부 패키지 — 배포하지 않습니다)
 
 ## 사용법
 
 ```tsx
-import { useEditor, EditorProvider, Toolbar, EditorContainer } from 'sagak-editor'
-import 'sagak-editor/styles.css'
+import { useEditor, EditorProvider, Toolbar, EditorContainer } from 'sagak-ui'
+import 'sagak-ui/styles.css'
 
 function MyEditor() {
   const { containerRef, editor, ready } = useEditor({
@@ -60,7 +60,7 @@ import {
   TableDialog,
   FindReplaceDialog,
   ExportMenu,
-} from 'sagak-editor'
+} from 'sagak-ui'
 ```
 
 ## 훅

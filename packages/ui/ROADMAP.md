@@ -1,4 +1,4 @@
-# packages/react Roadmap
+# packages/ui Roadmap
 
 ## 원칙
 
@@ -34,7 +34,7 @@
 ### 1.5 Toolbar 컴포넌트 추출
 
 - [x] 버튼들을 Toolbar 컴포넌트로 묶기
-- [x] packages/react에서 export
+- [x] packages/ui에서 export
 
 ---
 
@@ -248,6 +248,6 @@
 
 ## 완료된 작업
 
-- [x] packages/core + packages/react 구조 정리
+- [x] packages/core + packages/ui 구조 정리
 - [x] useEditor 훅 구현
 - [x] 기본 에디터 Storybook 동작 확인

@@ -22,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/sagak-editor.git",
+    "url": "https://github.com/cbcruk/sagak.git",
     "directory": "packages/core"
   },
   "devDependencies": {

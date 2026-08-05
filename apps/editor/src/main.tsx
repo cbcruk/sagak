@@ -1,6 +1,6 @@
 import { render } from 'preact'
 import { App } from './app'
-import 'sagak-editor/styles'
+import 'sagak-ui/styles'
 import './index.css'
 
 const container = document.getElementById('root')

@@ -25,8 +25,8 @@ pnpm storybook  # 컴포넌트 카탈로그
 ## 사용법
 
 ```tsx
-import { Editor, Toolbar, EditorArea, useEditor } from 'sagak-editor'
-import 'sagak-editor/styles.css'
+import { Editor, Toolbar, EditorArea, useEditor } from 'sagak-ui'
+import 'sagak-ui/styles.css'
 
 function App() {
   const editor = useEditor()
@@ -45,7 +45,7 @@ function App() {
 ```
 packages/
 ├── core/    # sagak-core: 에디터 코어 및 플러그인
-└── react/   # sagak-editor: Preact 컴포넌트
+└── react/   # sagak-ui: Preact 컴포넌트
 ```
 
 ### sagak-core
@@ -57,7 +57,7 @@ packages/
 - `PluginManager` - 플러그인 관리
 - 20+ 내장 플러그인 (Bold, Italic, Table, Image 등)
 
-### sagak-editor
+### sagak-ui
 
 Preact 컴포넌트와 훅:
 
@@ -77,7 +77,7 @@ pnpm build        # 프로덕션 빌드
 
 ## 데모
 
-[Storybook 데모](https://user.github.io/sagak-editor)에서 에디터를 체험해보세요.
+[Storybook 데모](https://user.github.io/sagak-ui)에서 에디터를 체험해보세요.
 
 ## 라이선스
 

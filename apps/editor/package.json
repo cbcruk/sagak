@@ -11,7 +11,7 @@
   "dependencies": {
     "preact": "^10.24.0",
     "sagak-core": "workspace:*",
-    "sagak-editor": "workspace:*"
+    "sagak-ui": "workspace:*"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.0",
