@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useId, useState } from 'preact/hooks'
+import { useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input } from 'kinu'
 import { Link } from 'lucide-preact'
-import { ContentEvents, CoreEvents } from 'sagak-core'
+import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -28,33 +29,10 @@ function getSelectedLink(): HTMLAnchorElement | null {
 export function LinkDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [url, setUrl] = useState('')
-  const [hasLink, setHasLink] = useState(false)
+  const hasLink = useSelectionDerived(() => !!getSelectedLink(), false)
   // kinu 의 Dialog.Content 는 함수 컴포넌트라 ref 가 DOM 으로 전달되지 않습니다.
   // 명시적 id 를 주고 그 id 로 <dialog> 핸들을 얻습니다.
   const dialogId = useId()
-
-  const updateLinkState = useCallback((): void => {
-    setHasLink(!!getSelectedLink())
-  }, [])
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateLinkState)
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateLinkState
-    )
-    const unsubRestore = eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      updateLinkState
-    )
-    return () => {
-      document.removeEventListener('selectionchange', updateLinkState)
-      unsubStyle()
-      unsubRestore()
-    }
-  }, [eventBus, updateLinkState])
 
   /**
    * `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 실행됩니다.

@@ -1,8 +1,8 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useState } from 'preact/hooks'
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-preact'
-import { ParagraphEvents, CoreEvents } from 'sagak-core'
+import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 type AlignmentType = 'left' | 'center' | 'right' | 'justify'
@@ -39,47 +39,11 @@ function getCurrentAlignment(): AlignmentType {
 }
 
 export function AlignmentButtons(): ComponentChildren {
-  const context = useEditorContext()
-  const { eventBus } = context
-  const [currentAlign, setCurrentAlign] = useState<AlignmentType>('left')
-
-  const isSelectionInEditor = useCallback((): boolean => {
-    const element = context.element
-    if (!element) return false
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return false
-
-    const anchorNode = selection.anchorNode
-    if (!anchorNode) return false
-
-    return element.contains(anchorNode)
-  }, [context.element])
-
-  const updateAlignment = useCallback((): void => {
-    if (!isSelectionInEditor()) return
-    setCurrentAlign(getCurrentAlignment())
-  }, [isSelectionInEditor])
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateAlignment)
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateAlignment
-    )
-    const unsubRestore = eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      updateAlignment
-    )
-
-    return () => {
-      document.removeEventListener('selectionchange', updateAlignment)
-      unsubStyle()
-      unsubRestore()
-    }
-  }, [eventBus, updateAlignment])
+  const { eventBus } = useEditorContext()
+  const currentAlign = useSelectionDerived<AlignmentType>(
+    getCurrentAlignment,
+    'left'
+  )
 
   return (
     <div data-part="icon-button-group" role="group" aria-label="Alignment">

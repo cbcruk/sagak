@@ -14,6 +14,8 @@ export type {
   UseHistoryStateReturn,
 } from './use-history-state'
 
+export { useSelectionDerived } from './use-selection-derived'
+
 export { useFontState } from './use-font-state'
 export type { FontState, UseFontStateReturn } from './use-font-state'
 

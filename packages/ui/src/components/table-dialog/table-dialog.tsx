@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useId, useState } from 'preact/hooks'
+import { useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label } from 'kinu'
 import { Table } from 'lucide-preact'
-import { ContentEvents, CoreEvents } from 'sagak-core'
+import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -33,32 +34,9 @@ export function TableDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [rows, setRows] = useState('3')
   const [cols, setCols] = useState('3')
-  const [hasTable, setHasTable] = useState(false)
+  const hasTable = useSelectionDerived(() => !!findTableAtSelection(), false)
   // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
   const dialogId = useId()
-
-  const updateTableState = useCallback((): void => {
-    setHasTable(!!findTableAtSelection())
-  }, [])
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateTableState)
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateTableState
-    )
-    const unsubRestore = eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      updateTableState
-    )
-    return () => {
-      document.removeEventListener('selectionchange', updateTableState)
-      unsubStyle()
-      unsubRestore()
-    }
-  }, [eventBus, updateTableState])
 
   /** `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */
   const handleOpen = (): void => {
