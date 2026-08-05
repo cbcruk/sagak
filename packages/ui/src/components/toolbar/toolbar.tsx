@@ -26,6 +26,7 @@ import { LetterSpacingSelect } from '../letter-spacing-select/letter-spacing-sel
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { MoreMenu } from '../more-menu/more-menu'
 import { ExportMenu } from '../export-menu/export-menu'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 16
 
@@ -42,25 +43,7 @@ const segmentButtonStyle: React.CSSProperties = {
   padding: 0,
 }
 
-const actionButtonStyle = (disabled: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: disabled ? '#ccc' : '#333',
-  cursor: disabled ? 'not-allowed' : 'pointer',
-})
 
-const dividerStyle: React.CSSProperties = {
-  width: 1,
-  height: 20,
-  background: '#e5e5e5',
-  margin: '0 4px',
-}
 
 export function Toolbar(): ReactNode {
   const {
@@ -79,37 +62,21 @@ export function Toolbar(): ReactNode {
   return (
     <div data-scope="toolbar" data-part="root" role="toolbar" aria-label="Text formatting">
       {/* Undo/Redo */}
-      <div style={{ display: 'flex', gap: 4 }} role="group" aria-label="History">
-        <button
-          type="button"
-          onClick={undo}
-          disabled={!canUndo}
-          style={actionButtonStyle(!canUndo)}
-          title="Undo (⌘Z)"
-          aria-label="Undo"
-          aria-disabled={!canUndo}
-        >
+      <div data-part="icon-button-group" role="group" aria-label="History">
+        <ToolbarButton title="Undo (⌘Z)" aria-label="Undo" onClick={undo} disabled={!canUndo}>
           <Undo2 size={ICON_SIZE} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={redo}
-          disabled={!canRedo}
-          style={actionButtonStyle(!canRedo)}
-          title="Redo (⌘⇧Z)"
-          aria-label="Redo"
-          aria-disabled={!canRedo}
-        >
+        </ToolbarButton>
+        <ToolbarButton title="Redo (⌘⇧Z)" aria-label="Redo" onClick={redo} disabled={!canRedo}>
           <Redo2 size={ICON_SIZE} aria-hidden="true" />
-        </button>
+        </ToolbarButton>
       </div>
 
-      <div style={dividerStyle} data-part="separator" />
+      <div data-part="separator" />
 
       {/* Heading/Paragraph */}
       <HeadingSelect />
 
-      <div style={dividerStyle} data-part="separator" />
+      <div data-part="separator" />
 
       {/* Text Style: B I U S */}
       <ToggleGroup role="group" aria-label="Text style">
@@ -155,7 +122,7 @@ export function Toolbar(): ReactNode {
       <ColorPicker type="text" />
       <ColorPicker type="background" />
 
-      <div style={dividerStyle} data-part="separator" />
+      <div data-part="separator" />
 
       {/* Font Family, Size - always visible */}
       <FontFamilySelect />
@@ -167,19 +134,19 @@ export function Toolbar(): ReactNode {
         <LetterSpacingSelect />
       </div>
 
-      <div style={dividerStyle} data-part="separator" />
+      <div data-part="separator" />
 
       {/* Alignment */}
       <AlignmentButtons />
 
-      <div style={dividerStyle} data-part="separator" />
+      <div data-part="separator" />
 
       {/* Lists */}
       <ListButtons />
 
       {/* Link, Image, Table, HR, Special Characters - hidden on mobile */}
       <div data-part="mobile-hidden" style={{ display: 'contents' }}>
-        <div style={dividerStyle} data-part="separator" />
+        <div data-part="separator" />
         <div style={{ display: 'flex', gap: 4 }}>
           <LinkDialog />
           <ImageDialog />
@@ -188,7 +155,7 @@ export function Toolbar(): ReactNode {
           <SpecialCharacterDialog />
         </div>
 
-        <div style={dividerStyle} data-part="separator" />
+        <div data-part="separator" />
 
         {/* Find & Export */}
         <div style={{ display: 'flex', gap: 4 }}>

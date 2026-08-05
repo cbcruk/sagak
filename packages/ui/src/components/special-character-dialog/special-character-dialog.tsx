@@ -3,6 +3,7 @@ import { Dialog, Button, TabList, Tab } from 'kinu'
 import { Omega } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
 
@@ -39,19 +40,6 @@ const categories: CharacterCategory[] = [
   },
 ]
 
-const triggerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#333',
-  cursor: 'pointer',
-}
-
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(10, 1fr)',
@@ -85,14 +73,12 @@ export function SpecialCharacterDialog(): ReactNode {
   return (
     <Dialog id={dialogId}>
       <Dialog.Trigger>
-        <button
-          type="button"
-          onClick={handleOpen}
+        <ToolbarButton
           title="Insert Special Character"
-          style={triggerStyle}
+          onClick={handleOpen}
         >
-          <Omega size={ICON_SIZE} />
-        </button>
+          <Omega size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
       </Dialog.Trigger>
 
       <Dialog.Content id={dialogId} aria-label="Insert Special Character">

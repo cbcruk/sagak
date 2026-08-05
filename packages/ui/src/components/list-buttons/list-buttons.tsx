@@ -1,54 +1,24 @@
-import type * as React from 'preact/compat'
-import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useId,
+  type ReactNode,
+} from 'preact/compat'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'kinu'
 import { ListOrdered, List, ChevronDown } from 'lucide-preact'
 import { ParagraphEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 type ListType = 'ordered' | 'unordered' | 'none'
 
 const ICON_SIZE = 16
-
-const dropdownButtonStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 2,
-  padding: '4px 8px',
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#333',
-  cursor: 'pointer',
-  fontSize: 13,
-}
-
-const popoverStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '100%',
-  left: 0,
-  marginTop: 4,
-  padding: 4,
-  background: '#fff',
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-  zIndex: 1000,
-  minWidth: 120,
-}
-
-const menuItemStyle = (isActive: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '6px 8px',
-  border: 'none',
-  borderRadius: 4,
-  background: isActive ? '#007AFF' : 'transparent',
-  color: isActive ? '#fff' : '#333',
-  cursor: 'pointer',
-  fontSize: 13,
-  textAlign: 'left',
-})
 
 function getCurrentListType(): ListType {
   const selection = window.getSelection()
@@ -72,7 +42,8 @@ export function ListButtons(): ReactNode {
   const context = useEditorContext()
   const { eventBus } = context
   const [currentList, setCurrentList] = useState<ListType>('none')
-  const [isOpen, setIsOpen] = useState(false)
+  // kinu 의 DropdownMenuContent 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
+  const menuId = useId()
 
   const isSelectionInEditor = useCallback((): boolean => {
     const element = context.element
@@ -94,8 +65,16 @@ export function ListButtons(): ReactNode {
 
   useEffect(() => {
     document.addEventListener('selectionchange', updateListState)
-    const unsubStyle = eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateListState)
-    const unsubRestore = eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateListState)
+    const unsubStyle = eventBus.on(
+      CoreEvents.STYLE_CHANGED,
+      'after',
+      updateListState
+    )
+    const unsubRestore = eventBus.on(
+      CoreEvents.CONTENT_RESTORED,
+      'after',
+      updateListState
+    )
 
     return () => {
       document.removeEventListener('selectionchange', updateListState)
@@ -104,67 +83,50 @@ export function ListButtons(): ReactNode {
     }
   }, [eventBus, updateListState])
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent): void {
-      const target = event.target as Element
-      if (!target.closest('[data-list-dropdown]')) {
-        setIsOpen(false)
-      }
+  /** 항목을 눌러도 메뉴는 스스로 닫히지 않습니다 (export-menu 와 동일) */
+  const closeThen = (emit: () => void): void => {
+    const menu = document.getElementById(menuId)
+    if (menu instanceof HTMLDialogElement) {
+      menu.close()
     }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
-
-  function handleOrderedList(): void {
-    eventBus.emit(ParagraphEvents.ORDERED_LIST_CLICKED)
-    setIsOpen(false)
-  }
-
-  function handleUnorderedList(): void {
-    eventBus.emit(ParagraphEvents.UNORDERED_LIST_CLICKED)
-    setIsOpen(false)
+    emit()
   }
 
   const CurrentIcon = currentList === 'ordered' ? ListOrdered : List
 
   return (
-    <div style={{ position: 'relative' }} data-list-dropdown>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          ...dropdownButtonStyle,
-          background: currentList !== 'none' ? '#e8f0fe' : '#fff',
-        }}
-        title="List"
-      >
-        <CurrentIcon size={ICON_SIZE} />
-        <ChevronDown size={12} />
-      </button>
+    <DropdownMenu id={menuId}>
+      <DropdownMenuTrigger>
+        <ToolbarButton
+          title="List"
+          wide
+          state={currentList !== 'none' ? 'on' : undefined}
+        >
+          <CurrentIcon size={ICON_SIZE} aria-hidden="true" />
+          <ChevronDown size={12} aria-hidden="true" />
+        </ToolbarButton>
+      </DropdownMenuTrigger>
 
-      {isOpen && (
-        <div style={popoverStyle}>
-          <button
-            type="button"
-            onClick={handleUnorderedList}
-            style={menuItemStyle(currentList === 'unordered')}
-          >
-            <List size={ICON_SIZE} />
-            Bullet List
-          </button>
-          <button
-            type="button"
-            onClick={handleOrderedList}
-            style={menuItemStyle(currentList === 'ordered')}
-          >
-            <ListOrdered size={ICON_SIZE} />
-            Numbered List
-          </button>
-        </div>
-      )}
-    </div>
+      <DropdownMenuContent id={menuId} aria-label="List type">
+        <DropdownMenuItem
+          selected={currentList === 'unordered'}
+          onClick={() =>
+            closeThen(() =>
+              eventBus.emit(ParagraphEvents.UNORDERED_LIST_CLICKED)
+            )
+          }
+        >
+          Bullet List
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          selected={currentList === 'ordered'}
+          onClick={() =>
+            closeThen(() => eventBus.emit(ParagraphEvents.ORDERED_LIST_CLICKED))
+          }
+        >
+          Numbered List
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

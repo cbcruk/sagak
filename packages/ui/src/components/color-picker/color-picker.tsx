@@ -5,6 +5,7 @@ import { X } from 'lucide-preact'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 import { useRecentColors } from '../../hooks/use-recent-colors'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const PRESET_COLORS = [
   '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
@@ -23,10 +24,10 @@ const popoverStyle: React.CSSProperties = {
   left: 0,
   marginTop: 4,
   padding: 8,
-  background: '#fff',
-  border: '1px solid #d4d4d4',
+  background: 'var(--sagak-chrome-bg)',
+  border: '1px solid var(--sagak-chrome-border)',
   borderRadius: 6,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+  boxShadow: '0 2px 8px var(--sagak-shadow)',
   zIndex: 1000,
   width: 220,
 }
@@ -41,7 +42,9 @@ const colorSwatchStyle = (color: string, isSelected: boolean): React.CSSProperti
   width: 18,
   height: 18,
   background: color,
-  border: isSelected ? '2px solid #007AFF' : '1px solid #e5e5e5',
+  border: isSelected
+    ? '2px solid var(--sagak-accent)'
+    : '1px solid var(--sagak-chrome-border)',
   borderRadius: 2,
   cursor: 'pointer',
 })
@@ -98,23 +101,7 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 26,
-          height: 26,
-          border: '1px solid #d4d4d4',
-          borderRadius: 4,
-          background: '#fff',
-          cursor: 'pointer',
-          padding: 2,
-        }}
-        title={isTextColor ? 'Text Color' : 'Highlight Color'}
-      >
+      <ToolbarButton title={isTextColor ? 'Text Color' : 'Highlight Color'} onClick={() => setIsOpen(!isOpen)}>
         {isTextColor ? (
           <div
             style={{
@@ -122,7 +109,10 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
               height: 16,
               background: currentColor,
               borderRadius: 2,
-              border: currentColor === '#ffffff' ? '1px solid #d4d4d4' : 'none',
+              border:
+                currentColor === '#ffffff'
+                  ? '1px solid var(--sagak-chrome-border)'
+                  : 'none',
             }}
           />
         ) : (
@@ -133,7 +123,7 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
                 height: 16,
                 background: currentColor,
                 borderRadius: 2,
-                border: '1px solid #d4d4d4',
+                border: '1px solid var(--sagak-chrome-border)',
               }}
             />
             <X
@@ -142,22 +132,22 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
                 position: 'absolute',
                 top: 3,
                 left: 3,
-                color: '#666',
+                color: 'var(--sagak-chrome-muted-fg)',
               }}
             />
           </div>
         )}
-      </button>
+      </ToolbarButton>
 
       {isOpen && (
         <div style={popoverStyle}>
-          <div style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
+          <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--sagak-chrome-muted-fg)' }}>
             {isTextColor ? 'Text Color' : 'Highlight Color'}
           </div>
 
           {recentColors.length > 0 && (
             <>
-              <div style={{ marginBottom: 4, fontSize: 11, color: '#999' }}>
+              <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--sagak-chrome-muted-fg)' }}>
                 Recent
               </div>
               <div style={{ ...colorGridStyle, marginBottom: 8 }}>
@@ -196,12 +186,12 @@ export function ColorPicker({ type }: ColorPickerProps): ReactNode {
                 width: '100%',
                 marginTop: 8,
                 padding: '6px 8px',
-                border: '1px solid #d4d4d4',
+                border: '1px solid var(--sagak-chrome-border)',
                 borderRadius: 4,
-                background: '#fff',
+                background: 'var(--sagak-chrome-bg)',
+                color: 'var(--sagak-chrome-fg)',
                 cursor: 'pointer',
                 fontSize: 12,
-                color: '#666',
               }}
             >
               <X size={12} />

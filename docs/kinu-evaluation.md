@@ -365,3 +365,86 @@ gates: typecheck 3개 패키지 · lint 0 errors · core 1009 tests · ui 4 test
 - **접근성은 다시 봐야 합니다.** §5에서 적었듯 kinu는 플랫폼(`<dialog>`, `popover`)에
   기대고, base-ui의 포커스 트랩 구현과는 다릅니다. 브라우저 검증은 동작을 확인한 것이지
   스크린리더 경험을 확인한 것은 아닙니다.
+
+## 11. 다크 모드 — kinu 도입이 드러낸 것
+
+kinu 를 들이자 다크 모드에서 에디터가 반쪽만 어두워졌습니다.
+
+### 원인
+
+앱 셸(`apps/editor/src/index.css`)은 **kinu 이전부터** `color-scheme: light dark` 와
+`Canvas`/`CanvasText` 를 쓰고 있었습니다(앱 진입점을 만든 `bfb2dff`). 그래서 예전에도
+다크에서 "어두운 페이지 + 흰 에디터 카드"였고, 그건 나름 의도된 모습으로 읽혔습니다.
+
+kinu 가 깨뜨린 건 **카드 안쪽의 일관성**입니다. kinu 는 `prefers-color-scheme: dark` 에
+반응해 `--k-*` 를 뒤집는데, `packages/ui/src/styles/index.css` 의 하드코딩 색 65곳과
+컴포넌트 9곳이 복사해 둔 인라인 버튼 스타일은 흰색 그대로였습니다. 결과적으로 툴바 한 줄에
+어두운 셀렉트와 흰 아이콘 버튼이 나란히 놓였습니다.
+
+### 결정 — 크롬은 따라가고, 종이는 밝게
+
+편집 영역은 다크 모드에서도 흰색으로 둡니다. 본문 글자색은 사용자가 `ColorPicker` 로
+직접 지정할 수 있고(기본은 검정), 내보낸 HTML 도 흰 배경을 전제합니다. 배경만 뒤집으면
+사용자가 검정으로 칠한 글자가 사라집니다. Google Docs 가 택한 것과 같은 절충입니다.
+
+`color-scheme: light` 를 편집 영역에 명시해 스크롤바와 폼 컨트롤도 종이 쪽을 따르게 했습니다.
+
+### 토큰 두 무리
+
+```css
+--sagak-chrome-*  /* hsl(var(--k-*)) — kinu 를 따라 뒤집힙니다 */
+--sagak-paper-*   /* 고정된 밝은 값 */
+--sagak-accent*   /* 두 테마에서 동일 */
+```
+
+### 인라인 버튼 스타일 9벌 → `ToolbarButton` 하나
+
+`{ border: '1px solid #d4d4d4', background: '#fff', color: '#333', width: 28, height: 26 }`
+가 컴포넌트 9곳에 복사되어 있었습니다. 색을 한 곳에 모으지 않고는 테마를 따라가게 만들
+방법이 없어서 `ToolbarButton` 으로 합쳤고, 색은 `[data-part='icon-button']` 한 곳에만
+있습니다. 이어붙인 세그먼트(정렬·실행취소·들여쓰기)도 `[data-part='icon-button-group']`
+으로 통일했습니다.
+
+`ToolbarButton` 은 나머지 prop 을 그대로 `<button>` 에 넘깁니다. kinu 의 `Dialog.Trigger` /
+`DropdownMenuTrigger` 가 자식에 `commandfor`/`command` 를 얹는 방식이라, 그 속성이 실제
+버튼까지 닿아야 하기 때문입니다.
+
+### 곁다리로 정리한 것
+
+- **죽은 CSS 255줄.** `[data-scope='dropdown']`·`[data-scope='dialog']`·
+  `[data-scope='color-picker']` 세 scope 는 어느 컴포넌트도 그 속성을 내보내지 않았습니다.
+  base-ui 시절 마크업의 잔해입니다. 724 → 469줄.
+- **`[data-part='root']` 에 걸린 종이 배경이 무의미했습니다.** 마운트되는 DOM 에는 그
+  래퍼가 없고 `wysiwyg` 가 컨테이너 바로 아래에 옵니다. 라이트 모드에서는 컨테이너가
+  흰색이라 드러나지 않았고, 다크로 바꾸자 바로 보였습니다.
+- **`list-buttons` 를 kinu `DropdownMenu` 로 옮겼습니다.** 직접 만든 팝오버와
+  click-outside `useEffect` 가 사라졌습니다.
+
+### 검증
+
+라이트·다크 두 스킴에서 **26/26 통과**. 종이가 두 테마에서 흰색인지, 크롬이 테마를
+따르는지, 아이콘 버튼과 셀렉트 배경이 서로 어긋나지 않는지(이번 이슈의 핵심),
+흰 종이 위 표 테두리가 보이는지, 대비가 기준을 넘는지를 계산해 확인했습니다.
+아이콘 전용 버튼은 WCAG 그래픽 기준 3:1, 텍스트는 4.5:1 을 적용했습니다.
+
+기존 기능 검증 33/33 도 그대로 통과합니다.
+
+### 이 과정에서 잡은 내 실수
+
+색을 토큰으로 일괄 치환하면서 **`:root` 블록 안의 정의까지 바꿔버렸습니다.**
+`--sagak-accent: #007aff` 가 `--sagak-accent: var(--sagak-accent)` 가 되어 자기 자신을
+가리켰고, 그러면 CSS 변수는 빈 값이 됩니다. 활성 정렬 버튼의 배경이 `transparent` 로
+계산됐는데, 처음 쓴 대비 검사가 투명을 검정으로 취급해 **21:1 로 통과 처리했습니다.**
+투명 배경을 조상 색으로 합성하도록 검사를 고치고서야 드러났습니다. 검사가 통과했다는
+것과 옳다는 것은 다릅니다.
+
+### 고치지 않고 남긴 것
+
+**목록 트리거의 켜짐 상태가 커서를 목록 안에 두어도 갱신되지 않습니다.**
+`getCurrentListType()` 이 `selection.anchorNode` 에서 위로만 올라가는데, 선택이
+컨테이너 요소에 offset 으로 걸리면(`anchorNode` = DIV, `offset` = 2) 위에 `OL` 이
+없어 놓칩니다. `image-dialog` 의 `getSelectedImage()` 는 같은 상황을 세 가지 경우로
+나눠 처리하고 있습니다.
+
+병합된 `main` 을 빌드해 같은 시나리오를 돌려 **이전에도 동일하게 동작했음을 확인**했습니다.
+이번 변경이 만든 회귀가 아니고, 다크 모드와도 무관해서 별건으로 남깁니다.
