@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { IndentDecrease, IndentIncrease } from 'lucide-preact'
 import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
@@ -6,7 +6,7 @@ import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
 
-export function IndentButtons(): ReactNode {
+export function IndentButtons(): ComponentChildren {
   const { eventBus } = useEditorContext()
 
   return (

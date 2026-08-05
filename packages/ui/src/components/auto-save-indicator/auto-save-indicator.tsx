@@ -1,4 +1,4 @@
-import type * as React from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { Cloud, CloudOff, Loader2, Check, AlertCircle } from 'lucide-preact'
 import { useAutoSave } from '../../hooks'
 
@@ -14,11 +14,11 @@ export interface AutoSaveIndicatorProps {
 
 export function AutoSaveIndicator({
   showTime = true,
-}: AutoSaveIndicatorProps): React.ReactNode {
+}: AutoSaveIndicatorProps): ComponentChildren {
   const { status, lastSaved } = useAutoSave()
 
   const getStatusDisplay = (): {
-    icon: React.ReactNode
+    icon: ComponentChildren
     text: string
     color: string
   } => {

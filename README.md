@@ -16,7 +16,6 @@ TypeScript와 Preact로 만든 WYSIWYG 에디터입니다.
 ```bash
 pnpm install
 pnpm dev        # 에디터 앱 실행
-pnpm storybook  # 컴포넌트 카탈로그
 ```
 
 > 이 저장소는 **앱**입니다. npm 배포는 하지 않습니다 —
@@ -71,13 +70,12 @@ Preact 컴포넌트와 훅:
 pnpm install      # 의존성 설치
 pnpm dev          # 개발 서버
 pnpm test         # 테스트 실행
-pnpm storybook    # Storybook 실행
 pnpm build        # 프로덕션 빌드
 ```
 
 ## 데모
 
-[Storybook 데모](https://user.github.io/sagak-ui)에서 에디터를 체험해보세요.
+[https://cbcruk.github.io/sagak/](https://cbcruk.github.io/sagak/) 에서 에디터를 체험해보세요.
 
 ## 라이선스
 

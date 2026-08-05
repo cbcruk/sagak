@@ -1,10 +1,5 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useId,
-  type ReactNode,
-} from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useId, useState } from 'preact/hooks'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -38,7 +33,7 @@ function getCurrentListType(): ListType {
   return 'none'
 }
 
-export function ListButtons(): ReactNode {
+export function ListButtons(): ComponentChildren {
   const context = useEditorContext()
   const { eventBus } = context
   const [currentList, setCurrentList] = useState<ListType>('none')

@@ -1,17 +1,19 @@
-import { createContext, useContext, type ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { createContext } from 'preact'
+import { useContext } from 'preact/hooks'
 import type { EditorContext as CoreEditorContext } from 'sagak-core'
 
 const EditorContext = createContext<CoreEditorContext | null>(null)
 
 export interface EditorProviderProps {
   context: CoreEditorContext
-  children: ReactNode
+  children: ComponentChildren
 }
 
 export function EditorProvider({
   context,
   children,
-}: EditorProviderProps): ReactNode {
+}: EditorProviderProps): ComponentChildren {
   return (
     <EditorContext.Provider value={context}>{children}</EditorContext.Provider>
   )

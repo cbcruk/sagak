@@ -517,3 +517,84 @@ export function runCommand(registry, eventBus, name, value): boolean {
 실패·미등록 커맨드에는 발행하지 않는지, `EditorCore` 가 구독하는지, `destroy` 뒤에는
 반응하지 않는지. **수정을 되돌려 이 테스트들이 실제로 실패하는 것을 확인**했습니다.
 core 1009 → 1014.
+
+## 13. `preact/compat` 걷어내기
+
+`preact/compat` 은 base-ui 가 `react` 를 임포트해서 필요했던 호환 계층입니다.
+base-ui 를 걷어낸(§10) 뒤로는 남아 있을 이유가 없었습니다.
+
+### 치환 규칙
+
+`packages/ui/src` 33개 파일. 기계적입니다.
+
+| `preact/compat` | 대체 |
+|---|---|
+| `useState`·`useEffect`·`useCallback`·`useRef`·`useMemo`·`useId`·`useContext` | `preact/hooks` |
+| `createContext` | `preact` |
+| `ReactNode` / `React.ReactNode` | `ComponentChildren` (`preact`) |
+| `CSSProperties` / `React.CSSProperties` | `JSX.CSSProperties` (`preact`) |
+| `React.RefObject<T>` | `RefObject<T>` (`preact`) |
+| `React.ChangeEvent<T>` | `JSX.TargetedEvent<T, Event>` |
+| `React.DragEvent<T>` | `JSX.TargetedDragEvent<T>` |
+
+빌드 설정에서도 `react`/`react-dom`/`react/jsx-runtime` 별칭을 지웠습니다 —
+`vite.config.ts`, `vitest.config.ts`, `tsup.config.ts`, 그리고 두 `tsconfig.json` 의
+`paths`.
+
+### 막힌 곳 — Storybook
+
+소스를 다 옮기고 나니 타입 에러 30개가 남았습니다. 전부 같은 모양이었습니다.
+
+```
+Type 'Element' is not assignable to type 'ReactNode'.
+```
+
+§8 에서 한 번 봤던 그 에러입니다. 그때는 `tsconfig` 의 `paths` 에
+`react/jsx-runtime` 이 빠져 있어서였고, 이번에는 **`paths` 를 지운 것 자체가**
+원인이었습니다. `--traceResolution` 으로 추적하니 출처는 하나였습니다.
+
+```
+Resolving module 'react' from '.../storybook/dist/types/index.d.ts'
+  -> @types/react@18.3.27
+```
+
+`@types/react` 는 전역 `JSX` 네임스페이스를 선언합니다. 그게 preact 의 것을 덮으면
+JSX 표현식이 React 의 `JSX.Element` 를 만들고, 컴포넌트 children 은 `ReactNode` 를
+기대하게 됩니다. `skipLibCheck` 는 `.d.ts` 의 *검사*만 건너뛸 뿐, 거기 선언된 전역은
+그대로 적용됩니다.
+
+`src/stories` 를 `exclude` 하고 다시 돌려 **Storybook 이 유일한 출처임을 확인**했습니다.
+남은 에러는 제가 만든 중복 임포트 하나뿐이었습니다.
+
+즉 `react → preact/compat` 매핑은 우리 코드가 아니라 **Storybook 의 `.d.ts` 를
+중화하려고** 있던 것입니다.
+
+### Storybook 제거
+
+Storybook 은 이미 제 역할을 잃은 상태였습니다.
+
+- Pages 는 `#12` 부터 앱을 배포합니다. Storybook 은 더 이상 배포되지 않습니다.
+- CI 워크플로 어디에서도 쓰지 않습니다.
+- 라이브러리 시절의 잔해입니다 — [`app-or-library.md`](./app-or-library.md) 의 판단 이후
+  `packages/ui` 는 앱 내부 패키지입니다.
+
+스토리 1234줄과 devDependency 4개(`storybook`, `@storybook/preact-vite`,
+`@storybook/addon-docs`, `eslint-plugin-storybook`)를 지웠습니다. 루트의
+`storybook` 스크립트와 `eslint.config.js` 의 storybook 플러그인, README 의 안내도
+함께 정리했습니다.
+
+**잃은 것을 분명히 해둡니다.** 스토리에는 앱 진입점에 없는 수동 검증 시나리오가
+있었습니다 — 모바일·태블릿 뷰포트, 맞춤법 검사 on/off, 표 리사이즈, 자동 저장,
+자동 완성. 앞으로 이것들을 눈으로 확인하려면 앱에 직접 만들어 넣어야 합니다.
+
+### 결과
+
+`preact/compat` 은 소스·설정 어디에도 없고, `pnpm-lock.yaml` 의 `@types/react`
+참조도 0건입니다. React 타입 세계가 저장소에서 완전히 사라졌습니다.
+
+번들은 JS 205 → 199 KB (gzip 61 → 59 KB). compat 이 preact 위에 얹던 계층만큼입니다.
+
+### 검증
+
+기존 브라우저 검증을 그대로 다시 돌렸습니다 — 기능 33/33, 테마(라이트·다크) 26/26,
+포커스 복귀 10/10. typecheck 3개 패키지, lint 0 errors, core 1014 · ui 4 tests.

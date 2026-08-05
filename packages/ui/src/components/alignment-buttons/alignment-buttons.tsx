@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useState } from 'preact/hooks'
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-preact'
 import { ParagraphEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
@@ -37,7 +38,7 @@ function getCurrentAlignment(): AlignmentType {
   return 'left'
 }
 
-export function AlignmentButtons(): ReactNode {
+export function AlignmentButtons(): ComponentChildren {
   const context = useEditorContext()
   const { eventBus } = context
   const [currentAlign, setCurrentAlign] = useState<AlignmentType>('left')

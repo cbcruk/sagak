@@ -1,10 +1,5 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useId,
-  type ReactNode,
-} from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input } from 'kinu'
 import { Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
@@ -30,7 +25,7 @@ function getSelectedLink(): HTMLAnchorElement | null {
   return null
 }
 
-export function LinkDialog(): ReactNode {
+export function LinkDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [url, setUrl] = useState('')
   const [hasLink, setHasLink] = useState(false)

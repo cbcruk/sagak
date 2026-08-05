@@ -1,10 +1,5 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useId,
-  type ReactNode,
-} from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label, Checkbox } from 'kinu'
 import { Search } from 'lucide-preact'
 import { FindReplaceEvents, CoreEvents } from 'sagak-core'
@@ -22,7 +17,7 @@ const checkboxLabelStyle = {
   cursor: 'pointer',
 } as const
 
-export function FindReplaceDialog(): ReactNode {
+export function FindReplaceDialog(): ComponentChildren {
   const { eventBus } = useEditorContext()
   const [open, setOpen] = useState(false)
   const [findText, setFindText] = useState('')

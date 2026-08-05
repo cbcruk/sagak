@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { Minus } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
@@ -6,7 +6,7 @@ import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 16
 
-export function HorizontalRuleButton(): ReactNode {
+export function HorizontalRuleButton(): ComponentChildren {
   const { eventBus } = useEditorContext()
 
   return (

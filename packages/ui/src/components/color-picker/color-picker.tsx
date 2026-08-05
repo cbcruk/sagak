@@ -1,6 +1,5 @@
-import type * as React from 'preact/compat'
-import type { ReactNode } from 'preact/compat'
-import { useState, useRef, useEffect } from 'preact/compat'
+import type { ComponentChildren, JSX } from 'preact'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { X } from 'lucide-preact'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
@@ -18,7 +17,7 @@ const PRESET_COLORS = [
   '#5b0f00', '#660000', '#783f04', '#7f6000', '#274e13', '#0c343d', '#1c4587', '#073763', '#20124d', '#4c1130',
 ]
 
-const popoverStyle: React.CSSProperties = {
+const popoverStyle: JSX.CSSProperties = {
   position: 'absolute',
   top: '100%',
   left: 0,
@@ -32,13 +31,13 @@ const popoverStyle: React.CSSProperties = {
   width: 220,
 }
 
-const colorGridStyle: React.CSSProperties = {
+const colorGridStyle: JSX.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(10, 1fr)',
   gap: 2,
 }
 
-const colorSwatchStyle = (color: string, isSelected: boolean): React.CSSProperties => ({
+const colorSwatchStyle = (color: string, isSelected: boolean): JSX.CSSProperties => ({
   width: 18,
   height: 18,
   background: color,
@@ -53,7 +52,7 @@ export interface ColorPickerProps {
   type: 'text' | 'background'
 }
 
-export function ColorPicker({ type }: ColorPickerProps): ReactNode {
+export function ColorPicker({ type }: ColorPickerProps): ComponentChildren {
   const editorContext = useEditorContext()
   const [isOpen, setIsOpen] = useState(false)
   const [currentColor, setCurrentColor] = useState(type === 'text' ? '#000000' : '#ffff00')

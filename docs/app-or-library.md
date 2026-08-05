@@ -347,7 +347,10 @@ typecheck 3패키지 통과 / lint 0 errors / build 통과 / **core 테스트 10
 
 ### GitHub Pages → 앱
 
-Storybook 대신 앱을 배포합니다. Storybook은 `pnpm storybook`으로 로컬 도구로 남습니다.
+Storybook 대신 앱을 배포합니다.
+
+> **갱신.** Storybook은 이후 제거했습니다 — 배경은
+> [`kinu-evaluation.md`](./kinu-evaluation.md) §13 참고.
 워크플로 파일도 `deploy-app.yml`로 바꿨습니다.
 
 Pages는 프로젝트 사이트를 하위 경로(`/sagak/`)로 서빙하므로 앱에 base가 필요합니다.

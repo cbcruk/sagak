@@ -1,16 +1,16 @@
-import type { ReactNode, CSSProperties } from 'preact/compat'
+import type { ComponentChildren, JSX } from 'preact'
 
 export interface EditorContainerProps {
-  children: ReactNode
+  children: ComponentChildren
   className?: string
-  style?: CSSProperties
+  style?: JSX.CSSProperties
 }
 
 export function EditorContainer({
   children,
   className,
   style,
-}: EditorContainerProps): ReactNode {
+}: EditorContainerProps): ComponentChildren {
   return (
     <div
       data-scope="editor-container"

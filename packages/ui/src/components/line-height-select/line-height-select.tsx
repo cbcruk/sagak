@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
@@ -12,7 +12,7 @@ const lineHeights = [
   { label: '3.0', value: '3' },
 ]
 
-export function LineHeightSelect(): ReactNode {
+export function LineHeightSelect(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
 
   const handleSelect = (lineHeight: string): void => {

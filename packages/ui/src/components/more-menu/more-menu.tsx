@@ -1,5 +1,5 @@
-import type * as React from 'preact/compat'
-import { useState, useRef, useEffect, useCallback } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import {
   MoreHorizontal,
   Link,
@@ -17,7 +17,7 @@ import { useEditorContext } from '../../context/editor-context'
 import { ContentEvents, TextStyleEvents } from 'sagak-core'
 
 interface MoreMenuItem {
-  icon: React.ReactNode
+  icon: ComponentChildren
   label: string
   action: () => void
   isActive?: boolean
@@ -30,7 +30,7 @@ interface MoreMenuSection {
 
 const ICON_SIZE = 16
 
-export function MoreMenu(): React.ReactNode {
+export function MoreMenu(): ComponentChildren {
   const context = useEditorContext()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)

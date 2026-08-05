@@ -1,4 +1,5 @@
-import { useRef, useEffect, type ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useEffect, useRef } from 'preact/hooks'
 import type { EditingMode } from 'sagak-core'
 
 export interface EditingAreaProps {
@@ -11,7 +12,7 @@ export function EditingArea({
   mode = 'wysiwyg',
   initialContent = '<p><br></p>',
   onWysiwygMount,
-}: EditingAreaProps): ReactNode {
+}: EditingAreaProps): ComponentChildren {
   const wysiwygRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

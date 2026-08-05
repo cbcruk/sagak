@@ -1,12 +1,5 @@
-import type * as React from 'preact/compat'
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useId,
-  type ReactNode,
-} from 'preact/compat'
+import type { ComponentChildren, JSX } from 'preact'
+import { useCallback, useEffect, useId, useRef, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label, ToggleGroup, Toggle } from 'kinu'
 import { Image, Upload, Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
@@ -77,7 +70,7 @@ function getSelectedImage(): HTMLImageElement | null {
   return null
 }
 
-const dropZoneStyle: React.CSSProperties = {
+const dropZoneStyle: JSX.CSSProperties = {
   border: '2px dashed var(--sagak-chrome-border)',
   borderRadius: 8,
   padding: 24,
@@ -85,7 +78,7 @@ const dropZoneStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
-export function ImageDialog(): ReactNode {
+export function ImageDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [mode, setMode] = useState<UploadMode>('url')
   const [src, setSrc] = useState('')
@@ -183,14 +176,14 @@ export function ImageDialog(): ReactNode {
     reader.readAsDataURL(file)
   }
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleFileInputChange = (e: JSX.TargetedEvent<HTMLInputElement, Event>): void => {
     const file = e.currentTarget.files?.[0]
     if (file) {
       handleFileSelect(file)
     }
   }
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
+  const handleDrop = (e: JSX.TargetedDragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     e.stopPropagation()
     const file = e.dataTransfer?.files?.[0]
@@ -199,7 +192,7 @@ export function ImageDialog(): ReactNode {
     }
   }
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
+  const handleDragOver = (e: JSX.TargetedDragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     e.stopPropagation()
   }

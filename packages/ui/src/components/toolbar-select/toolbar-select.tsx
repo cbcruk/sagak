@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { Select } from 'kinu'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -34,7 +34,7 @@ export function ToolbarSelect({
   value,
   defaultValue,
   onSelect,
-}: ToolbarSelectProps): ReactNode {
+}: ToolbarSelectProps): ComponentChildren {
   const { selectionManager } = useEditorContext()
 
   const save = (): void => {

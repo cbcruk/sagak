@@ -8,9 +8,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "test:run": "vitest run"
   },
   "keywords": [
     "editor",
@@ -33,13 +31,9 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.0",
-    "@storybook/addon-docs": "^10.1.11",
-    "@storybook/preact-vite": "10.1.11",
     "@vitest/browser": "3.2.4",
-    "eslint-plugin-storybook": "10.1.11",
     "playwright": "^1.57.0",
     "preact": "^10.24.0",
-    "storybook": "^10.1.11",
     "tsup": "^8.4.0",
     "typescript": "~5.9.3",
     "vite": "^6.0.0",

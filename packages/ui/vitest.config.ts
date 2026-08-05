@@ -11,9 +11,6 @@ export default defineConfig({
       '@/core': fileURLToPath(new URL('../core/src/core', import.meta.url)),
       '@/plugins': fileURLToPath(new URL('../core/src/plugins', import.meta.url)),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      react: 'preact/compat',
-      'react-dom': 'preact/compat',
-      'react/jsx-runtime': 'preact/jsx-runtime',
     },
   },
   test: {

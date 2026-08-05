@@ -12,7 +12,6 @@
     "test:ui": "pnpm --filter sagak-core test:ui",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "storybook": "pnpm --filter sagak-ui storybook",
     "preview": "pnpm --filter sagak-app preview",
     "build:packages": "pnpm --filter \"./packages/*\" build"
   },
@@ -28,7 +27,6 @@
     "@vitest/ui": "^3.2.4",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-storybook": "10.1.11",
     "globals": "^16.5.0",
     "playwright": "^1.57.0",
     "preact": "^10.27.2",

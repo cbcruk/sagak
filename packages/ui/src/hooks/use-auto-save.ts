@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/compat'
+import { useCallback, useEffect, useState } from 'preact/hooks'
 import {
   AutoSaveEvents,
   type AutoSaveStatus,
