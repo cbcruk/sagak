@@ -1,4 +1,5 @@
 import { render } from 'preact'
+import type { EditorContext } from 'sagak-core'
 import { expect } from 'vitest'
 import {
   useEditor,
@@ -27,8 +28,11 @@ const DEFAULT_CONTENT = `
 </ul>
 `
 
+let mountedContext: EditorContext | null = null
+
 function Harness({ initialContent }: { initialContent: string }) {
   const { containerRef, editor, ready } = useEditor({ initialContent })
+  if (editor) mountedContext = editor.context
 
   return (
     <main data-scope="app">
@@ -49,6 +53,8 @@ function Harness({ initialContent }: { initialContent: string }) {
 export interface MountedEditor {
   root: HTMLDivElement
   editable: HTMLElement
+  /** 커맨드 레지스트리 등 코어 핸들 — 측정에 씁니다 */
+  context: EditorContext
   unmount: () => void
 }
 
@@ -81,9 +87,12 @@ export async function mountEditor(
     throw new Error('에디터가 마운트되지 않았습니다')
   }
 
+  if (!mountedContext) throw new Error('에디터 컨텍스트를 찾지 못했습니다')
+
   return {
     root,
     editable,
+    context: mountedContext,
     unmount: () => {
       render(null, root)
       root.remove()

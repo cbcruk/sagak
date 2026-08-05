@@ -1,9 +1,10 @@
 import type { ComponentChildren, JSX } from 'preact'
-import { useCallback, useEffect, useId, useRef, useState } from 'preact/hooks'
+import { useId, useRef, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label, ToggleGroup, Toggle } from 'kinu'
 import { Image, Upload, Link } from 'lucide-preact'
-import { ContentEvents, CoreEvents } from 'sagak-core'
+import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -85,7 +86,7 @@ export function ImageDialog(): ComponentChildren {
   const [alt, setAlt] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
-  const [hasImage, setHasImage] = useState(false)
+  const hasImage = useSelectionDerived(() => !!getSelectedImage(), false)
   const [isEditing, setIsEditing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -93,30 +94,6 @@ export function ImageDialog(): ComponentChildren {
   const fileInputRef = useRef<HTMLInputElement>(null)
   // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
   const dialogId = useId()
-
-  const updateImageState = useCallback((): void => {
-    const img = getSelectedImage()
-    setHasImage(!!img)
-  }, [])
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateImageState)
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateImageState
-    )
-    const unsubRestore = eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      updateImageState
-    )
-    return () => {
-      document.removeEventListener('selectionchange', updateImageState)
-      unsubStyle()
-      unsubRestore()
-    }
-  }, [eventBus, updateImageState])
 
   const resetUploadState = (): void => {
     setSelectedFile(null)

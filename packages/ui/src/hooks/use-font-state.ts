@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'preact/hooks'
-import { CoreEvents, FontEvents } from 'sagak-core'
+import { useCallback } from 'preact/hooks'
+import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../context/editor-context'
+import { useSelectionDerived } from './use-selection-derived'
 
 export interface FontState {
   fontFamily: string
@@ -24,62 +25,28 @@ export interface UseFontStateReturn extends FontState {
 export function useFontState(): UseFontStateReturn {
   const context = useEditorContext()
   const { eventBus, selectionManager } = context
-  const [state, setState] = useState<FontState>(initialState)
 
-  const isSelectionInEditor = useCallback((): boolean => {
-    const element = context.element
-    if (!element) return false
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return false
-
-    const anchorNode = selection.anchorNode
-    if (!anchorNode) return false
-
-    return element.contains(anchorNode)
-  }, [context.element])
-
-  const updateFontState = useCallback(() => {
-    if (!isSelectionInEditor()) return
-
-    // 커맨드 레지스트리를 통해 조회합니다 (자체 구현 → 레거시 순으로 위임)
+  /**
+   * 커맨드 레지스트리를 통해 조회합니다 (자체 구현 → 레거시 순으로 위임).
+   *
+   * 폰트 종류와 크기를 따로 끌어옵니다. 한 객체로 묶으면 값이 같아도 매번 새
+   * 객체라 리렌더가 걸립니다.
+   */
+  const query = (name: string): string => {
     const registry = context.commandRegistry
-    const fontFamily = registry
-      ? registry.queryValue('fontName')
-      : document.queryCommandValue('fontName')
-    const fontSize = registry
-      ? registry.queryValue('fontSize')
-      : document.queryCommandValue('fontSize')
+    return registry
+      ? registry.queryValue(name)
+      : document.queryCommandValue(name)
+  }
 
-    setState({
-      fontFamily: normalizeFontFamily(fontFamily),
-      fontSize,
-    })
-  }, [isSelectionInEditor, context.commandRegistry])
-
-  useEffect(() => {
-    const handleSelectionChange = (): void => {
-      if (selectionManager?.getIsComposing()) {
-        return
-      }
-      requestAnimationFrame(updateFontState)
-    }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-
-    const unsubscribeStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateFontState
-    )
-
-    updateFontState()
-
-    return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange)
-      unsubscribeStyle()
-    }
-  }, [eventBus, selectionManager, updateFontState])
+  const fontFamily = useSelectionDerived(
+    () => normalizeFontFamily(query('fontName')),
+    initialState.fontFamily
+  )
+  const fontSize = useSelectionDerived(
+    () => query('fontSize'),
+    initialState.fontSize
+  )
 
   const setFontFamily = useCallback(
     (fontFamily: string) => {
@@ -98,7 +65,8 @@ export function useFontState(): UseFontStateReturn {
   )
 
   return {
-    ...state,
+    fontFamily,
+    fontSize,
     setFontFamily,
     setFontSize,
   }

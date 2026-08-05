@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useId, useState } from 'preact/hooks'
+import { useId } from 'preact/hooks'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -7,8 +7,9 @@ import {
   DropdownMenuItem,
 } from 'kinu'
 import { ListOrdered, List, ChevronDown } from 'lucide-preact'
-import { ParagraphEvents, CoreEvents } from 'sagak-core'
+import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 type ListType = 'ordered' | 'unordered' | 'none'
@@ -34,49 +35,10 @@ function getCurrentListType(): ListType {
 }
 
 export function ListButtons(): ComponentChildren {
-  const context = useEditorContext()
-  const { eventBus } = context
-  const [currentList, setCurrentList] = useState<ListType>('none')
+  const { eventBus } = useEditorContext()
+  const currentList = useSelectionDerived<ListType>(getCurrentListType, 'none')
   // kinu 의 DropdownMenuContent 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
   const menuId = useId()
-
-  const isSelectionInEditor = useCallback((): boolean => {
-    const element = context.element
-    if (!element) return false
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return false
-
-    const anchorNode = selection.anchorNode
-    if (!anchorNode) return false
-
-    return element.contains(anchorNode)
-  }, [context.element])
-
-  const updateListState = useCallback((): void => {
-    if (!isSelectionInEditor()) return
-    setCurrentList(getCurrentListType())
-  }, [isSelectionInEditor])
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateListState)
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      updateListState
-    )
-    const unsubRestore = eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      updateListState
-    )
-
-    return () => {
-      document.removeEventListener('selectionchange', updateListState)
-      unsubStyle()
-      unsubRestore()
-    }
-  }, [eventBus, updateListState])
 
   /** 항목을 눌러도 메뉴는 스스로 닫히지 않습니다 (export-menu 와 동일) */
   const closeThen = (emit: () => void): void => {
