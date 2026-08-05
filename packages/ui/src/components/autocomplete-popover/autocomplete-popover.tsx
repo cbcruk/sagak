@@ -1,7 +1,8 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useRef, useState } from 'preact/hooks'
 import { AutocompleteEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useEditorEvent } from '../../hooks/use-editor-event'
 
 interface AutocompleteState {
   visible: boolean
@@ -22,101 +23,59 @@ export function AutocompletePopover(): ComponentChildren {
   })
   const popoverRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!context?.eventBus) return
-
-    const { eventBus } = context
-
-    const unsubShow = eventBus.on(
-      AutocompleteEvents.AUTOCOMPLETE_SHOW,
-      'on',
-      (data?: unknown) => {
-        if (!data || typeof data !== 'object') return
-
-        const { suggestions, prefix, position } = data as {
-          suggestions: string[]
-          prefix: string
-          position: { x: number; y: number }
-        }
-
-        setState({
-          visible: true,
-          suggestions,
-          prefix,
-          position,
-          selectedIndex: 0,
-        })
-      }
-    )
-
-    const unsubHide = eventBus.on(
-      AutocompleteEvents.AUTOCOMPLETE_HIDE,
-      'on',
-      () => {
-        setState((prev) => ({
-          ...prev,
-          visible: false,
-          suggestions: [],
-          selectedIndex: 0,
-        }))
-      }
-    )
-
-    const unsubSelect = eventBus.on(
-      AutocompleteEvents.AUTOCOMPLETE_SELECT,
-      'on',
-      (data?: unknown) => {
-        if (!data || typeof data !== 'object' || !('direction' in data)) return
-
-        const { direction } = data as { direction: 'next' | 'prev' }
-
-        setState((prev) => {
-          if (!prev.visible || prev.suggestions.length === 0) return prev
-
-          let newIndex: number
-
-          if (direction === 'next') {
-            newIndex = (prev.selectedIndex + 1) % prev.suggestions.length
-          } else {
-            newIndex =
-              prev.selectedIndex === 0
-                ? prev.suggestions.length - 1
-                : prev.selectedIndex - 1
-          }
-
-          return { ...prev, selectedIndex: newIndex }
-        })
-      }
-    )
-
-    const unsubApply = eventBus.on(
-      AutocompleteEvents.AUTOCOMPLETE_APPLY,
-      'on',
-      (data?: unknown) => {
-        if (data && typeof data === 'object' && 'word' in data) {
-          return
-        }
-
-        setState((prev) => {
-          if (!prev.visible || prev.suggestions.length === 0) return prev
-
-          const selectedWord = prev.suggestions[prev.selectedIndex]
-          eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY, {
-            word: selectedWord,
-          })
-
-          return prev
-        })
-      }
-    )
-
-    return () => {
-      unsubShow()
-      unsubHide()
-      unsubSelect()
-      unsubApply()
+  useEditorEvent(
+    AutocompleteEvents.AUTOCOMPLETE_SHOW,
+    'on',
+    ({ suggestions, prefix, position }) => {
+      setState({ visible: true, suggestions, prefix, position, selectedIndex: 0 })
     }
-  }, [context?.eventBus])
+  )
+
+  useEditorEvent(AutocompleteEvents.AUTOCOMPLETE_HIDE, 'on', () => {
+    setState((prev) => ({
+      ...prev,
+      visible: false,
+      suggestions: [],
+      selectedIndex: 0,
+    }))
+  })
+
+  useEditorEvent(AutocompleteEvents.AUTOCOMPLETE_SELECT, 'on', (payload) => {
+    if (!payload || !('direction' in payload)) return
+    const { direction } = payload
+
+    setState((prev) => {
+      if (!prev.visible || prev.suggestions.length === 0) return prev
+
+      const last = prev.suggestions.length - 1
+      const selectedIndex =
+        direction === 'next'
+          ? (prev.selectedIndex + 1) % prev.suggestions.length
+          : prev.selectedIndex === 0
+            ? last
+            : prev.selectedIndex - 1
+
+      return { ...prev, selectedIndex }
+    })
+  })
+
+  /**
+   * 페이로드가 있으면 이미 적용된 것이라 흘려보냅니다.
+   * 없으면(키보드 확정) 지금 고른 단어를 실어 다시 발행합니다.
+   */
+  useEditorEvent(AutocompleteEvents.AUTOCOMPLETE_APPLY, 'on', (payload) => {
+    if (payload && 'word' in payload) return
+
+    setState((prev) => {
+      if (!prev.visible || prev.suggestions.length === 0) return prev
+
+      context.eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY, {
+        word: prev.suggestions[prev.selectedIndex],
+      })
+
+      return prev
+    })
+  })
 
   const handleItemClick = useCallback(
     (word: string) => {

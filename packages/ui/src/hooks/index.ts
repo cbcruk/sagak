@@ -17,6 +17,8 @@ export type { UseEditorOptions, UseEditorReturn } from './use-editor'
 
 export { useSelectionDerived } from './use-selection-derived'
 
+export { useEditorEvent } from './use-editor-event'
+
 export { useFindState } from './use-find-state'
 export type { FindState, UseFindStateReturn } from './use-find-state'
 

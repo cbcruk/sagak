@@ -1,16 +1,13 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { CoreEvents } from 'sagak-core'
-import { useEditorContext } from '../context/editor-context'
+import { useEditorEvent } from './use-editor-event'
 
 /**
  * 찾기 플러그인이 알려 주는 결과를 받습니다.
  *
  * 플러그인은 전용 이벤트가 아니라 `STYLE_CHANGED` 에 `style: 'find'` 를 실어
- * 보냅니다. 그 판별과 페이로드 해석을 여기 한 곳에 가둡니다.
- *
- * `useEffect` 가 하나 남지만 이건 **외부 구독**이라 정당합니다. 없앨 수 있는
- * 것은 "사용자 동작에 반응하려고 쓰는" 효과이고 (`docs/find-dialog.md` 참고),
- * 그건 핸들러로 옮겼습니다.
+ * 보냅니다. 그 판별을 여기 한 곳에 가둡니다 — 페이로드가 여러 종류의 합집합
+ * 이므로 `style` 확인은 타입 좁히기로도 필요합니다.
  */
 
 export interface FindState {
@@ -29,37 +26,30 @@ export interface UseFindStateReturn extends FindState {
 const initial: FindState = { matchCount: 0, currentMatch: 0 }
 
 export function useFindState(): UseFindStateReturn {
-  const { eventBus } = useEditorContext()
   const [state, setState] = useState<FindState>(initial)
 
-  useEffect(() => {
-    return eventBus.on(CoreEvents.STYLE_CHANGED, 'after', (data?: unknown) => {
-      if (!data || typeof data !== 'object' || !('style' in data)) return
+  useEditorEvent(CoreEvents.STYLE_CHANGED, 'after', (payload) => {
+    if (payload.style !== 'find') return
 
-      const payload = data as Record<string, unknown>
-      if (payload.style !== 'find') return
+    const { action, matchCount } = payload
 
-      const action = payload.action as string | undefined
-      const count = payload.matchCount as number | undefined
+    if (action === 'find' && typeof matchCount === 'number') {
+      setState({ matchCount, currentMatch: matchCount > 0 ? 1 : 0 })
+      return
+    }
 
-      if (action === 'find' && typeof count === 'number') {
-        setState({ matchCount: count, currentMatch: count > 0 ? 1 : 0 })
-        return
-      }
+    if (action === 'replace' && typeof matchCount === 'number') {
+      setState((prev) => ({
+        matchCount,
+        currentMatch: matchCount === 0 ? 0 : prev.currentMatch,
+      }))
+      return
+    }
 
-      if (action === 'replace' && typeof count === 'number') {
-        setState((prev) => ({
-          matchCount: count,
-          currentMatch: count === 0 ? 0 : prev.currentMatch,
-        }))
-        return
-      }
-
-      if (action === 'replaceAll' || action === 'clear') {
-        setState(initial)
-      }
-    })
-  }, [eventBus])
+    if (action === 'replaceAll' || action === 'clear') {
+      setState(initial)
+    }
+  })
 
   return {
     ...state,

@@ -89,3 +89,111 @@ UI 는 표시할 번호를 알 방법이 없어 같은 산술을 1부터 세는 
 
 **체크박스 핸들러에서 `runFind` 를 빼 실제로 실패하는 것을 확인했습니다** —
 `1 of 1` 이어야 할 것이 `1 of 3` 으로 남아 2개가 걸립니다.
+
+---
+
+# 이어서 — `useEventBus` 같은 훅을 만들까
+
+`find-replace-dialog` 를 정리하고 나서 같은 모양이 저장소 전체에 몇 개나 있는지
+셌습니다. `eventBus.on` 호출이 **10곳**입니다.
+
+## 먼저 확인한 것 — 타입은 이미 있었습니다
+
+`EventBus.on` 의 시그니처를 보면 페이로드 타입이 이미 흐릅니다.
+
+```ts
+on<E extends string>(
+  event: E,
+  phase: EventPhase,
+  handler: (payload: PayloadOf<E>) => boolean | void
+): Unsubscribe
+```
+
+실제로 추론되는지 확인해 봤습니다.
+
+```
+StyleChangedPayload      / AutocompleteShowPayload / FindPayload
+```
+
+**전부 정확히 추론됩니다.** `docs/event-bus-refactor.md` 의 C 단계가 이걸
+만들어 뒀습니다.
+
+그런데 호출부 10곳이 **전부 `(data?: unknown)` 으로 받고** 있었습니다.
+
+```ts
+(data?: unknown) => {
+  if (!data || typeof data !== 'object') return
+  const { status, timestamp } = data as AutoSaveEventData
+}
+```
+
+이미 컴파일러가 보장하는 것을 런타임에 다시 확인하고, 그러느라 타입을 버리고,
+버렸으니 `as` 로 되찾는 순환입니다. **훅이 필요해서가 아니라 있는 타입을 안
+쓰고 있었던 게 더 컸습니다.**
+
+## 그다음 — 훅은 무엇을 해결하나
+
+제안받은 형태는 이랬습니다.
+
+```ts
+function useEventBus(...args) {
+  const { eventBus } = useEditorContext()
+  useEffect(() => {
+    eventBus.on(...args)
+  }, [eventBus])
+}
+```
+
+이대로는 세 가지가 걸립니다.
+
+1. **해제하지 않습니다.** `on` 이 돌려주는 함수를 반환해야 합니다.
+2. **핸들러가 오래됩니다.** 렌더마다 새 클로저인데 의존성에 없으면 첫 클로저를
+   붙듭니다. 넣으면 매 렌더 재구독합니다.
+3. **가변 인자가 타입을 끊습니다.** `...args` 로 받으면 위에서 확인한
+   `PayloadOf<E>` 추론이 죽습니다.
+
+②의 답은 ref 에 최신 핸들러를 담고 구독은 한 번만 하는 것인데, **이 저장소에
+이미 두 곳이 손으로 만들어 두고 있었습니다** — `use-editor-error` 에는
+"최신 핸들러를 참조하여 effect 재구독을 피합니다" 라는 주석까지 있습니다.
+
+같은 비자명한 패턴이 두 번 손으로 쓰였다는 게 훅을 만들 근거입니다.
+③ 때문에 인자는 셋으로 고정했습니다.
+
+```ts
+export function useEditorEvent<E extends string>(
+  event: E,
+  phase: EventPhase,
+  handler: (payload: PayloadOf<E>) => void
+): void
+```
+
+## 결과
+
+| 파일 | 줄 |
+|---|---|
+| `use-auto-save` | 64 → 46 |
+| `use-editor-error` | 61 → 48 |
+| `autocomplete-popover` | 174 → 133 |
+
+`(data?: unknown)` 이 UI 코드에서 사라졌습니다. 남은 하나는
+`use-editor-signals` 인데, 거기는 이벤트 이름을 **런타임 값**으로 받는 범용
+저장소라 `PayloadOf<string>` 이 `unknown` 이 됩니다. 정당한 예외입니다.
+
+`autocomplete-popover` 는 `useEffect` 하나가 넷을 구독하고 해제까지 손으로
+챙기던 것이 `useEditorEvent` 네 번으로 바뀌었습니다.
+
+## 검증
+
+**`autocomplete-popover` 에는 테스트가 없었습니다.** 구독 4개를 다 고쳐 놓고
+확인 없이 넘어갈 수 없어 먼저 브라우저에서 넷을 다 몰아 보고
+(`SHOW` → 항목 3개, `SELECT` 앞뒤, 페이로드 없는 `APPLY` 재발행, `HIDE`),
+그대로 `test/autocomplete.browser.test.tsx` 4개로 남겼습니다.
+
+ui 47 → 51.
+
+## 하지 않은 것
+
+`useSelectionDerived` 와 `useFormattingSignals` 는 그대로입니다. 둘 다
+**컴포넌트가 아니라 모듈 수준에서 한 번** 구독하므로 `useEditorEvent` 의
+모양이 맞지 않습니다. 억지로 맞추면 구독이 다시 컴포넌트마다 생깁니다 —
+`docs/selection-state.md` 에서 줄인 것이 되돌아갑니다.

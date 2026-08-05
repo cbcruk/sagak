@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { CoreEvents, type EditorErrorData } from 'sagak-core'
-import { useEditorContext } from '../context/editor-context'
+import { useEditorEvent } from './use-editor-event'
 
 export interface UseEditorErrorReturn {
   /**
@@ -33,26 +33,13 @@ export interface UseEditorErrorReturn {
 export function useEditorError(
   onError?: (data: EditorErrorData) => void
 ): UseEditorErrorReturn {
-  const context = useEditorContext()
   const [lastError, setLastError] = useState<EditorErrorData | null>(null)
 
-  // 최신 핸들러를 참조하여 effect 재구독을 피합니다
-  const onErrorRef = useRef(onError)
-  onErrorRef.current = onError
-
-  useEffect(() => {
-    if (!context?.eventBus) return
-
-    const unsub = context.eventBus.on(CoreEvents.ERROR, 'on', (data?: unknown) => {
-      const errorData = data as EditorErrorData
-      setLastError(errorData)
-      onErrorRef.current?.(errorData)
-    })
-
-    return () => {
-      unsub()
-    }
-  }, [context?.eventBus])
+  // 최신 핸들러를 붙드는 일은 `useEditorEvent` 가 대신합니다
+  useEditorEvent(CoreEvents.ERROR, 'on', (error) => {
+    setLastError(error)
+    onError?.(error)
+  })
 
   return {
     lastError,
