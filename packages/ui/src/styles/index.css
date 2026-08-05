@@ -1,21 +1,52 @@
 /* kinu 의 기본 스타일. 자체 규칙보다 먼저 와야 덮어쓸 수 있습니다 */
 @import 'kinu/style.css';
 
+/*
+ * 색은 두 무리로 나뉩니다.
+ *
+ * 크롬 — 툴바, 컨테이너, 메뉴처럼 에디터를 감싸는 부분입니다. kinu 의 `--k-*`
+ * 를 그대로 받아쓰므로 kinu 가 `prefers-color-scheme` 에 반응할 때 함께 뒤집힙니다.
+ *
+ * 종이 — 사용자가 글을 쓰는 편집 영역입니다. 다크 모드에서도 밝게 둡니다.
+ * 본문 글자색은 사용자가 ColorPicker 로 직접 지정할 수 있고 (기본값은 검정),
+ * 내보낸 HTML 도 흰 배경을 전제합니다. 배경만 뒤집으면 그 글자들이 사라집니다.
+ */
+:root {
+  --sagak-chrome-bg: hsl(var(--k-background));
+  --sagak-chrome-raised: hsl(var(--k-muted));
+  --sagak-chrome-fg: hsl(var(--k-foreground));
+  --sagak-chrome-muted-fg: hsl(var(--k-muted-foreground));
+  --sagak-chrome-border: hsl(var(--k-border));
+  --sagak-chrome-hover: hsl(var(--k-accent));
+  --sagak-shadow: hsl(var(--k-foreground) / 0.12);
+
+  --sagak-paper-bg: #ffffff;
+  --sagak-paper-raised: #fafafa;
+  --sagak-paper-fg: #1f2937;
+  --sagak-paper-border: #d1d5db;
+  --sagak-paper-hover: #f3f4f6;
+
+  /* 강조색은 두 테마에서 같습니다 */
+  --sagak-accent: #007aff;
+  --sagak-accent-fg: #ffffff;
+  --sagak-accent-soft: hsl(211 100% 50% / 0.14);
+}
+
 /* Editor Container - TextEdit Style */
 [data-scope='editor-container'][data-part='root'] {
   display: flex;
   flex-direction: column;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--sagak-chrome-border);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--sagak-chrome-bg);
+  box-shadow: 0 1px 3px var(--sagak-shadow);
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 [data-scope='editor-container'][data-part='root']:focus-within {
-  border-color: #007AFF;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+  border-color: var(--sagak-accent);
+  box-shadow: 0 0 0 3px var(--sagak-accent-soft);
 }
 
 /* Toolbar */
@@ -26,262 +57,101 @@
   gap: 8px;
   padding: 8px 12px;
   border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--sagak-chrome-border);
   border-radius: 0;
-  background: #fafafa;
+  background: var(--sagak-chrome-raised);
+  color: var(--sagak-chrome-fg);
 }
 
 [data-scope='toolbar'] [data-part='separator'] {
   width: 1px;
   height: 24px;
-  background: #e0e0e0;
+  background: var(--sagak-chrome-border);
   margin: 0 4px;
 }
 
-[data-scope='toolbar'] [data-part='button'] {
+/*
+ * 툴바의 아이콘 버튼입니다. 컴포넌트 9곳이 같은 인라인 스타일을 복사해
+ * 두고 있었고, 그래서 테마를 따라가지 못했습니다. 여기 한 곳으로 모읍니다.
+ */
+[data-part='icon-button'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--sagak-chrome-border);
+  border-radius: 6px;
+  background: var(--sagak-chrome-bg);
+  color: var(--sagak-chrome-fg);
   cursor: pointer;
-  font-size: 14px;
 }
 
-[data-scope='toolbar'] [data-part='button']:hover {
-  background: #e8e8e8;
+/* 아이콘 하나보다 넓은 내용 (드롭다운 화살표 등) */
+[data-part='icon-button'][data-width='auto'] {
+  width: auto;
+  gap: 2px;
+  padding: 0 6px;
 }
 
-[data-scope='toolbar'] [data-part='button'][data-state-active] {
-  background: #d0d0d0;
-  border-color: #b0b0b0;
+[data-part='icon-button']:hover:not(:disabled) {
+  background: var(--sagak-chrome-hover);
 }
 
-[data-scope='toolbar'] [data-part='button'][data-state-disabled] {
-  opacity: 0.5;
+/* 다이얼로그를 여는 버튼은 편집 중인 대상이 있으면 켜진 상태로 보입니다 */
+[data-part='icon-button'][data-state='on'] {
+  border-color: var(--sagak-accent);
+  background: var(--sagak-accent-soft);
+}
+
+[data-part='icon-button'][data-state='active'] {
+  border-color: var(--sagak-accent);
+  background: var(--sagak-accent);
+  color: var(--sagak-accent-fg);
+}
+
+[data-part='icon-button']:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Dropdown */
-[data-scope='dropdown'] [data-part='root'] {
+/* 이어붙인 세그먼트 (정렬, 목록) */
+[data-part='icon-button-group'] {
+  display: inline-flex;
+}
+
+[data-part='icon-button-group'] > [data-part='icon-button']:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+[data-part='icon-button-group'] > [data-part='icon-button']:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[data-part='icon-button-group'] > [data-part='icon-button'] + [data-part='icon-button'] {
+  margin-left: -1px;
+}
+
+[data-part='icon-button-group'] > [data-part='icon-button'][data-state='active'],
+[data-part='icon-button-group'] > [data-part='icon-button']:focus-visible {
   position: relative;
-  display: inline-block;
+  z-index: 1;
 }
 
-[data-scope='dropdown'] [data-part='trigger'] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 100px;
-  padding: 6px 12px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-[data-scope='dropdown'] [data-part='trigger']:hover {
-  border-color: #a0a0a0;
-}
-
-[data-scope='dropdown'] [data-part='menu'] {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 1000;
-  min-width: 150px;
-  margin-top: 4px;
-  padding: 4px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-[data-scope='dropdown'] [data-part='item'] {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-[data-scope='dropdown'] [data-part='item']:hover {
-  background: #f0f0f0;
-}
-
-[data-scope='dropdown'] [data-part='item'][data-state-selected] {
-  background: #e0e0e0;
-  font-weight: 600;
-}
-
-/* Dialog */
-[data-scope='dialog'] [data-part='backdrop'] {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-[data-scope='dialog'] [data-part='root'] {
-  width: 90%;
-  max-width: 480px;
-  padding: 24px;
-  border-radius: 8px;
-  background: white;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-[data-scope='dialog'] [data-part='header'] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-[data-scope='dialog'] [data-part='title'] {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-[data-scope='dialog'] [data-part='close-button'] {
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-[data-scope='dialog'] [data-part='body'] {
-  margin-bottom: 24px;
-}
-
-[data-scope='dialog'] [data-part='field'] {
-  margin-bottom: 16px;
-}
-
-[data-scope='dialog'] [data-part='label'] {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-[data-scope='dialog'] [data-part='input'] {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-[data-scope='dialog'] [data-part='footer'] {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-[data-scope='dialog'] [data-part='cancel-button'],
-[data-scope='dialog'] [data-part='confirm-button'] {
-  padding: 8px 16px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-[data-scope='dialog'] [data-part='confirm-button'] {
-  background: #0066cc;
-  border-color: #0066cc;
-  color: white;
-}
-
-/* Color Picker */
-[data-scope='color-picker'] [data-part='root'] {
-  position: relative;
-  display: inline-block;
-}
-
-[data-scope='color-picker'] [data-part='trigger'] {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-}
-
-[data-scope='color-picker'] [data-part='trigger']:hover {
-  background: #e8e8e8;
-}
-
-[data-scope='color-picker'] [data-part='swatch'] {
-  width: 16px;
-  height: 16px;
-  border: 1px solid #d0d0d0;
-  border-radius: 2px;
-}
-
-[data-scope='color-picker'] [data-part='palette'] {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 1000;
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 4px;
-  padding: 8px;
-  margin-top: 4px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-[data-scope='color-picker'] [data-part='item'] {
-  width: 20px;
-  height: 20px;
-  border: 1px solid #d0d0d0;
-  border-radius: 2px;
-  cursor: pointer;
-  position: relative;
-}
-
-[data-scope='color-picker'] [data-part='item']:hover {
-  border-color: #000;
-}
-
-[data-scope='color-picker'] [data-part='check'] {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: white;
-  text-shadow: 0 0 2px black;
-}
-
-/* Editing Area */
+/*
+ * Editing Area — 여기부터가 종이입니다.
+ *
+ * 배경은 실제로 화면을 차지하는 요소에 걸어야 합니다. 마운트되는 DOM 에는
+ * `[data-part='root']` 래퍼가 없고 `wysiwyg`/`html`/`text` 가 컨테이너 바로
+ * 아래에 옵니다. 배경을 root 에만 두면 크롬 색이 그대로 비칩니다.
+ */
 [data-scope='editing-area'][data-part='root'] {
   border: none;
   border-radius: 0;
   min-height: 300px;
-  background: #ffffff;
   flex: 1;
 }
 
@@ -289,10 +159,13 @@
   padding: 0;
   min-height: 300px;
   outline: none;
+  background: var(--sagak-paper-bg);
+  color: var(--sagak-paper-fg);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.6;
-  color: #1f2937;
+  /* 종이는 다크 모드에서도 밝습니다. 폼 컨트롤과 스크롤바도 따라가야 합니다 */
+  color-scheme: light;
 }
 
 .modern-wysiwyg-area {
@@ -357,7 +230,9 @@
   min-height: 300px;
   padding: 16px 20px;
   border: none;
-  background: #fafafa;
+  background: var(--sagak-paper-raised);
+  color: var(--sagak-paper-fg);
+  color-scheme: light;
   font-family: 'SF Mono', Monaco, Menlo, monospace;
   font-size: 14px;
   line-height: 1.5;
@@ -367,7 +242,7 @@
 
 [data-scope='editing-area'][data-part='html']:focus,
 [data-scope='editing-area'][data-part='text']:focus {
-  background: #ffffff;
+  background: var(--sagak-paper-bg);
 }
 
 /* Scrollbar styling */
@@ -387,24 +262,24 @@
 .modern-wysiwyg-area::-webkit-scrollbar-thumb,
 [data-scope='editing-area'][data-part='html']::-webkit-scrollbar-thumb,
 [data-scope='editing-area'][data-part='text']::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: color-mix(in srgb, var(--sagak-paper-fg) 22%, transparent);
   border-radius: 4px;
 }
 
 .modern-wysiwyg-area::-webkit-scrollbar-thumb:hover,
 [data-scope='editing-area'][data-part='html']::-webkit-scrollbar-thumb:hover,
 [data-scope='editing-area'][data-part='text']::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--sagak-paper-fg) 40%, transparent);
 }
 
 /* Autocomplete Popover */
 [data-scope='autocomplete'][data-part='popover'] {
   min-width: 150px;
   max-width: 300px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--sagak-chrome-border);
   border-radius: 6px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--sagak-chrome-bg);
+  box-shadow: 0 4px 12px var(--sagak-shadow);
   overflow: hidden;
 }
 
@@ -425,16 +300,16 @@
 
 [data-scope='autocomplete'][data-part='item']:hover,
 [data-scope='autocomplete'][data-part='item'][data-selected] {
-  background: #f3f4f6;
+  background: var(--sagak-chrome-hover);
 }
 
 [data-scope='autocomplete'][data-part='prefix'] {
   font-weight: 600;
-  color: #1f2937;
+  color: var(--sagak-chrome-fg);
 }
 
 [data-scope='autocomplete'][data-part='completion'] {
-  color: #6b7280;
+  color: var(--sagak-chrome-muted-fg);
 }
 
 /* Responsive Toolbar */
@@ -462,12 +337,7 @@
     display: flex;
   }
 
-  [data-scope='dropdown'] [data-part='trigger'] {
-    min-width: 80px;
-    padding: 6px 8px;
-    font-size: 13px;
   }
-}
 
 @media (max-width: 480px) {
   [data-scope='toolbar'][data-part='root'] {
@@ -480,16 +350,7 @@
     height: 40px;
   }
 
-  [data-scope='dropdown'] [data-part='trigger'] {
-    min-width: 60px;
-    padding: 8px 6px;
-    font-size: 12px;
   }
-
-  [data-scope='dropdown'] [data-part='trigger'] svg {
-    display: none;
-  }
-}
 
 /* More Menu */
 [data-scope='more-menu'][data-part='trigger'] {
@@ -503,14 +364,14 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    border: 1px solid #d4d4d4;
+    border: 1px solid var(--sagak-chrome-border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--sagak-chrome-bg);
     cursor: pointer;
   }
 
   [data-scope='more-menu'][data-part='trigger']:hover {
-    background: #f5f5f5;
+    background: var(--sagak-chrome-hover);
   }
 }
 
@@ -522,15 +383,15 @@
   min-width: 200px;
   margin-top: 4px;
   padding: 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--sagak-chrome-border);
   border-radius: 8px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--sagak-chrome-bg);
+  box-shadow: 0 4px 12px var(--sagak-shadow);
 }
 
 [data-scope='more-menu'][data-part='section'] {
   padding: 8px 0;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--sagak-chrome-border);
 }
 
 [data-scope='more-menu'][data-part='section']:last-child {
@@ -541,7 +402,7 @@
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--sagak-chrome-muted-fg);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -561,12 +422,12 @@
 }
 
 [data-scope='more-menu'][data-part='item']:hover {
-  background: #f3f4f6;
+  background: var(--sagak-chrome-hover);
 }
 
 [data-scope='more-menu'][data-part='item'][data-state-active] {
-  background: #e0f2fe;
-  color: #007AFF;
+  background: var(--sagak-accent-soft);
+  color: var(--sagak-accent);
 }
 
 /* Table Styling */
@@ -579,24 +440,24 @@
 
 .modern-wysiwyg-area table td,
 .modern-wysiwyg-area table th {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--sagak-paper-border);
   padding: 8px 12px;
   vertical-align: top;
   position: relative;
 }
 
 .modern-wysiwyg-area table th {
-  background: #f9fafb;
+  background: var(--sagak-paper-raised);
   font-weight: 600;
 }
 
 .modern-wysiwyg-area table tr:hover td {
-  background: #f9fafb;
+  background: var(--sagak-paper-hover);
 }
 
 .modern-wysiwyg-area table td:focus-within,
 .modern-wysiwyg-area table th:focus-within {
-  outline: 2px solid #007AFF;
+  outline: 2px solid var(--sagak-accent);
   outline-offset: -2px;
 }
 
@@ -604,7 +465,8 @@
 [data-scope='auto-save'][data-part='indicator'] {
   padding: 4px 8px;
   border-radius: 4px;
-  background: #f9fafb;
+  background: var(--sagak-chrome-bg);
+  color: var(--sagak-chrome-muted-fg);
   transition: all 0.2s ease;
 }
 
@@ -628,41 +490,14 @@
 /* Accessibility - Focus Visible Styles */
 [data-scope='toolbar'] button:focus-visible,
 [data-scope='toolbar'] [role='button']:focus-visible {
-  outline: 2px solid #007AFF;
+  outline: 2px solid var(--sagak-accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-[data-scope='dropdown'] [data-part='trigger']:focus-visible,
-[data-scope='color-picker'] [data-part='trigger']:focus-visible {
-  outline: 2px solid #007AFF;
-  outline-offset: 2px;
-}
-
-[data-scope='dropdown'] [data-part='item']:focus-visible,
-[data-scope='color-picker'] [data-part='item']:focus-visible,
-[data-scope='more-menu'] [data-part='item']:focus-visible {
-  outline: 2px solid #007AFF;
-  outline-offset: -2px;
-  background: #f0f0f0;
-}
-
 [data-scope='autocomplete'][data-part='item']:focus-visible {
-  outline: 2px solid #007AFF;
+  outline: 2px solid var(--sagak-accent);
   outline-offset: -2px;
-}
-
-/* Dialog Focus Styles */
-[data-scope='dialog'] [data-part='input']:focus-visible {
-  outline: 2px solid #007AFF;
-  outline-offset: 0;
-  border-color: #007AFF;
-}
-
-[data-scope='dialog'] [data-part='cancel-button']:focus-visible,
-[data-scope='dialog'] [data-part='confirm-button']:focus-visible {
-  outline: 2px solid #007AFF;
-  outline-offset: 2px;
 }
 
 /* Skip Link for Screen Readers */
@@ -682,7 +517,7 @@
   position: absolute;
   top: -40px;
   left: 0;
-  background: #007AFF;
+  background: var(--sagak-accent);
   color: white;
   padding: 8px 16px;
   z-index: 10000;
@@ -697,10 +532,6 @@
 /* High Contrast Mode Support */
 @media (prefers-contrast: high) {
   [data-scope='toolbar'] button,
-  [data-scope='dropdown'] [data-part='trigger'] {
-    border: 2px solid currentColor;
-  }
-
   [data-scope='toolbar'] button:focus-visible {
     outline-width: 3px;
   }
@@ -719,6 +550,6 @@
 
 /* Keyboard Focus Indicator for Editing Area */
 [data-scope='editing-area'][data-part='wysiwyg']:focus-visible {
-  outline: 2px solid #007AFF;
+  outline: 2px solid var(--sagak-accent);
   outline-offset: -2px;
 }

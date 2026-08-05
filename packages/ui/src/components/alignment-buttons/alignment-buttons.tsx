@@ -1,37 +1,19 @@
-import type * as React from 'preact/compat'
 import { useState, useEffect, useCallback, type ReactNode } from 'preact/compat'
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-preact'
 import { ParagraphEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 type AlignmentType = 'left' | 'center' | 'right' | 'justify'
 
 const ICON_SIZE = 16
 
-const segmentGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  overflow: 'hidden',
-  background: '#fff',
-}
-
-function getButtonStyle(isActive: boolean, isLast?: boolean): React.CSSProperties {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 28,
-    height: 26,
-    border: 'none',
-    borderRight: isLast ? 'none' : '1px solid #d4d4d4',
-    background: isActive ? '#007AFF' : 'transparent',
-    color: isActive ? '#fff' : '#333',
-    cursor: 'pointer',
-    padding: 0,
-  }
-}
+const alignments = [
+  { value: 'left', label: 'Align Left', Icon: AlignLeft },
+  { value: 'center', label: 'Align Center', Icon: AlignCenter },
+  { value: 'right', label: 'Align Right', Icon: AlignRight },
+  { value: 'justify', label: 'Justify', Icon: AlignJustify },
+] as const
 
 function getCurrentAlignment(): AlignmentType {
   const selection = window.getSelection()
@@ -80,8 +62,16 @@ export function AlignmentButtons(): ReactNode {
 
   useEffect(() => {
     document.addEventListener('selectionchange', updateAlignment)
-    const unsubStyle = eventBus.on(CoreEvents.STYLE_CHANGED, 'after', updateAlignment)
-    const unsubRestore = eventBus.on(CoreEvents.CONTENT_RESTORED, 'after', updateAlignment)
+    const unsubStyle = eventBus.on(
+      CoreEvents.STYLE_CHANGED,
+      'after',
+      updateAlignment
+    )
+    const unsubRestore = eventBus.on(
+      CoreEvents.CONTENT_RESTORED,
+      'after',
+      updateAlignment
+    )
 
     return () => {
       document.removeEventListener('selectionchange', updateAlignment)
@@ -90,44 +80,20 @@ export function AlignmentButtons(): ReactNode {
     }
   }, [eventBus, updateAlignment])
 
-  function handleAlignment(align: AlignmentType): void {
-    eventBus.emit(ParagraphEvents.ALIGNMENT_CHANGED, { align })
-  }
-
   return (
-    <div style={segmentGroupStyle}>
-      <button
-        type="button"
-        onClick={() => handleAlignment('left')}
-        style={getButtonStyle(currentAlign === 'left')}
-        title="Align Left"
-      >
-        <AlignLeft size={ICON_SIZE} />
-      </button>
-      <button
-        type="button"
-        onClick={() => handleAlignment('center')}
-        style={getButtonStyle(currentAlign === 'center')}
-        title="Align Center"
-      >
-        <AlignCenter size={ICON_SIZE} />
-      </button>
-      <button
-        type="button"
-        onClick={() => handleAlignment('right')}
-        style={getButtonStyle(currentAlign === 'right')}
-        title="Align Right"
-      >
-        <AlignRight size={ICON_SIZE} />
-      </button>
-      <button
-        type="button"
-        onClick={() => handleAlignment('justify')}
-        style={getButtonStyle(currentAlign === 'justify', true)}
-        title="Justify"
-      >
-        <AlignJustify size={ICON_SIZE} />
-      </button>
+    <div data-part="icon-button-group" role="group" aria-label="Alignment">
+      {alignments.map(({ value, label, Icon }) => (
+        <ToolbarButton
+          key={value}
+          title={label}
+          state={currentAlign === value ? 'active' : undefined}
+          onClick={() =>
+            eventBus.emit(ParagraphEvents.ALIGNMENT_CHANGED, { align: value })
+          }
+        >
+          <Icon size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
+      ))}
     </div>
   )
 }

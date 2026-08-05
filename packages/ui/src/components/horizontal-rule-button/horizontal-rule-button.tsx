@@ -1,39 +1,20 @@
-import type * as React from 'preact/compat'
 import type { ReactNode } from 'preact/compat'
 import { Minus } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 16
-
-const buttonStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#333',
-  cursor: 'pointer',
-}
 
 export function HorizontalRuleButton(): ReactNode {
   const { eventBus } = useEditorContext()
 
-  const handleClick = (): void => {
-    eventBus.emit(ContentEvents.HORIZONTAL_RULE_INSERT)
-  }
-
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      style={buttonStyle}
+    <ToolbarButton
       title="Insert Horizontal Rule"
+      onClick={() => eventBus.emit(ContentEvents.HORIZONTAL_RULE_INSERT)}
     >
-      <Minus size={ICON_SIZE} />
-    </button>
+      <Minus size={ICON_SIZE} aria-hidden="true" />
+    </ToolbarButton>
   )
 }

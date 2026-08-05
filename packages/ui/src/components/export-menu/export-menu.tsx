@@ -8,6 +8,7 @@ import {
 import { Download, FileText, FileCode, FileType } from 'lucide-preact'
 import { ExportEvents, type ExportFormat } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
 
@@ -39,19 +40,6 @@ const exportOptions: ExportOption[] = [
   },
 ]
 
-const triggerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#333',
-  cursor: 'pointer',
-}
-
 export interface ExportMenuProps {
   filename?: string
 }
@@ -74,11 +62,11 @@ export function ExportMenu({
 
   return (
     <DropdownMenu id={menuId}>
-      {/* Trigger 는 자식에 commandfor/command 를 얹을 뿐 자체 요소를 만들지 않습니다 */}
+      {/* Trigger 는 자체 요소를 만들지 않고 자식에 commandfor/command 를 얹습니다 */}
       <DropdownMenuTrigger>
-        <button type="button" title="Export" style={triggerStyle}>
-          <Download size={ICON_SIZE} />
-        </button>
+        <ToolbarButton title="Export">
+          <Download size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent id={menuId} aria-label="Export as">

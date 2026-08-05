@@ -9,21 +9,9 @@ import { Dialog, Button, Input, Label, Checkbox } from 'kinu'
 import { Search } from 'lucide-preact'
 import { FindReplaceEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
-
-const triggerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#333',
-  cursor: 'pointer',
-}
 
 const rowStyle = { display: 'flex', gap: 8 } as const
 
@@ -145,14 +133,12 @@ export function FindReplaceDialog(): ReactNode {
   return (
     <Dialog id={dialogId}>
       <Dialog.Trigger>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
+        <ToolbarButton
           title="Find & Replace"
-          style={triggerStyle}
+          onClick={() => setOpen(true)}
         >
-          <Search size={ICON_SIZE} />
-        </button>
+          <Search size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
       </Dialog.Trigger>
 
       <Dialog.Content

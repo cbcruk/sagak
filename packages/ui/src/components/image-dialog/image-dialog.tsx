@@ -11,6 +11,7 @@ import { Dialog, Button, Input, Label, ToggleGroup, Toggle } from 'kinu'
 import { Image, Upload, Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -76,21 +77,8 @@ function getSelectedImage(): HTMLImageElement | null {
   return null
 }
 
-const triggerStyle = (hasImage: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 26,
-  border: '1px solid #d4d4d4',
-  borderRadius: 6,
-  background: hasImage ? '#e8f0fe' : '#fff',
-  color: '#333',
-  cursor: 'pointer',
-})
-
 const dropZoneStyle: React.CSSProperties = {
-  border: '2px dashed #d4d4d4',
+  border: '2px dashed var(--sagak-chrome-border)',
   borderRadius: 8,
   padding: 24,
   textAlign: 'center',
@@ -272,14 +260,13 @@ export function ImageDialog(): ReactNode {
   return (
     <Dialog id={dialogId}>
       <Dialog.Trigger>
-        <button
-          type="button"
-          onClick={handleOpen}
+        <ToolbarButton
           title="Insert Image"
-          style={triggerStyle(hasImage)}
+          onClick={handleOpen}
+          state={hasImage ? 'on' : undefined}
         >
-          <Image size={ICON_SIZE} />
-        </button>
+          <Image size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
       </Dialog.Trigger>
 
       <Dialog.Content

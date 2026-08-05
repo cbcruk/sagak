@@ -9,6 +9,7 @@ import { Dialog, Button, Input } from 'kinu'
 import { Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
 
@@ -105,30 +106,15 @@ export function LinkDialog(): ReactNode {
 
   return (
     <Dialog id={dialogId}>
-      {/*
-        Trigger 는 자체 요소를 렌더하지 않고 자식에 commandfor/command 를 얹습니다.
-        툴바 버튼은 다른 버튼과 모양을 맞춰야 하므로 kinu Button 대신 그대로 둡니다.
-      */}
+      {/* Trigger 는 자체 요소를 만들지 않고 자식에 commandfor/command 를 얹습니다 */}
       <Dialog.Trigger>
-        <button
-          type="button"
-          onClick={handleOpen}
+        <ToolbarButton
           title="Insert Link"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 26,
-            border: '1px solid #d4d4d4',
-            borderRadius: 6,
-            background: hasLink ? '#e8f0fe' : '#fff',
-            color: '#333',
-            cursor: 'pointer',
-          }}
+          onClick={handleOpen}
+          state={hasLink ? 'on' : undefined}
         >
-          <Link size={ICON_SIZE} />
-        </button>
+          <Link size={ICON_SIZE} aria-hidden="true" />
+        </ToolbarButton>
       </Dialog.Trigger>
 
       <Dialog.Content id={dialogId} aria-label="Insert Link">

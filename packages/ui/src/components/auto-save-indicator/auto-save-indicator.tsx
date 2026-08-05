@@ -27,7 +27,7 @@ export function AutoSaveIndicator({
         return {
           icon: <Cloud size={ICON_SIZE} />,
           text: 'Unsaved changes',
-          color: '#6b7280',
+          color: 'var(--sagak-chrome-muted-fg)',
         }
       case 'saving':
         return {
@@ -52,7 +52,7 @@ export function AutoSaveIndicator({
         return {
           icon: <CloudOff size={ICON_SIZE} />,
           text: '',
-          color: '#9ca3af',
+          color: 'var(--sagak-chrome-muted-fg)',
         }
     }
   }
