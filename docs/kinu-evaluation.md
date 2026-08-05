@@ -1,6 +1,6 @@
 # kinu 도입 검토 — base-ui 대체 스파이크
 
-> 상태: 스파이크 완료 · 결정 대기 · 대상: `sagak-ui`
+> 상태: 스파이크 + `link-dialog` 실제 이전 완료 · 결정 대기 · 대상: `sagak-ui`
 > 관련: [`app-or-library.md`](./app-or-library.md), [`preact-migration.md`](./preact-migration.md)
 
 ## 요약
@@ -157,8 +157,7 @@ base-ui 사용 파일 12개:
 
 ### 권고 순서
 
-1. **`link-dialog` 하나를 실제로 옮겨봅니다** — 스타일까지 포함한 진짜 비용이 나옵니다.
-   다이얼로그 5개 중 가장 단순한 것이라 대표성이 있습니다.
+1. ~~`link-dialog` 하나를 실제로 옮겨봅니다~~ → **완료 (§8)**
 2. 그 결과로 **"kinu 디자인을 받아들일 것인가"**를 판단합니다. 받아들이면 나머지 11개는
    기계적이고, 덮어쓸 거면 이 건은 다시 계산해야 합니다.
 3. Safari/Firefox에서 `<option>` 서체와 anchor positioning을 확인합니다.
@@ -170,3 +169,106 @@ base-ui 사용 파일 12개:
 - **스타일 재정의 비용** — §5 ①의 180곳이 실제로 어떻게 되는지는 1개 이전 전에는 추정입니다.
 - **접근성** — base-ui는 포커스 트랩·ARIA를 검증된 형태로 제공합니다. kinu는 플랫폼
   기본(`<dialog>`)에 기대는데, sagak의 a11y 요구를 만족하는지 확인하지 않았습니다.
+
+---
+
+## 8. `link-dialog` 실제 이전 — 무엇이 나왔나
+
+**동작 검증 7/7 통과, 콘솔 에러 0건.** 링크가 실제로 삽입되고(`<a href="https://example.com">`),
+재오픈 시 기존 URL도 채워집니다.
+
+| 검증 | 결과 |
+| --- | --- |
+| 다이얼로그 열림 (`commandfor`) | PASS |
+| 입력 반영 | PASS |
+| **닫힘 (프로그램적)** | PASS |
+| **링크 삽입** | PASS |
+| **기존 URL 미리 채움** (열기 전 실행 순서) | PASS |
+
+### 코드는 줄었습니다
+
+| | 이전 | 이후 |
+| --- | --- | --- |
+| 파일 | 191줄 | **165줄** (−120/+94) |
+| `style={}` | 11곳 | **3곳** |
+
+인라인 스타일 8곳이 kinu CSS로 흡수됐습니다. 툴바 버튼 하나와 버튼 정렬용 flex만 남았습니다.
+
+### 걸림돌 1 — `ref` 가 전달되지 않는다
+
+§4에서 "`.close()`로 감당된다"고 했는데, **그 핸들을 얻는 방법이 문제였습니다.**
+
+kinu의 `Dialog.Content`는 함수 컴포넌트이고 Preact는 함수 컴포넌트에 `ref`를 props로 넘기지
+않습니다. `ref={dialogRef}`는 조용히 무시되어 `dialogRef.current`가 `null`이고, `.close()`가
+실행되지 않아 **다이얼로그가 닫히지 않았습니다.**
+
+증상이 엉뚱하게 나타났습니다 — 다음 번 트리거 클릭이 "`<h2>Insert Link</h2>`가 포인터
+이벤트를 가로챈다"며 실패했습니다. 열린 채인 모달이 툴바를 덮고 있었던 것입니다. 레이아웃
+문제로 한참 헤맸고, 버튼 위치의 최상위 요소를 `elementFromPoint`로 찍어보고서야 레이아웃은
+멀쩡하고 **닫히지 않은 게 원인**임을 알았습니다.
+
+해법은 `id` 명시 + `document.getElementById`입니다. kinu가 `id` prop을 지원하므로 탈출구는
+있지만, **ref 대신 id로 DOM 핸들을 얻는 패턴이 다이얼로그 5개 전부에 필요합니다.**
+
+```ts
+const dialogId = useId()
+const close = () => {
+  const dialog = document.getElementById(dialogId)
+  if (dialog instanceof HTMLDialogElement) dialog.close()
+}
+```
+
+### 걸림돌 2 — `Field` 가 배포 패키지에 없다
+
+데모는 `Field`/`Field.Label`을 쓰는데 **npm 배포본의 `index.d.ts`에 export가 없습니다.**
+평범한 `<label>`로 대체했습니다. v0.1.4의 패키징 누락입니다.
+
+`ButtonVariant`에 `'primary'`도 없습니다 (`destructive|outline|secondary|ghost|link`, 기본값은
+이름 없음).
+
+### 곁가지로 발견한 것 — sagak 설정 버그
+
+가장 오래 붙잡은 오류는 kinu 탓이 아니었습니다.
+
+```
+Type 'Element' is not assignable to type 'ReactNode'.
+  Property 'children' is missing in type 'VNode<any>' but required in type 'ReactPortal'.
+```
+
+`ReactPortal`은 `@types/react` 타입인데, sagak의 tsconfig는 `react`/`react-dom`만
+`preact/compat`으로 매핑하고 **`react/jsx-runtime`을 빠뜨리고 있었습니다.** base-ui가 끌어온
+`@types/react/jsx-runtime.d.ts`로 흘러가 React 타입 세계가 통째로 딸려 들어왔습니다.
+
+`--traceResolution`으로 추적해서 찾았고, `react/jsx-runtime` 매핑 한 줄로 해결했습니다.
+**Preact 전환 때 제가 빠뜨린 것**이고, 두 타입 세계가 만날 일이 없어 지금까지 드러나지
+않았습니다. `packages/ui`와 `apps/editor` 양쪽에 추가했습니다.
+
+### 번들 — 아직 판단할 수 없습니다
+
+base-ui를 11개 컴포넌트가 여전히 쓰므로 **둘 다 번들에 들어 있습니다.** 현재 JS 370.2 KB /
+CSS 59.6 KB로, CSS가 12.6 → 59.6 KB 늘었습니다(kinu CSS 유입). **번들 이득은 base-ui를 완전히
+걷어낸 뒤에야 실현됩니다** — 중간 상태는 오히려 나쁩니다.
+
+이건 중요한 함의입니다: **점진적 이전은 번들 관점에서 손해 구간을 지나야 합니다.**
+
+## 9. 갱신된 판단
+
+기술적으로 **막히는 곳은 없었습니다.** 걸림돌 둘 다 탈출구가 있고, 가장 큰 오류는 kinu가 아니라
+sagak 설정 문제였습니다.
+
+남은 것은 여전히 §5의 두 가지이고, 이전 경험으로 조금 더 구체화됐습니다.
+
+- **스타일 주도권** — `link-dialog` 기준으로는 좋은 쪽이었습니다. 인라인 스타일 11 → 3곳,
+  코드 26줄 감소. 다만 이건 **kinu의 시각 언어를 받아들인 결과**이고, 나머지 11개도 같은
+  선택을 해야 일관됩니다.
+- **성숙도** — `Field` 미export가 §5 ②의 구체적 사례로 추가됐습니다.
+
+**남은 결정은 하나입니다: kinu의 디자인을 받아들일 것인가.** 받아들이면 나머지 11개는
+기계적이고(다이얼로그 4개는 `id` 패턴 반복), 번들 이득도 그때 실현됩니다. 받아들이지 않고
+전부 덮어쓸 거면 이 건은 다시 계산해야 합니다.
+
+### 이전한다면 순서
+
+**한 번에 전부 옮겨야 합니다.** 점진적 이전은 §8의 번들 손해 구간을 오래 끌고, base-ui가
+`@types/react`를 계속 물고 있어 타입 마찰도 남습니다.
+
