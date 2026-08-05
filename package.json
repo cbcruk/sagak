@@ -12,7 +12,7 @@
     "test:ui": "pnpm --filter sagak-core test:ui",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "storybook": "pnpm --filter sagak-editor storybook",
+    "storybook": "pnpm --filter sagak-ui storybook",
     "preview": "pnpm --filter sagak-app preview",
     "build:packages": "pnpm --filter \"./packages/*\" build"
   },

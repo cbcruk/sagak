@@ -175,9 +175,8 @@ apps/editor/
 
 ### 후속으로 정할 것
 
-- **GitHub Pages가 무엇을 배포할지.** 지금은 Storybook입니다. 앱으로 정의했으니 앱을 배포하는
-  쪽이 자연스럽지만, Storybook을 개발 도구로 계속 둘지와 함께 판단할 문제라 손대지 않았습니다.
-- **`packages/react`의 tsup 빌드를 유지할지.** 앱이 소스를 직접 참조하므로 지금은 쓰이지
+- ~~GitHub Pages가 무엇을 배포할지~~ → **앱으로 결정·적용** (§11)
+- **`packages/ui`의 tsup 빌드를 유지할지.** 앱이 소스를 직접 참조하므로 지금은 쓰이지
   않습니다. `build:packages`로 남겨두었습니다.
 
 ---
@@ -244,9 +243,8 @@ JSX 속성 차이 둘: `suppressContentEditableWarning`(React 전용) 제거, `s
 
 ### 남은 것
 
-`packages/react`가 여전히 `sagak-editor`라는 이름과 `packages/react` 경로를 씁니다. 이름은 이미
-React를 가리키지 않고, 경로 변경은 `deploy-storybook.yml` 2곳을 함께 고쳐야 해서 이번 범위에서
-제외했습니다.
+~~`packages/react`가 여전히 `sagak-editor`라는 이름과 `packages/react` 경로를 씁니다.~~
+→ **`packages/ui` / `sagak-ui`로 정정 완료** (§11)
 
 ---
 
@@ -342,4 +340,54 @@ typecheck 3패키지 통과 / lint 0 errors / build 통과 / **core 테스트 10
 이중 디스패치 제거는 **테스트를 먼저 정리한 뒤**가 맞습니다. 순수 통과 10개의 테스트가
 중복이라는 판단이 서면 그때 함께 걷어내면 비용이 맞아떨어집니다. 지금 순서로 하면 안전망을
 먼저 버리는 셈이 됩니다.
+
+---
+
+## 11. 후속 — Pages 대상과 패키지 이름
+
+### GitHub Pages → 앱
+
+Storybook 대신 앱을 배포합니다. Storybook은 `pnpm storybook`으로 로컬 도구로 남습니다.
+워크플로 파일도 `deploy-app.yml`로 바꿨습니다.
+
+Pages는 프로젝트 사이트를 하위 경로(`/sagak/`)로 서빙하므로 앱에 base가 필요합니다.
+`'/sagak/'`가 아니라 **`'./'`(상대 경로)**로 뒀습니다 — 빌드 산출물에 저장소 이름이 박히지 않고
+어디에 올려도 동작합니다.
+
+**잘못된 base는 빌드가 성공한 뒤 흰 화면이 되는 종류**라, `dist`를 `/sagak/` 하위 디렉터리에
+복사해 headless Chromium으로 구동했습니다. 8개 검증 전부 통과 — 자산 해석, Preact VDOM 마커,
+타이핑, Bold 적용.
+
+**덤으로 favicon을 붙였습니다.** 이번 세션의 모든 브라우저 검증에서 404가 하나씩 찍혔는데,
+응답을 가로채 보니 4xx가 하나도 없었습니다. 브라우저가 자동 요청하는 `favicon.ico`였고 서버
+리스너에는 잡히지 않는 종류였습니다. 선언해두면 요청 자체가 사라지므로, **앞으로 진짜 404가
+소음에 묻히지 않습니다.**
+
+### `packages/react` → `packages/ui`, `sagak-editor` → `sagak-ui`
+
+디렉터리는 React라고 하고 패키지는 editor라고 하는데 **둘 다 더는 사실이 아니었습니다.**
+이제 `sagak-core` / `sagak-ui` / `sagak-app`으로 맞습니다.
+
+**`apps/editor`로 병합하는 안(B)과 저울질했습니다.**
+
+| | 파일 | 줄 |
+| --- | --- | --- |
+| `packages/core` | 74 | 14,501 |
+| `packages/ui` | 50 | 5,478 |
+| `apps/editor` | 2 | **66** |
+
+앱이 66줄이니 오늘 기준으로 `ui`↔`app` 경계는 이름뿐이고, §4가 정당화한 것도 core↔뷰 경계이지
+뷰↔앱 경계가 아닙니다. 그런데도 이름 정정만 한 이유는, **앱이 얇은 게 본질이 아니라 최소 셸로
+방금 쓰였기 때문**입니다. 제품 방향이 정해져 라우팅·저장·설정이 붙으면 `packages/ui`는 진짜
+경계가 됩니다.
+
+즉 **확실히 틀린 것(이름)만 낮은 비용으로 고치고, 불확실한 것(구조)은 근거가 생길 때 판단**하는
+쪽입니다. **B가 맞아지는 시점은 명확합니다** — 앱이 한동안 커졌는데도 `packages/ui`가 그 앱
+하나에만 쓰이면, 그때가 경계가 값을 못 한다는 증거입니다.
+
+**localStorage 키는 건드리지 않았습니다** — `sagak-editor-autosave`,
+`sagak-editor-recent-*-colors`는 저장된 사용자 데이터라 이름을 바꾸면 기존 콘텐츠가 유실됩니다.
+
+`repository.url`에 남아 있던 스캐폴드 플레이스홀더(`github.com/user/sagak-editor.git`)도 실제
+값으로 채웠습니다.
 

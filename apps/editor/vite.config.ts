@@ -7,14 +7,16 @@ import preact from '@preact/preset-vite'
 const coreSrc = fileURLToPath(new URL('../../packages/core/src', import.meta.url))
 
 export default defineConfig({
+  // GitHub Pages 는 프로젝트 하위 경로(/sagak/)로 서빙되므로 상대 경로로 둡니다.
+  base: './',
   plugins: [preact()],
   resolve: {
     alias: {
-      'sagak-editor/styles': fileURLToPath(
-        new URL('../../packages/react/src/styles/index.css', import.meta.url)
+      'sagak-ui/styles': fileURLToPath(
+        new URL('../../packages/ui/src/styles/index.css', import.meta.url)
       ),
-      'sagak-editor': fileURLToPath(
-        new URL('../../packages/react/src/index.ts', import.meta.url)
+      'sagak-ui': fileURLToPath(
+        new URL('../../packages/ui/src/index.ts', import.meta.url)
       ),
       'sagak-core': `${coreSrc}/index.ts`,
       '@/core': `${coreSrc}/core`,
