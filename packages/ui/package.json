@@ -25,6 +25,7 @@
     "url": "https://github.com/cbcruk/sagak.git"
   },
   "dependencies": {
+    "@preact/signals": "^2.11.0",
     "kinu": "0.1.4",
     "lucide-preact": "^0.562.0",
     "sagak-core": "workspace:*"
