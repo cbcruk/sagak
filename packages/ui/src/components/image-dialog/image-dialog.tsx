@@ -1,6 +1,13 @@
 import type * as React from 'preact/compat'
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'preact/compat'
-import { Dialog } from '@base-ui/react/dialog'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useId,
+  type ReactNode,
+} from 'preact/compat'
+import { Dialog, Button, Input, Label, ToggleGroup, Toggle } from 'kinu'
 import { Image, Upload, Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
@@ -69,24 +76,29 @@ function getSelectedImage(): HTMLImageElement | null {
   return null
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 4,
-  fontSize: 14,
-  boxSizing: 'border-box',
-}
+const triggerStyle = (hasImage: boolean): React.CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 26,
+  border: '1px solid #d4d4d4',
+  borderRadius: 6,
+  background: hasImage ? '#e8f0fe' : '#fff',
+  color: '#333',
+  cursor: 'pointer',
+})
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  marginBottom: 4,
-  fontSize: 14,
+const dropZoneStyle: React.CSSProperties = {
+  border: '2px dashed #d4d4d4',
+  borderRadius: 8,
+  padding: 24,
+  textAlign: 'center',
+  cursor: 'pointer',
 }
 
 export function ImageDialog(): ReactNode {
   const { eventBus, selectionManager } = useEditorContext()
-  const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<UploadMode>('url')
   const [src, setSrc] = useState('')
   const [alt, setAlt] = useState('')
@@ -98,6 +110,8 @@ export function ImageDialog(): ReactNode {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
+  const dialogId = useId()
 
   const updateImageState = useCallback((): void => {
     const img = getSelectedImage()
@@ -129,6 +143,14 @@ export function ImageDialog(): ReactNode {
     setUploadError(null)
   }
 
+  const close = (): void => {
+    const dialog = document.getElementById(dialogId)
+    if (dialog instanceof HTMLDialogElement) {
+      dialog.close()
+    }
+  }
+
+  /** `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */
   const handleOpen = (): void => {
     selectionManager?.saveSelection()
     const img = getSelectedImage()
@@ -148,7 +170,6 @@ export function ImageDialog(): ReactNode {
       setMode('url')
     }
     resetUploadState()
-    setOpen(true)
   }
 
   const handleFileSelect = (file: File): void => {
@@ -197,7 +218,7 @@ export function ImageDialog(): ReactNode {
 
   const handleSubmit = (): void => {
     if (mode === 'file' && previewUrl) {
-      setOpen(false)
+      close()
       requestAnimationFrame(() => {
         selectionManager?.restoreSelection()
         eventBus.emit(ContentEvents.IMAGE_INSERT, {
@@ -209,7 +230,7 @@ export function ImageDialog(): ReactNode {
       })
     } else if (mode === 'url') {
       const trimmedSrc = src.trim()
-      setOpen(false)
+      close()
       if (trimmedSrc) {
         requestAnimationFrame(() => {
           selectionManager?.restoreSelection()
@@ -241,7 +262,7 @@ export function ImageDialog(): ReactNode {
   }
 
   const handleDelete = (): void => {
-    setOpen(false)
+    close()
     requestAnimationFrame(() => {
       selectionManager?.restoreSelection()
       eventBus.emit(ContentEvents.IMAGE_DELETE)
@@ -249,272 +270,162 @@ export function ImageDialog(): ReactNode {
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger
-        onClick={handleOpen}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 28,
-          height: 26,
-          border: '1px solid #d4d4d4',
-          borderRadius: 6,
-          background: hasImage ? '#e8f0fe' : '#fff',
-          color: '#333',
-          cursor: 'pointer',
-        }}
-        title="Insert Image"
-      >
-        <Image size={ICON_SIZE} />
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Backdrop
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-          }}
-        />
-        <Dialog.Popup
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: '#fff',
-            borderRadius: 8,
-            padding: 24,
-            minWidth: 360,
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-          }}
+    <Dialog id={dialogId}>
+      <Dialog.Trigger>
+        <button
+          type="button"
+          onClick={handleOpen}
+          title="Insert Image"
+          style={triggerStyle(hasImage)}
         >
-          <Dialog.Title
-            style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}
-          >
-            {isEditing ? 'Edit Image' : 'Insert Image'}
-          </Dialog.Title>
+          <Image size={ICON_SIZE} />
+        </button>
+      </Dialog.Trigger>
 
-          {!isEditing && (
-            <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => setMode('url')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '8px 12px',
-                  border: '1px solid #d4d4d4',
-                  borderRadius: 6,
-                  background: mode === 'url' ? '#e8f0fe' : '#fff',
-                  color: mode === 'url' ? '#0066cc' : '#666',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                <Link size={16} />
-                URL
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('file')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '8px 12px',
-                  border: '1px solid #d4d4d4',
-                  borderRadius: 6,
-                  background: mode === 'file' ? '#e8f0fe' : '#fff',
-                  color: mode === 'file' ? '#0066cc' : '#666',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                <Upload size={16} />
-                Upload
-              </button>
-            </div>
-          )}
+      <Dialog.Content
+        id={dialogId}
+        aria-label={isEditing ? 'Edit Image' : 'Insert Image'}
+      >
+        <h2>{isEditing ? 'Edit Image' : 'Insert Image'}</h2>
 
-          {mode === 'url' && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={labelStyle}>Image URL *</label>
-              <input
-                type="text"
-                value={src}
-                onChange={(e) => setSrc(e.currentTarget.value)}
-                placeholder="https://example.com/image.jpg"
-                style={inputStyle}
-              />
-            </div>
-          )}
+        {!isEditing && (
+          <ToggleGroup role="group" aria-label="Image source">
+            <Toggle
+              pressed={mode === 'url'}
+              onClick={() => setMode('url')}
+              type="button"
+            >
+              <Link size={16} />
+              URL
+            </Toggle>
+            <Toggle
+              pressed={mode === 'file'}
+              onClick={() => setMode('file')}
+              type="button"
+            >
+              <Upload size={16} />
+              Upload
+            </Toggle>
+          </ToggleGroup>
+        )}
 
-          {mode === 'file' && !isEditing && (
-            <div style={{ marginBottom: 12 }}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={ALLOWED_TYPES.join(',')}
-                onChange={handleFileInputChange}
-                style={{ display: 'none' }}
-              />
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                style={{
-                  border: '2px dashed #d4d4d4',
-                  borderRadius: 8,
-                  padding: 24,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: '#fafafa',
-                  transition: 'border-color 0.2s, background 0.2s',
-                }}
-              >
-                {previewUrl ? (
-                  <div>
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: 150,
-                        borderRadius: 4,
-                        marginBottom: 8,
-                      }}
-                    />
-                    <div style={{ fontSize: 12, color: '#666' }}>
-                      {selectedFile?.name}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        resetUploadState()
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = ''
-                        }
-                      }}
-                      style={{
-                        marginTop: 8,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        border: '1px solid #d4d4d4',
-                        borderRadius: 4,
-                        background: '#fff',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload size={32} style={{ color: '#999', marginBottom: 8 }} />
-                    <div style={{ fontSize: 14, color: '#666' }}>
-                      Click to select or drag and drop
-                    </div>
-                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-                      JPEG, PNG, GIF, WebP (max 5MB)
-                    </div>
-                  </div>
-                )}
-              </div>
-              {uploadError && (
-                <div style={{ color: '#dc3545', fontSize: 12, marginTop: 8 }}>
-                  {uploadError}
+        {mode === 'url' && (
+          <div>
+            <Label>Image URL *</Label>
+            <Input
+              type="text"
+              value={src}
+              onInput={(event) =>
+                setSrc((event.currentTarget as HTMLInputElement).value)
+              }
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+        )}
+
+        {mode === 'file' && !isEditing && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ALLOWED_TYPES.join(',')}
+              onChange={handleFileInputChange}
+              style={{ display: 'none' }}
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              style={dropZoneStyle}
+            >
+              {previewUrl ? (
+                <div>
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    style={{ maxWidth: '100%', maxHeight: 150 }}
+                  />
+                  <p>{selectedFile?.name}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      resetUploadState()
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = ''
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <Upload size={32} aria-hidden="true" />
+                  <p>Click to select or drag and drop</p>
+                  <p>JPEG, PNG, GIF, WebP (max 5MB)</p>
                 </div>
               )}
             </div>
-          )}
+            {uploadError && <p role="alert">{uploadError}</p>}
+          </div>
+        )}
 
-          <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>Alt Text</label>
-            <input
+        <div>
+          <Label>Alt Text</Label>
+          <Input
+            type="text"
+            value={alt}
+            onInput={(event) =>
+              setAlt((event.currentTarget as HTMLInputElement).value)
+            }
+            placeholder="Image description"
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <Label>Width</Label>
+            <Input
               type="text"
-              value={alt}
-              onChange={(e) => setAlt(e.currentTarget.value)}
-              placeholder="Image description"
-              style={inputStyle}
+              value={width}
+              onInput={(event) =>
+                setWidth((event.currentTarget as HTMLInputElement).value)
+              }
+              placeholder="300px or 50%"
             />
           </div>
-
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Width</label>
-              <input
-                type="text"
-                value={width}
-                onChange={(e) => setWidth(e.currentTarget.value)}
-                placeholder="300px or 50%"
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Height</label>
-              <input
-                type="text"
-                value={height}
-                onChange={(e) => setHeight(e.currentTarget.value)}
-                placeholder="auto"
-                style={inputStyle}
-              />
-            </div>
+          <div style={{ flex: 1 }}>
+            <Label>Height</Label>
+            <Input
+              type="text"
+              value={height}
+              onInput={(event) =>
+                setHeight((event.currentTarget as HTMLInputElement).value)
+              }
+              placeholder="auto"
+            />
           </div>
+        </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #dc3545',
-                  borderRadius: 4,
-                  background: '#fff',
-                  color: '#dc3545',
-                  cursor: 'pointer',
-                }}
-              >
-                Delete
-              </button>
-            )}
-            <Dialog.Close
-              style={{
-                padding: '8px 16px',
-                border: '1px solid #ccc',
-                borderRadius: 4,
-                background: '#fff',
-                cursor: 'pointer',
-              }}
-            >
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          {isEditing && (
+            <Button type="button" variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
+          <Dialog.Close>
+            <Button type="button" variant="outline">
               Cancel
-            </Dialog.Close>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit()}
-              style={{
-                padding: '8px 16px',
-                border: '1px solid #0066cc',
-                borderRadius: 4,
-                background: canSubmit() ? '#0066cc' : '#ccc',
-                color: '#fff',
-                cursor: canSubmit() ? 'pointer' : 'not-allowed',
-              }}
-            >
-              {isEditing ? 'Update' : 'Insert'}
-            </button>
-          </div>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+            </Button>
+          </Dialog.Close>
+          <Button type="button" onClick={handleSubmit} disabled={!canSubmit()}>
+            {isEditing ? 'Update' : 'Insert'}
+          </Button>
+        </div>
+      </Dialog.Content>
+    </Dialog>
   )
 }

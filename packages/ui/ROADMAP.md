@@ -12,7 +12,7 @@
 
 ### 1.1 Base UI 설치 및 기본 테스트
 
-- [x] `@base-ui/react` 설치
+- [x] UI 툴킷 설치 (`@base-ui/react` → `kinu`, [검토 노트](../../docs/kinu-evaluation.md))
 - [x] Storybook에서 Toggle 렌더링 확인
 
 ### 1.2 Bold 버튼 추가

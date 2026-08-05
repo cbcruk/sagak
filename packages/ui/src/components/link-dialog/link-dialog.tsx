@@ -6,7 +6,6 @@ import {
   type ReactNode,
 } from 'preact/compat'
 import { Dialog, Button, Input } from 'kinu'
-import 'kinu/style.css'
 import { Link } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'

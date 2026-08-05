@@ -272,3 +272,96 @@ sagak 설정 문제였습니다.
 **한 번에 전부 옮겨야 합니다.** 점진적 이전은 §8의 번들 손해 구간을 오래 끌고, base-ui가
 `@types/react`를 계속 물고 있어 타입 마찰도 남습니다.
 
+
+## 10. 전면 이전 — 실측
+
+§9의 "한 번에 전부 옮겨야 합니다"를 그대로 실행했습니다. 남아 있던 11개 파일을 모두 옮기고
+`@base-ui/react`를 의존성에서 제거했습니다.
+
+### 번들 — 이제 판단할 수 있습니다
+
+§8에서 "base-ui를 완전히 걷어낸 뒤에야 실현된다"고 미뤄둔 숫자입니다.
+`apps/editor` 프로덕션 빌드 기준, 이전 직전 커밋(`a6e3cbb`)과 비교했습니다.
+
+| | JS | JS gzip | CSS | CSS gzip | **합계 gzip** |
+|---|---|---|---|---|---|
+| base-ui | 379 KB | 118 KB | 12 KB | 2 KB | **120 KB** |
+| kinu | 207 KB | 61 KB | 59 KB | 10 KB | **71 KB** |
+
+전송량 기준 **41% 감소**입니다. CSS 원본은 12 → 59 KB로 늘었지만(kinu는 컴포넌트 전체 CSS를
+한 파일로 배포합니다) gzip 후에는 8 KB 차이고, JS에서 57 KB를 돌려받습니다. 모듈 수도
+2014 → 1787로 줄었습니다.
+
+§8의 "중간 상태는 오히려 나쁩니다"가 정확히 그랬습니다 — 둘 다 실린 상태에서는 JS 370 KB /
+CSS 59.6 KB였습니다.
+
+### 코드
+
+11개 파일 2269 → 1605줄, 인라인 `style={}` 138 → 48곳.
+
+| 파일 | 줄 |
+|---|---|
+| `font-size-select` | 100 → 31 |
+| `line-height-select` | 94 → 31 |
+| `letter-spacing-select` | 94 → 31 |
+| `font-family-select` | 98 → 32 |
+| `heading-select` | 100 → 40 |
+| `special-character-dialog` | 217 → 139 |
+| `export-menu` | 131 → 104 |
+| `toolbar` | 215 → 204 |
+| `find-replace-dialog` | 331 → 280 |
+| `table-dialog` | 369 → 282 |
+| `image-dialog` | 520 → 431 |
+
+드롭다운 5개가 가장 크게 줄었습니다. base-ui의 `Select`는 `Root`/`Trigger`/`Portal`/
+`Positioner`/`Popup`/`List`/`Item`/`ItemText` 8단 구조라 파일마다 트리거·팝업·항목 스타일
+세 벌이 붙어 있었습니다. kinu의 `Select`는 네이티브 `<select>`라 그게 전부 사라지고,
+5개가 공유하는 껍데기 하나(`toolbar-select.tsx`, 63줄)로 접혔습니다.
+
+### 반복해서 나온 패턴 세 가지
+
+**① `useId()` + `getElementById`** — §8에서 예고한 대로 다이얼로그 5개 전부에 들어갔습니다.
+kinu의 `Dialog.Content`가 Preact에서 `ref`를 DOM으로 넘기지 않기 때문입니다. 한 번 알고 나면
+기계적이지만, 다이얼로그마다 3줄씩 붙는 세금입니다.
+
+**② 네이티브 `<select>`에는 `onOpenChange`가 없습니다** — base-ui는 드롭다운이 열릴 때
+선택 영역을 저장했습니다(`saveSelection()`). 네이티브에는 그 훅이 없어 포커스가 에디터를
+떠나기 *전* 시점인 `mousedown`(마우스)과 `focus`(키보드)에 붙였습니다. `saveSelection()`은
+범위가 에디터 밖이면 아무것도 하지 않으므로 두 번 불려도 안전합니다.
+
+**③ 상태 없는 컴포넌트가 더 잘 맞습니다** — kinu의 `ToggleGroup`·`TabList`/`Tab`은
+스타일만 담당하고 상태는 호출부에 둡니다. 툴바가 손으로 만들던 세그먼트 컨트롤(모서리
+이어붙이기, `margin-left: -1px`, 눌림 색)이 `ToggleGroup` 한 줄로 대체됐고,
+특수문자 다이얼로그의 탭도 `aria-selected`만 넘기면 끝났습니다.
+
+### 덤으로 나온 것
+
+- **`FindReplaceDialog`가 Esc로 닫힐 때도 강조가 지워집니다.** 네이티브 `<dialog>`의 `close`
+  이벤트에 정리 로직을 붙였기 때문입니다. base-ui 시절에는 `onOpenChange(false)` 경로였고
+  같은 동작이었지만, 이제는 어떤 경로로 닫혀도 브라우저가 보장합니다.
+- **특수문자 목록의 큰따옴표 두 개가 ASCII `"`였습니다.** 곱은 따옴표(`“` `”`)로 고쳤습니다.
+  특수문자 삽입기에서 일반 따옴표를 주고 있었던 셈입니다.
+- `kinu/style.css` 임포트를 컴포넌트에서 `src/styles/index.css` 한 곳으로 옮겼습니다.
+- `tsup.config.ts`의 `react → preact/compat` alias를 제거했습니다. base-ui가 내부적으로
+  `react`를 임포트해서 필요했던 것이고, kinu는 preact 네이티브입니다.
+
+### 검증
+
+헤드리스 Chromium에서 빌드 산출물을 직접 구동해 **33/33 통과**했습니다. 앱 에러 없음
+(콘솔에 남은 하나는 테스트가 쓰는 가짜 이미지 URL을 프록시가 막은 것입니다).
+
+Bold 적용·`aria-pressed`·`ToggleGroup` 이어붙임 CSS, 네이티브 `<select>` 여부와 `<option>`
+폰트 미리보기 계산, 줄 간격·제목 반영(= 선택 영역 저장/복원이 살아 있음), 다이얼로그 4개의
+열기·닫기·실제 삽입, 탭 전환, Esc 닫기 시 강조 제거, 드롭다운 메뉴 열기·항목 클릭 후 닫힘·
+실제 파일 내보내기(`document.md`), `link-dialog` 회귀 없음까지 확인했습니다.
+
+gates: typecheck 3개 패키지 · lint 0 errors · core 1009 tests · ui 4 tests.
+
+### 남은 것
+
+- **kinu에 `Field`가 없어** 레이블은 `Label` + 직접 배치입니다(§8과 동일).
+- **`autocomplete-popover`, `more-menu`, `color-picker`** 등은 애초에 base-ui를 쓰지 않아
+  손대지 않았습니다. kinu의 `Popover`/`DropdownMenu`로 옮길 여지는 있지만 별건입니다.
+- **접근성은 다시 봐야 합니다.** §5에서 적었듯 kinu는 플랫폼(`<dialog>`, `popover`)에
+  기대고, base-ui의 포커스 트랩 구현과는 다릅니다. 브라우저 검증은 동작을 확인한 것이지
+  스크린리더 경험을 확인한 것은 아닙니다.
