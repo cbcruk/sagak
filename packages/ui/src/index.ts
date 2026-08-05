@@ -3,8 +3,10 @@ export type { EditorProviderProps } from './context/editor-context'
 
 export {
   useEditor,
-  useFormattingState,
-  useHistoryState,
+  useFormattingSignals,
+  useFormattingCommands,
+  useHistorySignals,
+  useHistoryCommands,
   useFontState,
   useRecentColors,
   useAutoSave,
@@ -13,11 +15,11 @@ export {
 export type {
   UseEditorOptions,
   UseEditorReturn,
-  FormattingActions,
-  UseFormattingStateReturn,
+  FormattingSignals,
+  FormattingCommands,
+  HistorySignals,
   HistoryState,
-  HistoryActions,
-  UseHistoryStateReturn,
+  HistoryCommands,
   FontState,
   UseFontStateReturn,
   UseRecentColorsReturn,
