@@ -233,11 +233,17 @@ export class CommandRegistry {
 /**
  * 스냅샷 캡처 후 커맨드를 실행하는 헬퍼
  *
- * 히스토리 스냅샷 규약(`CAPTURE_SNAPSHOT` 발행)을 커맨드 실행에 내장합니다.
+ * 커맨드 실행 전후의 두 가지 규약을 여기 한 곳에 담습니다.
+ *
+ * - 실행 전 `CAPTURE_SNAPSHOT` — 히스토리가 직전 상태를 저장합니다.
+ * - 성공 후 `FOCUS_REQUESTED` — 편집 영역으로 포커스를 되돌립니다.
+ *   툴바 버튼을 누르면 포커스가 그 버튼에 남아, 커맨드는 저장된 선택 영역으로
+ *   동작하지만 이어지는 타이핑이 편집 영역에 닿지 않습니다.
+ *
  * 서식 플러그인이 `document.execCommand`를 직접 호출하던 자리를 대체합니다.
  *
  * @param registry 커맨드 레지스트리
- * @param eventBus 스냅샷 이벤트를 발행할 이벤트 버스
+ * @param eventBus 스냅샷·포커스 이벤트를 발행할 이벤트 버스
  * @param name 커맨드 이름
  * @param value 커맨드 값
  * @returns 커맨드 결과
@@ -249,5 +255,11 @@ export function runCommand(
   value?: string
 ): boolean {
   eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-  return registry.run(name, value)
+  const result = registry.run(name, value)
+
+  if (result) {
+    eventBus.emit(CoreEvents.FOCUS_REQUESTED)
+  }
+
+  return result
 }

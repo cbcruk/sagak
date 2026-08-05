@@ -149,6 +149,44 @@ describe('CommandRegistry', () => {
       expect(result).toBe(true)
       expect(order).toEqual(['snapshot', 'command'])
     })
+
+    it('커맨드가 성공하면 실행 뒤에 FOCUS_REQUESTED를 발행해야 함', () => {
+      const registry = new CommandRegistry(ctx)
+      const order: string[] = []
+      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
+        order.push('focus')
+      })
+      registry.register('foo', () => {
+        order.push('command')
+        return true
+      })
+
+      runCommand(registry, eventBus, 'foo')
+      expect(order).toEqual(['command', 'focus'])
+    })
+
+    it('커맨드가 실패하면 FOCUS_REQUESTED를 발행하지 않아야 함', () => {
+      const registry = new CommandRegistry(ctx)
+      let focusCount = 0
+      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
+        focusCount += 1
+      })
+      registry.register('foo', () => false)
+
+      expect(runCommand(registry, eventBus, 'foo')).toBe(false)
+      expect(focusCount).toBe(0)
+    })
+
+    it('등록되지 않은 커맨드에는 FOCUS_REQUESTED를 발행하지 않아야 함', () => {
+      const registry = new CommandRegistry(ctx)
+      let focusCount = 0
+      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
+        focusCount += 1
+      })
+
+      expect(runCommand(registry, eventBus, 'nope')).toBe(false)
+      expect(focusCount).toBe(0)
+    })
   })
 
   describe('registerLegacyExecCommands', () => {
