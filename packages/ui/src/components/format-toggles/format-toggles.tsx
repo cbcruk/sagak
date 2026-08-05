@@ -1,11 +1,7 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { Toggle, ToggleGroup } from 'kinu'
 import { Bold, Italic, Underline, Strikethrough } from 'lucide-preact'
-import type { Signal } from '@preact/signals'
-import {
-  useFormattingSignals,
-  useFormattingCommands,
-} from '../../hooks/use-formatting-signals'
+import { useFormattingState } from '../../hooks'
 
 const ICON_SIZE = 16
 
@@ -18,56 +14,27 @@ const buttonStyle: JSX.CSSProperties = {
   padding: 0,
 }
 
-/**
- * 신호를 **각 토글 안에서** 읽습니다.
- *
- * 부모(`FormatToggles`)에서 `.value` 를 읽으면 부모가 통째로 다시 그려져
- * 토글 4개가 전부 따라갑니다. 잎에서 읽어야 바뀐 하나만 그려집니다.
- */
-function FormatToggle({
-  pressed,
-  onClick,
-  title,
-  label,
-  children,
-}: {
-  pressed: Signal<boolean>
-  onClick: () => void
-  title: string
-  label: string
-  children: ComponentChildren
-}): ComponentChildren {
-  return (
-    <Toggle
-      pressed={pressed.value}
-      onClick={onClick}
-      style={buttonStyle}
-      title={title}
-      aria-label={label}
-    >
-      {children}
-    </Toggle>
-  )
-}
-
+/** 상태를 `Toolbar` 에서 여기(잎)로 내렸습니다 */
 export function FormatToggles(): ComponentChildren {
-  const s = useFormattingSignals()
-  const c = useFormattingCommands()
+  const {
+    isBold, isItalic, isUnderline, isStrikeThrough,
+    toggleBold, toggleItalic, toggleUnderline, toggleStrikeThrough,
+  } = useFormattingState()
 
   return (
     <ToggleGroup role="group" aria-label="Text style">
-      <FormatToggle pressed={s.isBold} onClick={c.toggleBold} title="Bold (⌘B)" label="Bold">
+      <Toggle pressed={isBold} onClick={toggleBold} style={buttonStyle} title="Bold (⌘B)" aria-label="Bold">
         <Bold size={ICON_SIZE} strokeWidth={2.5} aria-hidden="true" />
-      </FormatToggle>
-      <FormatToggle pressed={s.isItalic} onClick={c.toggleItalic} title="Italic (⌘I)" label="Italic">
+      </Toggle>
+      <Toggle pressed={isItalic} onClick={toggleItalic} style={buttonStyle} title="Italic (⌘I)" aria-label="Italic">
         <Italic size={ICON_SIZE} aria-hidden="true" />
-      </FormatToggle>
-      <FormatToggle pressed={s.isUnderline} onClick={c.toggleUnderline} title="Underline (⌘U)" label="Underline">
+      </Toggle>
+      <Toggle pressed={isUnderline} onClick={toggleUnderline} style={buttonStyle} title="Underline (⌘U)" aria-label="Underline">
         <Underline size={ICON_SIZE} aria-hidden="true" />
-      </FormatToggle>
-      <FormatToggle pressed={s.isStrikeThrough} onClick={c.toggleStrikeThrough} title="Strikethrough" label="Strikethrough">
+      </Toggle>
+      <Toggle pressed={isStrikeThrough} onClick={toggleStrikeThrough} style={buttonStyle} title="Strikethrough" aria-label="Strikethrough">
         <Strikethrough size={ICON_SIZE} aria-hidden="true" />
-      </FormatToggle>
+      </Toggle>
     </ToggleGroup>
   )
 }
