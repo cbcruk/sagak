@@ -1,7 +1,7 @@
 {
   "name": "sagak-ui",
   "version": "0.1.0",
-  "description": "sagak \uc5d0\ub514\ud130 UI \ucef4\ud3ec\ub10c\ud2b8 (Preact) \u2014 \uc6cc\ud06c\uc2a4\ud398\uc774\uc2a4 \ub0b4\ubd80 \ud328\ud0a4\uc9c0",
+  "description": "sagak 에디터 UI 컴포넌트 (Preact) — 워크스페이스 내부 패키지",
   "type": "module",
   "scripts": {
     "build": "tsup",
@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
+    "kinu": "0.1.4",
     "lucide-preact": "^0.562.0",
     "sagak-core": "workspace:*"
   },
