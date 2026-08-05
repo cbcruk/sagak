@@ -1,5 +1,4 @@
 import type { ComponentChildren } from 'preact'
-import type { ReactNode } from 'preact/compat'
 
 export interface ToolbarButtonProps {
   title: string
@@ -36,7 +35,7 @@ export function ToolbarButton({
   state,
   wide,
   ...rest
-}: ToolbarButtonProps): ReactNode {
+}: ToolbarButtonProps): ComponentChildren {
   return (
     <button
       {...rest}

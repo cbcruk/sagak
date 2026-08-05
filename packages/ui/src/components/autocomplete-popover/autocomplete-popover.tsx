@@ -1,5 +1,5 @@
-import type * as React from 'preact/compat'
-import { useState, useEffect, useCallback, useRef } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { AutocompleteEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 
@@ -11,7 +11,7 @@ interface AutocompleteState {
   selectedIndex: number
 }
 
-export function AutocompletePopover(): React.ReactNode {
+export function AutocompletePopover(): ComponentChildren {
   const context = useEditorContext()
   const [state, setState] = useState<AutocompleteState>({
     visible: false,

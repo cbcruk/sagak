@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { useFontState } from '../../hooks'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
 
@@ -14,7 +14,7 @@ const fonts = [
 /** 각 옵션을 자기 폰트로 렌더해 미리보기가 되게 합니다 */
 const options = fonts.map((font) => ({ ...font, fontFamily: font.value }))
 
-export function FontFamilySelect(): ReactNode {
+export function FontFamilySelect(): ComponentChildren {
   const { fontFamily, setFontFamily } = useFontState()
 
   const currentValue = fonts.some((font) => font.value === fontFamily)

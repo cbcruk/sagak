@@ -22,9 +22,6 @@ export default defineConfig({
       '@/core': `${coreSrc}/core`,
       '@/plugins': `${coreSrc}/plugins`,
       '@/editor': `${coreSrc}/editor`,
-      react: 'preact/compat',
-      'react-dom': 'preact/compat',
-      'react/jsx-runtime': 'preact/jsx-runtime',
     },
   },
 })

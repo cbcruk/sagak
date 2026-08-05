@@ -1,4 +1,5 @@
-import { useId, type ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useId } from 'preact/hooks'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,7 +16,7 @@ const ICON_SIZE = 18
 interface ExportOption {
   format: ExportFormat
   label: string
-  icon: ReactNode
+  icon: ComponentChildren
   description: string
 }
 
@@ -46,7 +47,7 @@ export interface ExportMenuProps {
 
 export function ExportMenu({
   filename = 'document',
-}: ExportMenuProps): ReactNode {
+}: ExportMenuProps): ComponentChildren {
   const { eventBus } = useEditorContext()
   // `DropdownMenuItem` 은 항목을 눌러도 메뉴를 닫지 않습니다.
   // `link-dialog` 와 같은 이유로 id 를 직접 잡아 `<dialog>` 를 닫습니다.

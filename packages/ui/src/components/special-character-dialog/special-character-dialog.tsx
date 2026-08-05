@@ -1,4 +1,5 @@
-import { useState, useId, type ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useId, useState } from 'preact/hooks'
 import { Dialog, Button, TabList, Tab } from 'kinu'
 import { Omega } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
@@ -48,7 +49,7 @@ const gridStyle = {
   overflowY: 'auto',
 } as const
 
-export function SpecialCharacterDialog(): ReactNode {
+export function SpecialCharacterDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [activeCategory, setActiveCategory] = useState(0)
   // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)

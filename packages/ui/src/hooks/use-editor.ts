@@ -1,11 +1,11 @@
-import type * as React from 'preact/compat'
-import { useEffect, useRef, useState } from 'preact/compat'
+import type { RefObject } from 'preact'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { createEditor, type CreateEditorOptions, type Editor } from 'sagak-core'
 
 export type UseEditorOptions = Omit<CreateEditorOptions, 'container'>
 
 export interface UseEditorReturn {
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: RefObject<HTMLDivElement>
   editor: Editor | null
   ready: boolean
   error: Error | null

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'preact/compat'
+import { useEffect, useMemo, useState } from 'preact/hooks'
 import { HistoryEvents } from 'sagak-core'
 import { useEditorContext } from '../context/editor-context'
 

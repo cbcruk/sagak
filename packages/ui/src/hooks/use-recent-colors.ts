@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'preact/compat'
+import { useCallback, useEffect, useState } from 'preact/hooks'
 
 const STORAGE_KEY_TEXT = 'sagak-editor-recent-text-colors'
 const STORAGE_KEY_BG = 'sagak-editor-recent-bg-colors'

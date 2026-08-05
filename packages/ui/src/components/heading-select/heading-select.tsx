@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
@@ -13,7 +13,7 @@ const headings = [
   { label: 'Heading 6', value: '6' },
 ]
 
-export function HeadingSelect(): ReactNode {
+export function HeadingSelect(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
 
   const handleSelect = (value: string): void => {

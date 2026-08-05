@@ -19,12 +19,6 @@
     "noUnusedParameters": true,
     "baseUrl": ".",
     "paths": {
-      "react": [
-        "../../node_modules/preact/compat"
-      ],
-      "react-dom": [
-        "../../node_modules/preact/compat"
-      ],
       "sagak-ui": [
         "../../packages/ui/src/index.ts"
       ],
@@ -33,12 +27,6 @@
       ],
       "@/*": [
         "../../packages/core/src/*"
-      ],
-      "react/jsx-runtime": [
-        "../../node_modules/preact/jsx-runtime"
-      ],
-      "react/jsx-dev-runtime": [
-        "../../node_modules/preact/jsx-runtime"
       ]
     }
   },

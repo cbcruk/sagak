@@ -1,5 +1,4 @@
-import type * as React from 'preact/compat'
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren, JSX } from 'preact'
 import { Toggle, ToggleGroup } from 'kinu'
 import {
   Undo2,
@@ -34,7 +33,7 @@ const ICON_SIZE = 16
  * kinu 의 `ToggleGroup` 이 이어붙인 모서리와 눌림 상태를 담당합니다.
  * 아이콘 버튼이라 크기만 정사각형에 가깝게 맞춥니다.
  */
-const segmentButtonStyle: React.CSSProperties = {
+const segmentButtonStyle: JSX.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -45,7 +44,7 @@ const segmentButtonStyle: React.CSSProperties = {
 
 
 
-export function Toolbar(): ReactNode {
+export function Toolbar(): ComponentChildren {
   const {
     isBold,
     isItalic,

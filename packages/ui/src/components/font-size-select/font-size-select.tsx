@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { useFontState } from '../../hooks'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
 
@@ -13,7 +13,7 @@ const sizes = [
   { label: '36', value: '7' },
 ]
 
-export function FontSizeSelect(): ReactNode {
+export function FontSizeSelect(): ComponentChildren {
   const { fontSize, setFontSize } = useFontState()
 
   const currentValue = sizes.some((size) => size.value === fontSize)

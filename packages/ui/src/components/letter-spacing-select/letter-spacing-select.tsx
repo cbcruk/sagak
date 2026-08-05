@@ -1,4 +1,4 @@
-import type { ReactNode } from 'preact/compat'
+import type { ComponentChildren } from 'preact'
 import { FontEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
@@ -12,7 +12,7 @@ const letterSpacings = [
   { label: '0.3', value: '0.3' },
 ]
 
-export function LetterSpacingSelect(): ReactNode {
+export function LetterSpacingSelect(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
 
   const handleSelect = (letterSpacing: string): void => {

@@ -1,10 +1,5 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useId,
-  type ReactNode,
-} from 'preact/compat'
+import type { ComponentChildren } from 'preact'
+import { useCallback, useEffect, useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label } from 'kinu'
 import { Table } from 'lucide-preact'
 import { ContentEvents, CoreEvents } from 'sagak-core'
@@ -34,7 +29,7 @@ function findTableAtSelection(): HTMLTableElement | null {
 
 const rowStyle = { display: 'flex', gap: 8 } as const
 
-export function TableDialog(): ReactNode {
+export function TableDialog(): ComponentChildren {
   const { eventBus, selectionManager } = useEditorContext()
   const [rows, setRows] = useState('3')
   const [cols, setCols] = useState('3')
