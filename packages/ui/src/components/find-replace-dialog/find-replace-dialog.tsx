@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useCallback, useEffect, useId, useState } from 'preact/hooks'
+import { useId, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label, Checkbox } from 'kinu'
 import { Search } from 'lucide-preact'
-import { FindReplaceEvents, CoreEvents } from 'sagak-core'
+import { FindReplaceEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useFindState } from '../../hooks/use-find-state'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -17,111 +18,83 @@ const checkboxLabelStyle = {
   cursor: 'pointer',
 } as const
 
+interface FindOptions {
+  caseSensitive: boolean
+  wholeWord: boolean
+}
+
 export function FindReplaceDialog(): ComponentChildren {
   const { eventBus } = useEditorContext()
-  const [open, setOpen] = useState(false)
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
-  const [caseSensitive, setCaseSensitive] = useState(false)
-  const [wholeWord, setWholeWord] = useState(false)
-  const [matchCount, setMatchCount] = useState(0)
-  const [currentMatch, setCurrentMatch] = useState(0)
+  const [options, setOptions] = useState<FindOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+  })
+  const { matchCount, currentMatch, reset } = useFindState()
   // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
   const dialogId = useId()
 
-  const handleFind = useCallback((): void => {
+  /**
+   * 검색 옵션은 인자로 받습니다.
+   *
+   * 이전에는 체크박스가 상태만 바꾸고 `useEffect` 가 그 변화를 보고 다시
+   * 찾았습니다. 그러면 의존성 배열이 `[caseSensitive, wholeWord]` 로 거짓말을
+   * 하게 되고(실제로는 `findText` 와 `open` 도 읽습니다), 다이얼로그가 열려
+   * 있는지 확인하려고 `open` 상태까지 따로 들고 있어야 했습니다.
+   *
+   * 사용자 동작에 반응하는 일은 핸들러에서 합니다. 바뀐 값을 직접 넘기면
+   * 렌더를 한 번 더 기다릴 필요도 없습니다.
+   */
+  const runFind = (override?: Partial<FindOptions>): void => {
     if (!findText.trim()) return
 
     eventBus.emit(FindReplaceEvents.FIND, {
       query: findText,
-      caseSensitive,
-      wholeWord,
+      ...options,
+      ...override,
     })
-  }, [eventBus, findText, caseSensitive, wholeWord])
+  }
 
-  const handleFindNext = useCallback((): void => {
+  const setOption = (patch: Partial<FindOptions>): void => {
+    setOptions((prev) => ({ ...prev, ...patch }))
+    runFind(patch)
+  }
+
+  const handleFindNext = (): void => {
     eventBus.emit(FindReplaceEvents.FIND_NEXT)
-    setCurrentMatch((prev) => (matchCount > 0 ? (prev % matchCount) + 1 : 0))
-  }, [eventBus, matchCount])
+  }
 
-  const handleFindPrevious = useCallback((): void => {
+  const handleFindPrevious = (): void => {
     eventBus.emit(FindReplaceEvents.FIND_PREVIOUS)
-    setCurrentMatch((prev) =>
-      matchCount > 0 ? (prev <= 1 ? matchCount : prev - 1) : 0
-    )
-  }, [eventBus, matchCount])
+  }
 
-  const handleReplace = useCallback((): void => {
+  const handleReplace = (): void => {
     if (!findText.trim()) return
-
     eventBus.emit(FindReplaceEvents.REPLACE, {
       query: findText,
       replacement: replaceText,
-      caseSensitive,
-      wholeWord,
+      ...options,
     })
-  }, [eventBus, findText, replaceText, caseSensitive, wholeWord])
+  }
 
-  const handleReplaceAll = useCallback((): void => {
+  const handleReplaceAll = (): void => {
     if (!findText.trim()) return
-
     eventBus.emit(FindReplaceEvents.REPLACE_ALL, {
       query: findText,
       replacement: replaceText,
-      caseSensitive,
-      wholeWord,
+      ...options,
     })
-  }, [eventBus, findText, replaceText, caseSensitive, wholeWord])
+  }
 
   /**
    * 네이티브 `<dialog>` 의 `close` 이벤트에 붙습니다. Esc 든 Close 버튼이든
    * 어느 경로로 닫혀도 강조 표시가 정리되도록 보장합니다.
    */
-  const handleClose = useCallback((): void => {
+  const handleClose = (): void => {
     eventBus.emit(FindReplaceEvents.CLEAR_FIND)
-    setOpen(false)
-    setMatchCount(0)
-    setCurrentMatch(0)
-  }, [eventBus])
-
-  useEffect(() => {
-    const unsubStyle = eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      (data?: unknown) => {
-        if (data && typeof data === 'object' && 'style' in data) {
-          const styleData = data as Record<string, unknown>
-          if (styleData.style !== 'find') return
-
-          const action = styleData.action as string | undefined
-          const count = styleData.matchCount as number | undefined
-
-          if (action === 'find' && typeof count === 'number') {
-            setMatchCount(count)
-            setCurrentMatch(count > 0 ? 1 : 0)
-          } else if (action === 'replace' && typeof count === 'number') {
-            setMatchCount(count)
-            if (count === 0) {
-              setCurrentMatch(0)
-            }
-          } else if (action === 'replaceAll' || action === 'clear') {
-            setMatchCount(0)
-            setCurrentMatch(0)
-          }
-        }
-      }
-    )
-
-    return () => {
-      unsubStyle()
-    }
-  }, [eventBus])
-
-  useEffect(() => {
-    if (open && findText.trim()) {
-      handleFind()
-    }
-  }, [caseSensitive, wholeWord])
+    reset()
+  }
 
   const hasQuery = !!findText.trim()
 
@@ -130,7 +103,6 @@ export function FindReplaceDialog(): ComponentChildren {
       <Dialog.Trigger>
         <ToolbarButton
           title="Find & Replace"
-          onClick={() => setOpen(true)}
         >
           <Search size={ICON_SIZE} aria-hidden="true" />
         </ToolbarButton>
@@ -157,7 +129,7 @@ export function FindReplaceDialog(): ComponentChildren {
               if (matchCount > 0) {
                 handleFindNext()
               } else {
-                handleFind()
+                runFind()
               }
             }}
             placeholder="Search text..."
@@ -180,20 +152,23 @@ export function FindReplaceDialog(): ComponentChildren {
         <div style={{ display: 'flex', gap: 16 }}>
           <Label style={checkboxLabelStyle}>
             <Checkbox
-              checked={caseSensitive}
+              checked={options.caseSensitive}
               onChange={(event) =>
-                setCaseSensitive(
-                  (event.currentTarget as HTMLInputElement).checked
-                )
+                setOption({
+                  caseSensitive: (event.currentTarget as HTMLInputElement)
+                    .checked,
+                })
               }
             />
             Case sensitive
           </Label>
           <Label style={checkboxLabelStyle}>
             <Checkbox
-              checked={wholeWord}
+              checked={options.wholeWord}
               onChange={(event) =>
-                setWholeWord((event.currentTarget as HTMLInputElement).checked)
+                setOption({
+                  wholeWord: (event.currentTarget as HTMLInputElement).checked,
+                })
               }
             />
             Whole word
@@ -211,7 +186,7 @@ export function FindReplaceDialog(): ComponentChildren {
         )}
 
         <div style={rowStyle}>
-          <Button type="button" onClick={handleFind} disabled={!hasQuery}>
+          <Button type="button" onClick={() => runFind()} disabled={!hasQuery}>
             Find
           </Button>
           <Button

@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useId, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { Dialog, Button, Input } from 'kinu'
 import { Link } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
@@ -27,44 +28,35 @@ function getSelectedLink(): HTMLAnchorElement | null {
 }
 
 export function LinkDialog(): ComponentChildren {
-  const { eventBus, selectionManager } = useEditorContext()
+  const { eventBus } = useEditorContext()
   const [url, setUrl] = useState('')
   const hasLink = useSelectionDerived(() => !!getSelectedLink(), false)
-  // kinu 의 Dialog.Content 는 함수 컴포넌트라 ref 가 DOM 으로 전달되지 않습니다.
-  // 명시적 id 를 주고 그 id 로 <dialog> 핸들을 얻습니다.
-  const dialogId = useId()
+  const { id: dialogId, save, close, restoreThen } = useDialogHandle()
 
   /**
    * `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 실행됩니다.
    * 선택 영역 저장과 URL 미리 채우기는 열리기 전에 끝나야 합니다.
    */
   const handleOpen = (): void => {
-    selectionManager?.saveSelection()
+    save()
     setUrl(getSelectedLink()?.href ?? '')
-  }
-
-  const close = (): void => {
-    const dialog = document.getElementById(dialogId)
-    if (dialog instanceof HTMLDialogElement) {
-      dialog.close()
-    }
   }
 
   const handleSubmit = (): void => {
     const trimmedUrl = url.trim()
-    close()
-    if (trimmedUrl) {
-      requestAnimationFrame(() => {
-        selectionManager?.restoreSelection()
-        eventBus.emit(ContentEvents.LINK_CHANGED, { url: trimmedUrl })
-      })
+    // URL 이 비어 있어도 닫기는 합니다
+    if (!trimmedUrl) {
+      close()
+      return
     }
+    restoreThen(() =>
+      eventBus.emit(ContentEvents.LINK_CHANGED, { url: trimmedUrl })
+    )
   }
 
   const handleRemove = (): void => {
-    close()
-    requestAnimationFrame(() => {
-      selectionManager?.restoreSelection()
+    restoreThen(() => {
+      // 링크 전체를 선택 영역으로 잡아야 코어가 그 범위를 풀 수 있습니다
       const link = getSelectedLink()
       if (link) {
         const range = document.createRange()
@@ -97,12 +89,12 @@ export function LinkDialog(): ComponentChildren {
           URL
         </label>
         <Input
-            type="text"
-            value={url}
-            onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
-            placeholder="https://example.com"
-            onKeyDown={(e) => {
-              if ((e as KeyboardEvent).key === 'Enter') handleSubmit()
+          type="text"
+          value={url}
+          onInput={(e) => setUrl((e.currentTarget as HTMLInputElement).value)}
+          placeholder="https://example.com"
+          onKeyDown={(e) => {
+            if ((e as KeyboardEvent).key === 'Enter') handleSubmit()
           }}
         />
 

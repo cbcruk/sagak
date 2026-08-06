@@ -1,10 +1,7 @@
-import { useCallback, useEffect, useState } from 'preact/hooks'
-import {
-  AutoSaveEvents,
-  type AutoSaveStatus,
-  type AutoSaveEventData,
-} from 'sagak-core'
+import { useCallback, useState } from 'preact/hooks'
+import { AutoSaveEvents, type AutoSaveStatus } from 'sagak-core'
 import { useEditorContext } from '../context/editor-context'
+import { useEditorEvent } from './use-editor-event'
 
 export interface UseAutoSaveReturn {
   status: AutoSaveStatus
@@ -18,31 +15,16 @@ export function useAutoSave(): UseAutoSaveReturn {
   const [status, setStatus] = useState<AutoSaveStatus>('idle')
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
-  useEffect(() => {
-    if (!context?.eventBus) return
-
-    const { eventBus } = context
-
-    const unsubStatus = eventBus.on(
-      AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED,
-      'on',
-      (data?: unknown) => {
-        if (!data || typeof data !== 'object') return
-
-        const { status: newStatus, timestamp } = data as AutoSaveEventData
-
-        setStatus(newStatus)
-
-        if (timestamp) {
-          setLastSaved(new Date(timestamp))
-        }
+  useEditorEvent(
+    AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED,
+    'on',
+    ({ status: next, timestamp }) => {
+      setStatus(next)
+      if (timestamp) {
+        setLastSaved(new Date(timestamp))
       }
-    )
-
-    return () => {
-      unsubStatus()
     }
-  }, [context?.eventBus])
+  )
 
   const restore = useCallback(() => {
     if (!context?.eventBus) return

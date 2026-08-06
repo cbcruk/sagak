@@ -304,6 +304,33 @@ export function createFindReplacePlugin(
 
     initialize(context: EditorContext) {
       const { eventBus, config } = context
+
+      /**
+       * 찾기 상태를 한 곳에서 알립니다.
+       *
+       * 이전에는 `FIND_NEXT`/`FIND_PREVIOUS` 가 내부 인덱스만 바꾸고 아무것도
+       * 되쏘지 않아서, UI 가 표시용 번호를 직접 같은 산술로 계산했습니다.
+       * 인덱스의 주인은 여기이므로 여기서 실어 보냅니다.
+       */
+      const emitFindState = (
+        action:
+          | 'find'
+          | 'next'
+          | 'previous'
+          | 'replace'
+          | 'replaceAll'
+          | 'clear',
+        extra?: { replaceCount?: number }
+      ): void => {
+        eventBus.emit(CoreEvents.STYLE_CHANGED, {
+          style: 'find',
+          action,
+          matchCount: currentMatches.length,
+          matchIndex: currentMatchIndex,
+          ...extra,
+        })
+      }
+
       const reportError = createErrorReporter(
         eventBus,
         'plugin:utility:find-replace'
@@ -376,11 +403,7 @@ export function createFindReplacePlugin(
             }
           }
 
-          eventBus.emit(CoreEvents.STYLE_CHANGED, {
-            style: 'find',
-            action: 'find',
-            matchCount: currentMatches.length,
-          })
+          emitFindState('find')
 
           return true
         } catch (error) {
@@ -421,6 +444,8 @@ export function createFindReplacePlugin(
           }
         }
 
+        emitFindState('next')
+
         return true
       })
       unsubscribers.push(unsubFindNext)
@@ -457,6 +482,8 @@ export function createFindReplacePlugin(
             })
           }
         }
+
+        emitFindState('previous')
 
         return true
       })
@@ -525,11 +552,7 @@ export function createFindReplacePlugin(
                 currentHighlightColor
             }
 
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'find',
-              action: 'replace',
-              matchCount: currentMatches.length,
-            })
+            emitFindState('replace')
 
             return true
           } catch (error) {
@@ -601,11 +624,7 @@ export function createFindReplacePlugin(
             currentMatches = []
             currentMatchIndex = -1
 
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'find',
-              action: 'replaceAll',
-              replaceCount,
-            })
+            emitFindState('replaceAll', { replaceCount })
 
             return true
           } catch (error) {
@@ -628,10 +647,7 @@ export function createFindReplacePlugin(
           currentMatches = []
           currentMatchIndex = -1
 
-          eventBus.emit(CoreEvents.STYLE_CHANGED, {
-            style: 'find',
-            action: 'clear',
-          })
+          emitFindState('clear')
 
           return true
         } catch (error) {

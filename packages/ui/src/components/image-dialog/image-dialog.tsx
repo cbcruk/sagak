@@ -1,9 +1,10 @@
 import type { ComponentChildren, JSX } from 'preact'
-import { useId, useRef, useState } from 'preact/hooks'
+import { useRef, useState } from 'preact/hooks'
 import { Dialog, Button, Input, Label, ToggleGroup, Toggle } from 'kinu'
 import { Image, Upload, Link } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
@@ -80,7 +81,7 @@ const dropZoneStyle: JSX.CSSProperties = {
 }
 
 export function ImageDialog(): ComponentChildren {
-  const { eventBus, selectionManager } = useEditorContext()
+  const { eventBus } = useEditorContext()
   const [mode, setMode] = useState<UploadMode>('url')
   const [src, setSrc] = useState('')
   const [alt, setAlt] = useState('')
@@ -92,8 +93,7 @@ export function ImageDialog(): ComponentChildren {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
-  const dialogId = useId()
+  const { id: dialogId, save, close, restoreThen } = useDialogHandle()
 
   const resetUploadState = (): void => {
     setSelectedFile(null)
@@ -101,16 +101,9 @@ export function ImageDialog(): ComponentChildren {
     setUploadError(null)
   }
 
-  const close = (): void => {
-    const dialog = document.getElementById(dialogId)
-    if (dialog instanceof HTMLDialogElement) {
-      dialog.close()
-    }
-  }
-
   /** `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */
   const handleOpen = (): void => {
-    selectionManager?.saveSelection()
+    save()
     const img = getSelectedImage()
     if (img) {
       setSrc(img.src)
@@ -134,12 +127,16 @@ export function ImageDialog(): ComponentChildren {
     setUploadError(null)
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setUploadError('Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.')
+      setUploadError(
+        'Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.'
+      )
       return
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setUploadError(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit.`)
+      setUploadError(
+        `File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit.`
+      )
       return
     }
 
@@ -153,7 +150,9 @@ export function ImageDialog(): ComponentChildren {
     reader.readAsDataURL(file)
   }
 
-  const handleFileInputChange = (e: JSX.TargetedEvent<HTMLInputElement, Event>): void => {
+  const handleFileInputChange = (
+    e: JSX.TargetedEvent<HTMLInputElement, Event>
+  ): void => {
     const file = e.currentTarget.files?.[0]
     if (file) {
       handleFileSelect(file)
@@ -176,40 +175,38 @@ export function ImageDialog(): ComponentChildren {
 
   const handleSubmit = (): void => {
     if (mode === 'file' && previewUrl) {
-      close()
-      requestAnimationFrame(() => {
-        selectionManager?.restoreSelection()
+      restoreThen(() =>
         eventBus.emit(ContentEvents.IMAGE_INSERT, {
           src: previewUrl,
           alt: alt.trim() || selectedFile?.name,
           width: width.trim() || undefined,
           height: height.trim() || undefined,
         })
-      })
-    } else if (mode === 'url') {
-      const trimmedSrc = src.trim()
-      close()
-      if (trimmedSrc) {
-        requestAnimationFrame(() => {
-          selectionManager?.restoreSelection()
-          if (isEditing) {
-            eventBus.emit(ContentEvents.IMAGE_UPDATE, {
-              src: trimmedSrc,
-              alt: alt.trim(),
-              width: width.trim() || undefined,
-              height: height.trim() || undefined,
-            })
-          } else {
-            eventBus.emit(ContentEvents.IMAGE_INSERT, {
-              src: trimmedSrc,
-              alt: alt.trim(),
-              width: width.trim() || undefined,
-              height: height.trim() || undefined,
-            })
-          }
-        })
-      }
+      )
+      return
     }
+
+    if (mode !== 'url') return
+
+    const trimmedSrc = src.trim()
+    // src 가 비어 있어도 닫기는 합니다
+    if (!trimmedSrc) {
+      close()
+      return
+    }
+
+    const payload = {
+      src: trimmedSrc,
+      alt: alt.trim(),
+      width: width.trim() || undefined,
+      height: height.trim() || undefined,
+    }
+
+    restoreThen(() =>
+      isEditing
+        ? eventBus.emit(ContentEvents.IMAGE_UPDATE, payload)
+        : eventBus.emit(ContentEvents.IMAGE_INSERT, payload)
+    )
   }
 
   const canSubmit = (): boolean => {
@@ -220,11 +217,7 @@ export function ImageDialog(): ComponentChildren {
   }
 
   const handleDelete = (): void => {
-    close()
-    requestAnimationFrame(() => {
-      selectionManager?.restoreSelection()
-      eventBus.emit(ContentEvents.IMAGE_DELETE)
-    })
+    restoreThen(() => eventBus.emit(ContentEvents.IMAGE_DELETE))
   }
 
   return (

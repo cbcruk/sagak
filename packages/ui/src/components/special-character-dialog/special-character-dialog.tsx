@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact'
-import { useId, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { Dialog, Button, TabList, Tab } from 'kinu'
 import { Omega } from 'lucide-preact'
 import { ContentEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
+import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
 
 const ICON_SIZE = 18
@@ -16,11 +17,50 @@ interface CharacterCategory {
 const categories: CharacterCategory[] = [
   {
     name: 'Arrows',
-    characters: ['←', '→', '↑', '↓', '↔', '↕', '⇐', '⇒', '⇑', '⇓', '⇔', '⇕', '➜', '➔', '➝', '➞'],
+    characters: [
+      '←',
+      '→',
+      '↑',
+      '↓',
+      '↔',
+      '↕',
+      '⇐',
+      '⇒',
+      '⇑',
+      '⇓',
+      '⇔',
+      '⇕',
+      '➜',
+      '➔',
+      '➝',
+      '➞',
+    ],
   },
   {
     name: 'Math',
-    characters: ['±', '×', '÷', '≠', '≈', '≤', '≥', '∞', '∑', '∏', '√', '∫', '∂', '∆', '∇', '∈', '∉', '⊂', '⊃', '∪', '∩'],
+    characters: [
+      '±',
+      '×',
+      '÷',
+      '≠',
+      '≈',
+      '≤',
+      '≥',
+      '∞',
+      '∑',
+      '∏',
+      '√',
+      '∫',
+      '∂',
+      '∆',
+      '∇',
+      '∈',
+      '∉',
+      '⊂',
+      '⊃',
+      '∪',
+      '∩',
+    ],
   },
   {
     name: 'Currency',
@@ -28,16 +68,81 @@ const categories: CharacterCategory[] = [
   },
   {
     name: 'Greek',
-    characters: ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω'],
+    characters: [
+      'α',
+      'β',
+      'γ',
+      'δ',
+      'ε',
+      'ζ',
+      'η',
+      'θ',
+      'ι',
+      'κ',
+      'λ',
+      'μ',
+      'ν',
+      'ξ',
+      'ο',
+      'π',
+      'ρ',
+      'σ',
+      'τ',
+      'υ',
+      'φ',
+      'χ',
+      'ψ',
+      'ω',
+    ],
   },
   {
     name: 'Symbols',
-    characters: ['©', '®', '™', '§', '¶', '†', '‡', '•', '°', '′', '″', '‰', '№', '℃', '℉', '♠', '♣', '♥', '♦', '★', '☆', '✓', '✗'],
+    characters: [
+      '©',
+      '®',
+      '™',
+      '§',
+      '¶',
+      '†',
+      '‡',
+      '•',
+      '°',
+      '′',
+      '″',
+      '‰',
+      '№',
+      '℃',
+      '℉',
+      '♠',
+      '♣',
+      '♥',
+      '♦',
+      '★',
+      '☆',
+      '✓',
+      '✗',
+    ],
   },
   {
     name: 'Punctuation',
     // 곱은 따옴표 두 쌍. 원래 큰따옴표 자리에 ASCII `"` 가 두 번 들어가 있었습니다
-    characters: ['…', '–', '—', '«', '»', '‹', '›', '“', '”', '‘', '’', '¡', '¿', '‽', '※'],
+    characters: [
+      '…',
+      '–',
+      '—',
+      '«',
+      '»',
+      '‹',
+      '›',
+      '“',
+      '”',
+      '‘',
+      '’',
+      '¡',
+      '¿',
+      '‽',
+      '※',
+    ],
   },
 ]
 
@@ -50,34 +155,21 @@ const gridStyle = {
 } as const
 
 export function SpecialCharacterDialog(): ComponentChildren {
-  const { eventBus, selectionManager } = useEditorContext()
+  const { eventBus } = useEditorContext()
   const [activeCategory, setActiveCategory] = useState(0)
-  // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
-  const dialogId = useId()
-
-  /** `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */
-  const handleOpen = (): void => {
-    selectionManager?.saveSelection()
-  }
+  const { id: dialogId, save, restoreThen } = useDialogHandle()
 
   const handleCharacterClick = (character: string): void => {
-    const dialog = document.getElementById(dialogId)
-    if (dialog instanceof HTMLDialogElement) {
-      dialog.close()
-    }
-    requestAnimationFrame(() => {
-      selectionManager?.restoreSelection()
+    restoreThen(() =>
       eventBus.emit(ContentEvents.SPECIAL_CHARACTER_INSERT, { character })
-    })
+    )
   }
 
   return (
     <Dialog id={dialogId}>
       <Dialog.Trigger>
-        <ToolbarButton
-          title="Insert Special Character"
-          onClick={handleOpen}
-        >
+        {/* `commandfor` 가 다이얼로그를 여는 것과 같은 클릭에서 먼저 실행됩니다 */}
+        <ToolbarButton title="Insert Special Character" onClick={save}>
           <Omega size={ICON_SIZE} aria-hidden="true" />
         </ToolbarButton>
       </Dialog.Trigger>
