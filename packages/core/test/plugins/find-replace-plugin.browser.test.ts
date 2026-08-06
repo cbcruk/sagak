@@ -227,22 +227,30 @@ describe('FindReplacePlugin', () => {
       eventBus.emit('FIND', { query: 'test' })
     })
 
+    /**
+     * 이전 판은 `highlights[0]` 의 색을 이동 **전에** 찍어 두고 이동 **후** 의
+     * `highlights[1]` 과 달라야 한다고 단언했습니다. 둘 다 "현재 항목 색" 이라
+     * 원래는 같아야 맞는데, 강조가 문서 순서와 반대로 들어가는 버그 덕분에
+     * 우연히 통과하고 있었습니다. 의도대로 다시 씁니다.
+     */
     it('should navigate to next match', () => {
-      // Given: 검색 결과 하이라이트 확인
+      // Given: 강조 3개, 첫 번째가 현재 항목
       const highlights = element.querySelectorAll(
         '.find-highlight'
       ) as NodeListOf<HTMLElement>
       expect(highlights.length).toBe(3)
 
-      const firstColor = highlights[0].style.backgroundColor
+      const currentColor = highlights[0].style.backgroundColor
+      const plainColor = highlights[1].style.backgroundColor
+      expect(currentColor).not.toBe(plainColor)
 
       // When: FIND_NEXT 이벤트 발행
       const result = eventBus.emit('FIND_NEXT')
       expect(result).toBe(true)
 
-      // Then: 다음 결과가 현재 하이라이트되어야 함
-      const secondColor = highlights[1].style.backgroundColor
-      expect(secondColor).not.toBe(firstColor)
+      // Then: 현재 항목이 두 번째로 옮겨가야 함
+      expect(highlights[1].style.backgroundColor).toBe(currentColor)
+      expect(highlights[0].style.backgroundColor).toBe(plainColor)
     })
 
     it('should wrap around to first match after last', () => {
