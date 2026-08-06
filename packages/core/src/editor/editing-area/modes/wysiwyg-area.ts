@@ -295,11 +295,28 @@ export class WysiwygArea implements EditingArea {
    */
   private initializeEventListeners(): void {
     this.element.addEventListener('input', () => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, {
-          content: this.element.innerHTML,
-        })
-      }
+      if (!this.eventBus) return
+
+      /*
+       * `content` 는 **읽을 때** 직렬화합니다.
+       *
+       * 이전에는 여기서 `this.element.innerHTML` 을 바로 담았습니다. 그러면
+       * 키를 누를 때마다 문서 전체가 문자열로 만들어지는데, 재 보니 2000문단
+       * (222 KB) 에서 키 하나당 0.925 ms 였습니다. 문서 크기에 비례합니다.
+       *
+       * 그런데 **구독자 둘 다 이 값을 읽지 않습니다** — `EditorCore` 는
+       * `updateFormattingState()` 로 넘기고(인자를 받지 않습니다), 자동 저장은
+       * `() => scheduleSave()` 입니다. 즉 아무도 안 보는 문자열을 매번
+       * 만들고 있었습니다.
+       *
+       * 게터로 두면 계약은 그대로이고 아무도 안 읽으면 비용이 0 입니다.
+       */
+      const element = this.element
+      this.eventBus.emit(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, {
+        get content(): string {
+          return element.innerHTML
+        },
+      })
     })
 
     this.element.addEventListener('focus', () => {

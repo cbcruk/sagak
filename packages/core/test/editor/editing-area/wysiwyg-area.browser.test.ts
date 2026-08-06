@@ -572,6 +572,57 @@ describe('WysiwygArea', () => {
       expect(handler).toHaveBeenCalled()
     })
 
+    /**
+     * Why: 매 키 입력마다 문서 전체를 직렬화하면 문서 크기에 비례해 느려집니다.
+     *      재 보니 2000문단(222 KB)에서 키 하나당 0.925 ms 였고, 정작 구독자
+     *      둘 다(`EditorCore`, 자동 저장) 이 값을 읽지 않았습니다.
+     * How: `innerHTML` 게터를 세어, 페이로드를 읽기 전에는 0 인지 확인
+     */
+    it('콘텐츠를 읽기 전에는 직렬화하지 않아야 함', () => {
+      // Given: innerHTML 접근을 세는 WysiwygArea
+      const eventBus = new EventBus()
+      const config: WysiwygAreaConfig = { container, eventBus }
+      wysiwygArea = new WysiwygArea(config)
+
+      const div = wysiwygArea.getElement()
+      div.innerHTML = '<p>글자가 좀 있는 문단입니다</p>'
+
+      const descriptor = Object.getOwnPropertyDescriptor(
+        Element.prototype,
+        'innerHTML'
+      )!
+      let reads = 0
+      Object.defineProperty(div, 'innerHTML', {
+        configurable: true,
+        get() {
+          reads += 1
+          return descriptor.get!.call(this)
+        },
+        set(value: string) {
+          descriptor.set!.call(this, value)
+        },
+      })
+
+      let payload: { content: string } | undefined
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', (data) => {
+        payload = data
+      })
+
+      // When: 입력이 열 번 일어나되 아무도 content 를 읽지 않음
+      for (let i = 0; i < 10; i += 1) {
+        div.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+
+      // Then: 한 번도 직렬화되지 않아야 함
+      expect(reads).toBe(0)
+
+      // 그리고 읽으면 그때 제대로 나와야 합니다 (계약은 그대로)
+      expect(payload?.content).toContain('문단입니다')
+      expect(reads).toBe(1)
+
+      delete (div as unknown as Record<string, unknown>).innerHTML
+    })
+
     it('포커스 이벤트를 발행해야 함', () => {
       // Given: EventBus와 FOCUSED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
