@@ -22,13 +22,14 @@ import { mountEditor, settle, type MountedEditor } from './harness'
  * `AUTO_SAVE_RESTORE` 와 `AUTO_SAVE_CLEAR` 에 처리자가 없었습니다.
  *
  * `createEditor` 의 `autoSave` 기본값이 `false` 라 자동 저장 플러그인이 아예
- * 등록되지 않는데, `AutoSaveIndicator` 는 앱(`apps/editor/src/app.tsx`)과
- * harness 양쪽에 마운트돼 있고 `useAutoSave` 가 이 두 이벤트를 발행합니다.
- * **켜 준 적이 없으니 아무 데도 닿지 않습니다.**
+ * 등록되지 않는데, `AutoSaveIndicator` 는 앱과 harness 양쪽에 마운트돼 있고
+ * `useAutoSave` 가 이 두 이벤트를 발행하고 있었습니다. 켜 준 적이 없으니
+ * 아무 데도 닿지 않았습니다.
  *
- * 여기서는 플러그인을 켜고 계약만 검사합니다 — 앱이 자동 저장을 켤지는
- * 제품 결정이고, 켜면 localStorage 에 사용자 글이 쌓이므로 이 리팩토링이
- * 대신 정할 일이 아닙니다.
+ * **앱은 이제 켰습니다** (`apps/editor/src/app.tsx`, `restoreOnInit: true`).
+ * harness 는 여전히 끕니다 — 테스트마다 localStorage 를 건드리면 서로
+ * 간섭하므로 필요한 테스트만 켜고 `storageKey` 를 따로 줍니다
+ * (`auto-save.browser.test.tsx` 참고). 그래서 여기서도 명시적으로 켭니다.
  */
 describe('이벤트 계약', () => {
   let ed: MountedEditor | null = null

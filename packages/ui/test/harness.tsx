@@ -1,5 +1,5 @@
 import { render } from 'preact'
-import type { EditorContext } from 'sagak-core'
+import type { CreateEditorOptions, EditorContext } from 'sagak-core'
 import { expect } from 'vitest'
 import {
   useEditor,
@@ -35,7 +35,7 @@ function Harness({
   autoSave,
 }: {
   initialContent: string
-  autoSave?: boolean
+  autoSave?: CreateEditorOptions['autoSave']
 }) {
   const { containerRef, editor, ready } = useEditor({
     initialContent,
@@ -79,13 +79,13 @@ export async function settle(frames = 3): Promise<void> {
 
 export interface MountOptions {
   /**
-   * 자동 저장 플러그인을 등록합니다.
+   * 자동 저장 설정.
    *
-   * `createEditor` 의 기본값이 `false` 라 앱도 harness 도 켜지 않습니다 —
-   * 즉 평소에는 플러그인이 아예 없습니다. 그 상태를 그대로 두고 재려고
-   * 옵션으로 열어 둡니다 (`event-contract.browser.test.tsx` 참고).
+   * `createEditor` 의 기본값은 `false` 이고 harness 도 켜지 않습니다 —
+   * 앱과 달리 테스트마다 localStorage 를 건드리면 서로 간섭하기 때문입니다.
+   * 필요한 테스트만 켜고 `storageKey` 를 따로 줍니다.
    */
-  autoSave?: boolean
+  autoSave?: CreateEditorOptions['autoSave']
 }
 
 export async function mountEditor(

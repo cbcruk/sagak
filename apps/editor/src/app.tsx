@@ -21,6 +21,12 @@ const INITIAL_CONTENT = `
 export function App(): JSX.Element {
   const { containerRef, editor, ready, error } = useEditor({
     initialContent: INITIAL_CONTENT,
+    /*
+     * 저장만 켜면 글이 localStorage 로 들어가기만 하고 돌아올 길이 없습니다.
+     * `restoreOnInit` 이 있어야 다음 방문에서 쓰던 글이 살아납니다 —
+     * 그때부터 위 `INITIAL_CONTENT` 는 첫 방문에만 보입니다.
+     */
+    autoSave: { restoreOnInit: true },
   })
 
   return (
