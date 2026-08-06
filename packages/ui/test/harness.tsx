@@ -30,8 +30,17 @@ const DEFAULT_CONTENT = `
 
 let mountedContext: EditorContext | null = null
 
-function Harness({ initialContent }: { initialContent: string }) {
-  const { containerRef, editor, ready } = useEditor({ initialContent })
+function Harness({
+  initialContent,
+  autoSave,
+}: {
+  initialContent: string
+  autoSave?: boolean
+}) {
+  const { containerRef, editor, ready } = useEditor({
+    initialContent,
+    autoSave,
+  })
   if (editor) mountedContext = editor.context
 
   return (
@@ -68,13 +77,28 @@ export async function settle(frames = 3): Promise<void> {
   }
 }
 
+export interface MountOptions {
+  /**
+   * 자동 저장 플러그인을 등록합니다.
+   *
+   * `createEditor` 의 기본값이 `false` 라 앱도 harness 도 켜지 않습니다 —
+   * 즉 평소에는 플러그인이 아예 없습니다. 그 상태를 그대로 두고 재려고
+   * 옵션으로 열어 둡니다 (`event-contract.browser.test.tsx` 참고).
+   */
+  autoSave?: boolean
+}
+
 export async function mountEditor(
-  initialContent: string = DEFAULT_CONTENT
+  initialContent: string = DEFAULT_CONTENT,
+  options: MountOptions = {}
 ): Promise<MountedEditor> {
   const root = document.createElement('div')
   document.body.appendChild(root)
 
-  render(<Harness initialContent={initialContent} />, root)
+  render(
+    <Harness initialContent={initialContent} autoSave={options.autoSave} />,
+    root
+  )
 
   // useEditor 의 비동기 초기화가 끝나고 툴바가 붙을 때까지 기다립니다
   let editable: HTMLElement | null = null

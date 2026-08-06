@@ -8,6 +8,11 @@ import { useEditorEvent } from './use-editor-event'
  * 플러그인은 전용 이벤트가 아니라 `STYLE_CHANGED` 에 `style: 'find'` 를 실어
  * 보냅니다. 그 판별을 여기 한 곳에 가둡니다 — 페이로드가 여러 종류의 합집합
  * 이므로 `style` 확인은 타입 좁히기로도 필요합니다.
+ *
+ * **이 훅은 계산하지 않습니다.** 예전에는 `FIND_NEXT`/`FIND_PREVIOUS` 가
+ * 아무것도 되쏘지 않아서 여기서 플러그인의 `(index ± 1 + n) % n` 을 똑같이
+ * 따라 했고, 같은 상태 기계가 두 벌 돌았습니다. 지금은 플러그인이 `matchIndex`
+ * 를 실어 보내므로 그대로 옮겨 담기만 합니다.
  */
 
 export interface FindState {
@@ -18,8 +23,6 @@ export interface FindState {
 }
 
 export interface UseFindStateReturn extends FindState {
-  /** 다음/이전으로 이동할 때 표시를 앞당깁니다 */
-  step: (direction: 1 | -1) => void
   reset: () => void
 }
 
@@ -31,47 +34,19 @@ export function useFindState(): UseFindStateReturn {
   useEditorEvent(CoreEvents.STYLE_CHANGED, 'after', (payload) => {
     if (payload.style !== 'find') return
 
-    const { action, matchCount } = payload
+    const { matchCount, matchIndex } = payload
 
-    if (action === 'find' && typeof matchCount === 'number') {
-      setState({ matchCount, currentMatch: matchCount > 0 ? 1 : 0 })
-      return
-    }
+    if (typeof matchCount !== 'number' || typeof matchIndex !== 'number') return
 
-    if (action === 'replace' && typeof matchCount === 'number') {
-      setState((prev) => ({
-        matchCount,
-        currentMatch: matchCount === 0 ? 0 : prev.currentMatch,
-      }))
-      return
-    }
-
-    if (action === 'replaceAll' || action === 'clear') {
-      setState(initial)
-    }
+    setState({
+      matchCount,
+      // 플러그인은 0부터, 표시는 1부터. 하나도 없으면 -1 이 옵니다
+      currentMatch: matchIndex < 0 ? 0 : matchIndex + 1,
+    })
   })
 
   return {
     ...state,
-    /*
-     * 플러그인은 `FIND_NEXT`/`FIND_PREVIOUS` 에 아무것도 되쏘지 않고 내부
-     * 인덱스만 바꿉니다. 그래서 표시용 번호는 여기서 같은 산술을 따라갑니다 —
-     * 플러그인의 `(index ± 1 + n) % n` 을 1부터 세는 형태로 옮긴 것입니다.
-     *
-     * 같은 상태 기계가 두 곳에 있는 셈입니다. 플러그인이 인덱스를 실어 보내면
-     * 이 계산은 사라집니다.
-     */
-    step: (direction) =>
-      setState((prev) => {
-        if (prev.matchCount === 0) return prev
-        const next =
-          direction === 1
-            ? (prev.currentMatch % prev.matchCount) + 1
-            : prev.currentMatch <= 1
-              ? prev.matchCount
-              : prev.currentMatch - 1
-        return { ...prev, currentMatch: next }
-      }),
     reset: () => setState(initial),
   }
 }

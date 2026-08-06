@@ -99,6 +99,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 2,
+        matchIndex: 0,
       })
 
       const highlights = element.querySelectorAll('.find-highlight')
@@ -120,6 +121,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 2,
+        matchIndex: 0,
       })
 
       vi.restoreAllMocks()
@@ -141,6 +143,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 0,
+        matchIndex: -1,
       })
 
       vi.restoreAllMocks()
@@ -164,6 +167,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 1,
+        matchIndex: 0,
       })
 
       vi.restoreAllMocks()
@@ -198,6 +202,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 0,
+        matchIndex: -1,
       })
 
       const highlights = element.querySelectorAll('.find-highlight')
@@ -282,6 +287,49 @@ describe('FindReplacePlugin', () => {
       // Then: 실패해야 함
       expect(result).toBe(false)
     })
+
+    /**
+     * Why: 인덱스의 주인은 플러그인입니다. 되쏘지 않으면 화면이 같은 산술을
+     *      직접 해야 하고, 실제로 UI 가 그렇게 하고 있었습니다.
+     * How: 이동할 때마다 `STYLE_CHANGED` 의 `matchIndex` 를 확인
+     */
+    it('이동할 때마다 현재 인덱스를 실어 보내야 함', () => {
+      // Given: 결과 3개에서 첫 번째가 선택된 상태
+      const spy = vi.fn()
+      eventBus.on('STYLE_CHANGED', 'on', spy)
+
+      const indexOfLastCall = (): number =>
+        spy.mock.calls[spy.mock.calls.length - 1][0].matchIndex
+
+      // When/Then: 앞으로 돌면 0 → 1 → 2 → 0
+      eventBus.emit('FIND_NEXT')
+      expect(indexOfLastCall()).toBe(1)
+      eventBus.emit('FIND_NEXT')
+      expect(indexOfLastCall()).toBe(2)
+      eventBus.emit('FIND_NEXT')
+      expect(indexOfLastCall()).toBe(0)
+
+      // 뒤로 돌면 0 → 2
+      eventBus.emit('FIND_PREVIOUS')
+      expect(indexOfLastCall()).toBe(2)
+    })
+
+    it('이동 통지에 전체 개수도 함께 실어야 함', () => {
+      // Given: 결과 3개
+      const spy = vi.fn()
+      eventBus.on('STYLE_CHANGED', 'on', spy)
+
+      // When: 다음으로 이동
+      eventBus.emit('FIND_NEXT')
+
+      // Then: 화면이 "2 of 3" 을 그리는 데 필요한 것이 한 번에 옵니다
+      expect(spy).toHaveBeenCalledWith({
+        style: 'find',
+        action: 'next',
+        matchCount: 3,
+        matchIndex: 1,
+      })
+    })
   })
 
   describe('Replace functionality', () => {
@@ -318,6 +366,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'replace',
         matchCount: 1,
+        matchIndex: 0,
       })
 
       expect(element.textContent).toContain('Hi')
@@ -395,6 +444,8 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'replaceAll',
         replaceCount: 3,
+        matchCount: 0,
+        matchIndex: -1,
       })
 
       expect(element.textContent).not.toContain('Hello')
@@ -424,6 +475,8 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'replaceAll',
         replaceCount: 1,
+        matchCount: 0,
+        matchIndex: -1,
       })
 
       expect(element.textContent).toContain('Hello')
@@ -452,6 +505,8 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'replaceAll',
         replaceCount: 1,
+        matchCount: 0,
+        matchIndex: -1,
       })
 
       expect(element.textContent).toContain('Hi')
@@ -476,6 +531,8 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'replaceAll',
         replaceCount: 0,
+        matchCount: 0,
+        matchIndex: -1,
       })
 
       vi.restoreAllMocks()
@@ -533,6 +590,8 @@ describe('FindReplacePlugin', () => {
       expect(styleChangedSpy).toHaveBeenCalledWith({
         style: 'find',
         action: 'clear',
+        matchCount: 0,
+        matchIndex: -1,
       })
 
       highlights = element.querySelectorAll('.find-highlight')
@@ -733,6 +792,7 @@ describe('FindReplacePlugin', () => {
         style: 'find',
         action: 'find',
         matchCount: 2,
+        matchIndex: 0,
       })
 
       // When: 일괄 치환

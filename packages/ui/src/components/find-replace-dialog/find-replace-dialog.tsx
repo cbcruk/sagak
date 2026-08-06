@@ -31,7 +31,7 @@ export function FindReplaceDialog(): ComponentChildren {
     caseSensitive: false,
     wholeWord: false,
   })
-  const { matchCount, currentMatch, step, reset } = useFindState()
+  const { matchCount, currentMatch, reset } = useFindState()
   // kinu 의 Dialog.Content 는 ref 를 DOM 으로 넘기지 않습니다 (link-dialog 참고)
   const dialogId = useId()
 
@@ -63,12 +63,10 @@ export function FindReplaceDialog(): ComponentChildren {
 
   const handleFindNext = (): void => {
     eventBus.emit(FindReplaceEvents.FIND_NEXT)
-    step(1)
   }
 
   const handleFindPrevious = (): void => {
     eventBus.emit(FindReplaceEvents.FIND_PREVIOUS)
-    step(-1)
   }
 
   const handleReplace = (): void => {
