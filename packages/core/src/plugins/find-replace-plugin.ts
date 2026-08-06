@@ -145,6 +145,69 @@ function getTextNodes(element: Node): Text[] {
 }
 
 /**
+ * 문자소(grapheme) 경계 오프셋 집합.
+ *
+ * 정규식은 **코드유닛** 단위로 일치하므로, 질의가 결합 시퀀스의 앞부분과만
+ * 같으면 그 중간에서 일치합니다. 예를 들어 `🤦` 는 `🤦🏼‍♂️` 의 앞 두
+ * 코드유닛과 같아서, 그 자리를 잘라 강조하면 문자소 하나가 둘로 쪼개집니다.
+ * 실제로 그렇게 되는 것을 확인했고, 바꾸기까지 가면
+ * `🤦🏼‍♂️` → `X🏼‍♂️` 처럼 피부톤·ZWJ 가 고아로 남습니다.
+ *
+ * 그래서 일치 지점이 문자소 경계인지 검사합니다.
+ * `find-replace-grapheme.browser.test.ts` 참고.
+ */
+function graphemeBoundaries(text: string): Set<number> {
+  const boundaries = new Set<number>([0])
+
+  for (const { index, segment } of segmenter.segment(text)) {
+    boundaries.add(index + segment.length)
+  }
+
+  return boundaries
+}
+
+const segmenter = new Intl.Segmenter()
+
+/**
+ * 문자소 계산을 건너뛸 수 있는 경우.
+ *
+ * ASCII 만 있으면 모든 코드유닛 위치가 문자소 경계라 검사할 것이 없습니다.
+ * 비-ASCII 를 하나라도 찾으면 세그멘터를 씁니다.
+ */
+const NON_ASCII = /[^\p{ASCII}]/u
+
+/**
+ * 단어 경계 문자류 — `\b` 를 대신합니다.
+ *
+ * JS 의 `\b` 는 `\w`(= `[A-Za-z0-9_]`) 기준이라 **한글에서 성립하지 않습니다.**
+ * `\b사과\b` 는 "사과 사과나무 사과" 에서 하나도 못 찾습니다 — 사용자에게는
+ * "일치 없음" 으로 조용히 잘못 답하는 셈입니다. 유니코드 글자류로 바꿉니다.
+ */
+const WORD_CLASS = '\\p{L}\\p{N}_'
+
+function buildPattern(
+  query: string,
+  flags: string,
+  wholeWord: boolean
+): RegExp {
+  const escaped = escapeRegExp(query)
+
+  if (!wholeWord) {
+    return new RegExp(escaped, flags)
+  }
+
+  try {
+    return new RegExp(
+      `(?<![${WORD_CLASS}])${escaped}(?![${WORD_CLASS}])`,
+      `${flags}u`
+    )
+  } catch {
+    // 짝 없는 서로게이트 등으로 `u` 플래그가 거부되면 예전 방식으로 물러섭니다
+    return new RegExp(`\\b${escaped}\\b`, flags)
+  }
+}
+
+/**
  * 텍스트 노드에서 일치 항목을 찾습니다
  */
 function findMatches(
@@ -161,21 +224,37 @@ function findMatches(
   const textNodes = getTextNodes(element)
 
   const flags = caseSensitive ? 'g' : 'gi'
-  const pattern = wholeWord
-    ? new RegExp(`\\b${escapeRegExp(query)}\\b`, flags)
-    : new RegExp(escapeRegExp(query), flags)
+  const pattern = buildPattern(query, flags, wholeWord)
 
   for (const node of textNodes) {
     const text = node.textContent || ''
 
+    /*
+     * 경계는 **일치가 하나라도 나온 뒤에** 계산합니다.
+     *
+     * 문서 대부분의 텍스트 노드에는 일치가 없습니다. 노드마다 미리 계산하면
+     * 한글 문서에서 찾기가 눈에 띄게 느려집니다 (100문단 3.2 → 12.0 ms).
+     * 순수 ASCII 는 모든 위치가 경계이므로 아예 건너뜁니다.
+     */
+    let boundaries: Set<number> | null | undefined
+
     let match: RegExpExecArray | null
+    pattern.lastIndex = 0
 
     while ((match = pattern.exec(text)) !== null) {
-      matches.push({
-        node,
-        offset: match.index,
-        length: match[0].length,
-      })
+      if (boundaries === undefined) {
+        boundaries = NON_ASCII.test(text) ? graphemeBoundaries(text) : null
+      }
+
+      const start = match.index
+      const end = start + match[0].length
+
+      // 결합 시퀀스 중간에서 자르지 않습니다
+      if (boundaries && (!boundaries.has(start) || !boundaries.has(end))) {
+        continue
+      }
+
+      matches.push({ node, offset: start, length: match[0].length })
     }
   }
 
@@ -191,15 +270,22 @@ function escapeRegExp(str: string): string {
 
 /**
  * 일치 항목을 강조 표시합니다
+ *
+ * **원본 노드에는 앞부분을 남깁니다.** 호출부는 한 노드 안의 여러 일치를
+ * 오프셋 역순으로 강조하는데, 이는 앞쪽 오프셋이 그대로 유효하다는 전제입니다.
+ * 예전에는 반대로 뒷부분을 남겨서 그 전제가 깨졌습니다 — 두 번째 이후의
+ * 강조가 빈 노드를 잘라 **빈 `<span>`** 이 되었고, "3개 일치" 라고 세어 놓고
+ * 실제로는 하나만 칠해졌습니다. ASCII 에서도 재현됩니다.
  */
 function highlightMatch(match: Match, color: string): void {
   const { node, offset, length } = match
 
   if (!node.parentNode) return
 
-  const before = node.textContent!.substring(0, offset)
-  const matchText = node.textContent!.substring(offset, offset + length)
-  const after = node.textContent!.substring(offset + length)
+  const text = node.textContent!
+  const before = text.substring(0, offset)
+  const matchText = text.substring(offset, offset + length)
+  const after = text.substring(offset + length)
 
   const highlight = document.createElement('span')
   highlight.style.backgroundColor = color
@@ -207,13 +293,14 @@ function highlightMatch(match: Match, color: string): void {
   highlight.textContent = matchText
 
   const parent = node.parentNode
+  const next = node.nextSibling
 
-  if (before) {
-    parent.insertBefore(document.createTextNode(before), node)
+  node.textContent = before
+  parent.insertBefore(highlight, next)
+
+  if (after) {
+    parent.insertBefore(document.createTextNode(after), next)
   }
-  parent.insertBefore(highlight, node)
-
-  node.textContent = after
 
   match.element = highlight
 }
