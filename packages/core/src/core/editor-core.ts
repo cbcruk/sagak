@@ -574,6 +574,47 @@ export class EditorCore {
       return element.contains(anchorNode)
     }
 
+    /**
+     * 서식 상태를 **지금** 계산해 발행합니다.
+     *
+     * undo 처럼 한 번에 끝나는 동작이 여기로 옵니다. 프레임을 기다리면
+     * 그 사이에 화면이 문서와 어긋난 채로 한 번 그려집니다 —
+     *
+     * ```
+     * CONTENT_RESTORED          문서는 이미 되돌아감
+     * HISTORY_STATE_CHANGED     동기 → canUndo 신호 변경
+     * 커밋 [HistoryButton]      화면=굵게 문서=보통   ← 어긋남
+     * FORMATTING_STATE_CHANGED  rAF 뒤
+     * 커밋 [FormatToggle]       교정
+     * ```
+     *
+     * 히스토리는 동기인데 서식만 rAF 뒤라서 커밋이 갈립니다. 같은 틱에
+     * 발행하면 preact 가 한 플러시로 묶습니다.
+     */
+    const flushFormattingState = () => {
+      if (this.selectionManager?.getIsComposing()) {
+        return
+      }
+
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+
+      if (!isSelectionInEditor()) {
+        return
+      }
+
+      computeAndEmitFormattingState()
+    }
+
+    /**
+     * 프레임 하나로 접습니다.
+     *
+     * `selectionchange` 는 캐럿을 한 번 옮겨도 여러 번 오고, 타이핑도 매 입력
+     * 들어옵니다. 이쪽은 폭주가 정상이라 계속 묶습니다
+     * (`selection-tracking.browser.test.tsx` 가 훑는 횟수를 지킵니다).
+     */
     const updateFormattingState = () => {
       if (this.selectionManager?.getIsComposing()) {
         return
@@ -591,35 +632,37 @@ export class EditorCore {
           return
         }
 
-        if (isContentEmpty()) {
-          cleanupEmptyFormatting()
-          if (!isStateEqual(emptyFormattingState, lastFormattingState)) {
-            lastFormattingState = emptyFormattingState
-            this.eventBus.emit(
-              CoreEvents.FORMATTING_STATE_CHANGED,
-              emptyFormattingState
-            )
-          }
-          return
-        }
+        computeAndEmitFormattingState()
+      })
+    }
 
-        const formattingState = {
-          isBold: this.commandRegistry.queryState('bold'),
-          isItalic: this.commandRegistry.queryState('italic'),
-          isUnderline: this.commandRegistry.queryState('underline'),
-          isStrikeThrough: this.commandRegistry.queryState('strikeThrough'),
-          isSubscript: this.commandRegistry.queryState('subscript'),
-          isSuperscript: this.commandRegistry.queryState('superscript'),
-        }
-
-        if (!isStateEqual(formattingState, lastFormattingState)) {
-          lastFormattingState = formattingState
+    /** 두 경로가 공유하는 계산·발행 */
+    const computeAndEmitFormattingState = () => {
+      if (isContentEmpty()) {
+        cleanupEmptyFormatting()
+        if (!isStateEqual(emptyFormattingState, lastFormattingState)) {
+          lastFormattingState = emptyFormattingState
           this.eventBus.emit(
             CoreEvents.FORMATTING_STATE_CHANGED,
-            formattingState
+            emptyFormattingState
           )
         }
-      })
+        return
+      }
+
+      const formattingState = {
+        isBold: this.commandRegistry.queryState('bold'),
+        isItalic: this.commandRegistry.queryState('italic'),
+        isUnderline: this.commandRegistry.queryState('underline'),
+        isStrikeThrough: this.commandRegistry.queryState('strikeThrough'),
+        isSubscript: this.commandRegistry.queryState('subscript'),
+        isSuperscript: this.commandRegistry.queryState('superscript'),
+      }
+
+      if (!isStateEqual(formattingState, lastFormattingState)) {
+        lastFormattingState = formattingState
+        this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, formattingState)
+      }
     }
 
     document.addEventListener('selectionchange', updateFormattingState)
@@ -628,10 +671,11 @@ export class EditorCore {
       'after',
       updateFormattingState
     )
+    // undo/redo 는 한 번에 끝나는 동작이라 프레임을 기다리지 않습니다
     const unsubRestored = this.eventBus.on(
       CoreEvents.CONTENT_RESTORED,
       'after',
-      updateFormattingState
+      flushFormattingState
     )
     const unsubContent = this.eventBus.on(
       WysiwygEvents.WYSIWYG_CONTENT_CHANGED,
