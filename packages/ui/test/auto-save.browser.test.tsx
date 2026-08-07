@@ -108,6 +108,78 @@ describe('자동 저장', () => {
     expect(ed.editable.textContent).toContain('첫 방문')
   })
 
+  /**
+   * `clear()` 는 훅에 있었지만 어디에도 노출되지 않았습니다 — 초안이 한 번
+   * 저장되면 사용자가 지울 방법이 없었습니다. 인디케이터에 버튼을 붙였습니다.
+   */
+  it('저장된 초안이 있을 때만 버리기 버튼이 보여야 함', async () => {
+    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    await settle(4)
+
+    const discard = (): HTMLButtonElement | null =>
+      ed!.root.querySelector<HTMLButtonElement>(
+        '[data-scope="auto-save"] button'
+      )
+
+    // 저장된 것이 없으면 인디케이터 자체가 없습니다
+    expect(discard()).toBeNull()
+
+    const p = ed.editable.querySelector('p')!
+    p.textContent = '초안'
+    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushSave()
+
+    expect(discard()).not.toBeNull()
+  })
+
+  it('버리기 버튼이 저장소를 비우고, 쓰던 글은 남겨야 함', async () => {
+    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    await settle(4)
+
+    const p = ed.editable.querySelector('p')!
+    p.textContent = '초안'
+    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushSave()
+    expect(saved()).toContain('초안')
+
+    const discard = ed.root.querySelector<HTMLButtonElement>(
+      '[data-scope="auto-save"] button'
+    )!
+    discard.click()
+    await settle(4)
+
+    // 저장소는 비고
+    expect(saved()).toBeNull()
+    // 쓰던 글은 그대로이며
+    expect(ed.editable.textContent).toContain('초안')
+    // 버튼도 사라집니다 (버릴 초안이 없으므로)
+    expect(ed.root.querySelector('[data-scope="auto-save"] button')).toBeNull()
+  })
+
+  /**
+   * 버튼의 의미를 정확히 못박아 둡니다 — "글을 되돌린다" 가 아니라 "저장된
+   * 초안을 버린다" 입니다. 다음 입력에서 자동 저장이 다시 씁니다.
+   */
+  it('버린 뒤 이어서 쓰면 다시 저장되어야 함', async () => {
+    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    await settle(4)
+
+    const p = ed.editable.querySelector('p')!
+    p.textContent = '초안'
+    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushSave()
+
+    ed.context.eventBus.emit('AUTO_SAVE_CLEAR')
+    await settle(2)
+    expect(saved()).toBeNull()
+
+    p.textContent = '초안 이어서'
+    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushSave()
+
+    expect(saved()).toContain('초안 이어서')
+  })
+
   it('지우면 저장소가 비어야 함', async () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options })
     await settle(4)
