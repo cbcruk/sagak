@@ -34,21 +34,70 @@ export interface AutocompletePluginOptions {
 }
 
 /**
+ * 단어 분절기.
+ *
+ * 예전에는 `/\b[a-zA-Z가-힣]+\b/g` 였습니다. 두 가지가 걸렸습니다 —
+ *
+ * **① `\b` 가 한글에서 성립하지 않습니다.** JS 의 `\b` 는 `\w`(ASCII) 기준
+ * 이라 한글 앞뒤에서 경계가 잡히지 않고, 그래서 **한국어 자동 완성이 아무
+ * 제안도 내놓지 못했습니다.** 찾기의 단어 단위 검색과 같은 원인입니다.
+ *
+ * **② 문자 클래스가 좁습니다.** 악센트 붙은 라틴(`café`), 숫자 섞인
+ * 식별자(`item1`), 일본어·중국어·키릴이 전부 빠졌습니다.
+ *
+ * `Intl.Segmenter` 의 단어 단위를 씁니다. 공백이 없는 일본어·중국어도
+ * 분절해 주므로 `[\p{L}\p{N}]+` 같은 클래스로 직접 자르는 것보다 정확합니다
+ * (그렇게 하면 CJK 한 줄이 통째로 한 단어가 됩니다).
+ */
+const wordSegmenter = new Intl.Segmenter(undefined, { granularity: 'word' })
+
+/**
  * Extract all words from text content
  */
 function extractWords(text: string): Set<string> {
   const words = new Set<string>()
-  const matches = text.match(/\b[a-zA-Z가-힣]+\b/g)
 
-  if (matches) {
-    for (const word of matches) {
-      if (word.length >= 2) {
-        words.add(word)
-      }
+  for (const segment of wordSegmenter.segment(text)) {
+    // 구두점·공백을 걸러 냅니다
+    if (!segment.isWordLike) continue
+    if (segment.segment.length >= 2) {
+      words.add(segment.segment)
     }
   }
 
   return words
+}
+
+/**
+ * 편집 영역의 텍스트를 블록 경계를 지켜 모읍니다.
+ *
+ * `element.textContent` 는 블록을 구분자 없이 이어붙입니다 —
+ * `<p>apricot</p><p>banana</p>` 가 `"apricotbanana"` 가 되어 없는 단어가
+ * 사전에 들어갔습니다. 텍스트 노드를 줄바꿈으로 이어 그것을 막습니다.
+ */
+function collectText(element: HTMLElement): string {
+  const parts: string[] = []
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null)
+
+  let node: Node | null
+  while ((node = walker.nextNode())) {
+    if (node.textContent) parts.push(node.textContent)
+  }
+
+  return parts.join('\n')
+}
+
+/**
+ * 문자열 끝에 붙어 있는 단어. 끝이 구두점·공백이면 `null` 입니다.
+ */
+function lastWordBefore(text: string): string | null {
+  let last: string | null = null
+
+  for (const segment of wordSegmenter.segment(text)) {
+    last = segment.isWordLike ? segment.segment : null
+  }
+
+  return last
 }
 
 /**
@@ -84,13 +133,19 @@ function getCurrentWordInfo(element: HTMLElement): {
   const text = node.textContent || ''
   const offset = range.startOffset
   const beforeCursor = text.slice(0, offset)
-  const match = beforeCursor.match(/[a-zA-Z가-힣]+$/)
 
-  if (!match) {
+  /*
+   * 캐럿 **바로 앞** 에서 끝나는 단어를 찾습니다.
+   *
+   * 사전(`extractWords`)과 같은 분절기를 써야 합니다. 예전에는 여기만
+   * `[a-zA-Z가-힣]+$` 였고 사전은 `\b…\b` 여서 기준이 서로 달랐습니다.
+   */
+  const prefix = lastWordBefore(beforeCursor)
+
+  if (!prefix) {
     return null
   }
 
-  const prefix = match[0]
   const rect = range.getBoundingClientRect()
 
   return {
@@ -183,6 +238,8 @@ export function createAutocompletePlugin(
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   let isAutocompleteVisible = false
   let currentPrefix = ''
+  /** 마지막으로 사전을 만든 원문 — 같으면 다시 만들지 않습니다 */
+  let lastText: string | null = null
 
   return {
     name: 'utility:autocomplete',
@@ -194,8 +251,21 @@ export function createAutocompletePlugin(
         return
       }
 
+      /**
+       * 사전을 다시 만듭니다 — **글이 바뀌었을 때만.**
+       *
+       * 키업마다 문서 전체를 분절하면 큰 문서에서 비쌉니다 (1000문단 8.8 ms).
+       * 화살표·수식 키처럼 글을 바꾸지 않는 입력에도 키업은 오므로, 모아 온
+       * 텍스트가 그대로면 건너뜁니다.
+       */
       const updateWords = (): void => {
-        const text = element.textContent || ''
+        const text = collectText(element)
+
+        if (text === lastText) {
+          return
+        }
+
+        lastText = text
         words = extractWords(text)
       }
 
