@@ -57,6 +57,27 @@ export interface LinkPluginOptions {
 }
 
 /**
+ * 프로토콜 없는 입력(`example.com`, `a.com/path`)의 최소 형태 검사.
+ *
+ * 예전에는 `[a-zA-Z0-9…]` 로 ASCII 만 받았습니다. 프로토콜이 있으면
+ * `new URL()` 이 IDN 도 퍼센트 인코딩도 알아서 처리하므로, **비-ASCII 가
+ * 거부되는 것은 이 정규식 하나 때문** 이었습니다 —
+ *
+ *     ko.wikipedia.org/wiki/한국      거부
+ *     example.com/path?q=검색어       거부
+ *     한국.kr · пример.рф             거부
+ *     https://…  같은 주소            전부 통과
+ *
+ * 게다가 거부는 `logger.warn` 뒤 커맨드를 막는 것이라, 사용자에게는 **아무
+ * 일도 일어나지 않습니다.** 유니코드 글자·숫자를 받도록 넓힙니다.
+ *
+ * 이 검사의 역할은 "URL 이 아닌 문장" 을 걸러 내는 것뿐입니다. 원래도
+ * `hello` 같은 맨 단어는 통과했으므로, 넓힌 뒤에도 그 느슨함은 그대로이고
+ * 다만 문자 종류에 따른 차별이 없어집니다.
+ */
+const BARE_URL = /^[\p{L}\p{N}/.][\p{L}\p{N}\-._~:/?#[\]@!$&'()*+,;=%]*$/u
+
+/**
  * URL 형식을 검증합니다
  *
  * @param url - 검증할 URL
@@ -100,9 +121,7 @@ function isValidUrl(
   }
 
   if (!hasProtocol) {
-    return /^[a-zA-Z0-9/.][a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=%]*$/.test(
-      trimmedUrl
-    )
+    return BARE_URL.test(trimmedUrl)
   }
 
   try {
