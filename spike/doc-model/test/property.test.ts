@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { Change, ChangeSet } from '../src/change'
+import { insertSize, type Change, type ChangeSet } from '../src/change'
 import { mapPos } from '../src/map'
 
 /**
@@ -101,7 +101,7 @@ function oracle(c: Case): number {
     const { from, to, insert } = c.changes[i]
     const cf = toTextOffset(from)
     const ct = toTextOffset(to)
-    const inserted = Array.from({ length: insert.length }, () => -1)
+    const inserted = Array.from({ length: insertSize(insert) }, () => -1)
     ids.splice(cf, ct - cf, ...inserted)
   }
 

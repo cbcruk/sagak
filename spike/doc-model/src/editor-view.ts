@@ -2,7 +2,7 @@ import type { Doc } from './doc'
 import type { ChangeSet } from './change'
 import { applyChanges } from './change'
 import { mapPos } from './map'
-import { readChanges, StructuralChange } from './read-dom'
+import { readChanges, UnexpectedDom } from './read-dom'
 import { readCaret, renderDoc, writeCaret } from './view'
 
 /**
@@ -53,8 +53,8 @@ export class EditorView {
 
   /** 반영된 flush 기록 — 예측과 실제를 비교하는 데 씁니다 */
   readonly flushes: FlushRecord[] = []
-  /** 거부한 구조 변경 */
-  readonly rejected: StructuralChange[] = []
+  /** 읽을 수 없었던 DOM — `<p>` 가 아닌 자식이 생긴 경우 */
+  readonly rejected: UnexpectedDom[] = []
 
   private caretBefore: number | null = null
   private readonly restoreCaret: boolean
@@ -110,16 +110,26 @@ export class EditorView {
   /**
    * DOM 을 읽어 모델에 반영하고 다시 그립니다.
    *
-   * 구조 변경은 거부하고 **모델로 DOM 을 되돌립니다.** 조용히 갈라지게
-   * 두면 그 뒤의 모든 좌표가 틀어지므로, 눈에 보이게 실패하는 편이 낫습니다.
+   * 읽을 수 없는 DOM 은 거부하고 **모델로 DOM 을 되돌립니다.** 조용히
+   * 갈라지게 두면 그 뒤의 모든 좌표가 틀어지므로, 눈에 보이게 실패하는
+   * 편이 낫습니다.
    */
   flush(): FlushRecord | null {
+    /*
+     * 재렌더 **전**에 읽습니다 — 브라우저가 편집 직후 커서를 어디에 뒀는지.
+     *
+     * 예측이 맞았는지 채점하는 데도 쓰지만, 그 전에 **진단을 보정하는 데**
+     * 씁니다. 같은 글자가 이어질 때 어디에 쳤는지는 문자열이 말해 주지
+     * 않고 브라우저만 압니다.
+     */
+    const browser = readCaret(this.root)
+
     let changes: ChangeSet
 
     try {
-      changes = readChanges(this.root, this.doc)
+      changes = readChanges(this.root, this.doc, browser ?? undefined)
     } catch (error) {
-      if (error instanceof StructuralChange) {
+      if (error instanceof UnexpectedDom) {
         this.rejected.push(error)
         renderDoc(this.root, this.doc)
         if (this.restoreCaret && this.caretBefore !== null) {
@@ -136,7 +146,6 @@ export class EditorView {
       return null
     }
 
-    const browser = readCaret(this.root)
     const predicted =
       this.caretBefore === null ? null : mapPos(this.caretBefore, changes, 1)
 
