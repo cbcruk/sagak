@@ -23,6 +23,7 @@ packages/*/test/**/*.d.ts.map
 
 # Test artifacts
 packages/*/test/**/__screenshots__/
+spike/*/test/**/__screenshots__/
 *.png
 coverage/
 
