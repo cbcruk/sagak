@@ -1,4 +1,4 @@
-import type { ChangeSet } from './change'
+import { insertSize, type ChangeSet } from './change'
 
 /**
  * 위치가 삽입 지점에 **정확히 걸쳤을 때** 어느 쪽에 붙을지.
@@ -32,6 +32,16 @@ export type Assoc = 1 | -1
  * 없으므로 경계로 보냅니다. 협업 편집에서 "상대가 내가 보던 자리를 지웠을 때"
  * 가 정확히 이 경우입니다.
  *
+ * ## 3단계를 지나고도 이 함수는 그대로입니다
+ *
+ * 구조 변경(문단 나누기·합치기)을 넣으면서 `applyChanges` 와 읽기 단계는
+ * 다시 썼는데, 여기는 `insert.length` 를 `insertSize(insert)` 로 바꾼 것이
+ * 전부입니다. **길이 산술이라 무엇이 들어가는지는 알 필요가 없습니다.**
+ *
+ * 좌표계가 처음부터 문단 경계를 위치로 세고 있었기 때문입니다
+ * (`paraSize = 텍스트 길이 + 2`). 경계를 만드는 편집은 그 좌표계 안에서
+ * 그냥 "2 만큼 늘어나는 변경" 입니다.
+ *
  * @param changes **변경 전 좌표** 기준, 정렬·비겹침
  */
 export function mapPos(
@@ -45,7 +55,7 @@ export function mapPos(
     // 정렬돼 있으므로 이 뒤의 변경은 pos 에 영향을 주지 않습니다
     if (from > pos) break
 
-    const inserted = insert.length
+    const inserted = insertSize(insert)
     const deleted = to - from
 
     // ① 변경이 통째로 앞에 있음

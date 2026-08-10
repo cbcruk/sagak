@@ -116,26 +116,26 @@ describe('화해 고리 — 브라우저가 고치고, 읽고, 모델에 반영�
   })
 
   /**
-   * **알려진 한계입니다.** 숨기지 않고 재 둡니다.
+   * 2단계에서는 **어긋나는 채로 재 두기만 했던** 자리입니다.
    *
-   * `"aaa"` 의 맨 앞에 `a` 를 쳐도 `read-dom` 은 맨 뒤에 넣은 것으로
-   * 진단합니다 — 문자열만 봐서는 구분이 안 되기 때문입니다. 텍스트는 어느
-   * 쪽으로 봐도 맞으므로 **모델은 멀쩡하고 커서 예측만 어긋납니다.**
+   * `"aaa"` 의 맨 앞에 `a` 를 쳐도 문자열만 봐서는 맨 뒤에 넣은 것과
+   * 구분이 안 됩니다. 텍스트는 어느 쪽으로 봐도 맞으므로 **모델은 멀쩡하고
+   * 커서 예측만 조용히 어긋났습니다** (`browser: 2` vs `predicted: 1`).
    *
-   * 그래서 조용합니다. 브라우저가 보고한 자리(`browser`)라는 정답지가
-   * 없었다면 못 찾았을 종류의 버그입니다. ProseMirror 가 진단에 선택 위치를
-   * 섞는 이유가 이것이고, 3단계의 주제입니다.
+   * 3단계에서 브라우저가 보고한 자리를 진단에 섞어 고쳤습니다.
+   * `read-dom.ts` 의 보정 블록입니다.
    */
-  it('같은 글자가 이어지면 커서 예측이 어긋납니다 — 알려진 한계', async () => {
+  it('같은 글자가 이어져도 커서 예측이 맞습니다 — 3단계에서 고침', async () => {
     view = mount([para('aaa')])
     await typeAt(1, 'a') // 맨 앞에 칩니다
 
-    expect(debugString(view.doc)).toBe('<p>aaaa</p>') // 텍스트는 맞습니다
+    expect(debugString(view.doc)).toBe('<p>aaaa</p>')
 
     const flush = view.flushes[0]
-    expect(flush.browser).toBe(2) // 브라우저는 친 자리 뒤에 뒀습니다
-    expect(flush.predicted).toBe(1) // 진단이 뒤쪽이라 예측은 안 움직였습니다
-    expect(flush.predicted).not.toBe(flush.browser)
+    expect(flush.browser).toBe(2)
+    expect(flush.predicted).toBe(2)
+    // 진단도 앞쪽으로 옮겨졌습니다
+    expect(flush.changes).toEqual([{ from: 1, to: 1, insert: 'a' }])
   })
 
   /**
@@ -181,19 +181,17 @@ describe('화해 고리 — 브라우저가 고치고, 읽고, 모델에 반영�
   })
 
   /**
-   * 1단계가 "하지 않는 것" 으로 미뤄 둔 구조 변경이 실제로 부딪히는 자리
-   * 입니다. `applyChanges` 는 문단 안의 편집만 표현할 수 있으므로 읽기
-   * 단계에서 거부하고 DOM 을 모델로 되돌립니다.
+   * 2단계에서는 여기서 읽기가 **거부**했습니다 — `applyChanges` 가 문단 안의
+   * 편집만 표현할 수 있었기 때문입니다.
    *
-   * **조용히 갈라지는 것보다 눈에 보이게 실패하는 편이 낫습니다.**
+   * 3단계에서 변경의 표현이 문단 경계를 품게 되면서 거부할 이유가
+   * 사라졌습니다. 자세한 것은 `structure.browser.test.ts`.
    */
-  it('Enter 는 구조 변경이라 거부됩니다 — 3단계의 주제', async () => {
+  it('Enter 가 통과합니다 — 3단계에서 열림', async () => {
     view = mount([para('ab')])
     await typeAt(3, '{Enter}')
 
-    expect(view.rejected.length).toBe(1)
-    expect(view.rejected[0].before).toBe(1)
-    expect(view.rejected[0].after).toBe(2)
-    expect(debugString(view.doc)).toBe('<p>ab</p>')
+    expect(view.rejected).toHaveLength(0)
+    expect(debugString(view.doc)).toBe('<p>ab</p><p></p>')
   })
 })
