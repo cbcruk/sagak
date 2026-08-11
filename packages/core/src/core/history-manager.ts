@@ -4,10 +4,18 @@
  * 특정 시점의 편집기 상태를 나타냅니다.
  *
  * @property content 편집기의 `HTML` 컨텐츠
- * @property selection 선택 영역 정보 (선택적)
- * @property selection.start 선택 시작 오프셋
- * @property selection.end 선택 종료 오프셋
+ * @property selection 선택 영역 — `dom-position` 의 **정수 위치**입니다
+ * @property selection.start 선택의 앵커 위치
+ * @property selection.end 선택의 헤드 위치 (뒤에서 앞으로 끌었으면 `start` 보다 작습니다)
  * @property timestamp 상태가 캡처된 시각 (밀리초)
+ *
+ * ## `selection` 이 `Range` 가 아닌 이유
+ *
+ * `Range` 는 노드 참조라 `innerHTML` 교체를 못 견딥니다. 되돌리려 하면
+ * **예외도 없이 조용히 문서 맨 앞으로** 갑니다. 정수 위치는 노드를 안
+ * 붙들기 때문에 같은 내용을 되돌려 놓으면 같은 자리를 가리킵니다.
+ *
+ * 자세한 것은 `core/dom-position.ts` 와 `docs/spike-to-product.md`.
  */
 export interface HistoryState {
   content: string

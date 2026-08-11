@@ -1,6 +1,10 @@
-import type { Plugin, EditorContext } from '@/core'
+import type { Plugin, EditorContext, HistoryState } from '@/core'
 import { HistoryEvents, CoreEvents } from '@/core'
 import { HistoryManager } from '@/core'
+import {
+  readSelectionPositions,
+  writeSelectionPositions,
+} from '@/core/dom-position'
 
 /**
  * 히스토리 플러그인 옵션 인터페이스
@@ -87,13 +91,39 @@ export function createHistoryPlugin(
         if (isRestoring) return
 
         const content = el.innerHTML
+        const positions = readSelectionPositions(el)
 
         historyManager.push({
           content,
+          selection: positions
+            ? { start: positions.anchor, end: positions.head }
+            : undefined,
           timestamp: Date.now(),
         })
 
         emitStateChange(eventBus)
+      }
+
+      /**
+       * 복원한 내용에 캐럿을 되돌립니다.
+       *
+       * `innerHTML` 을 갈아끼우면 노드가 전부 새것이라 **네이티브 선택이
+       * 죽습니다.** 브라우저는 캐럿을 문서 맨 앞으로 보내고, 사용자가 이어서
+       * 타이핑하면 글자가 문서 앞에 붙습니다.
+       *
+       * 저장해 둔 것은 노드가 아니라 정수 위치라 같은 내용을 되돌려 놓으면
+       * 같은 자리를 가리킵니다.
+       *
+       * 캐럿이 에디터 밖에 있을 때 찍힌 스냅샷은 저장된 위치가 없습니다.
+       * 그때는 건너뜁니다 — 되돌릴 자리를 지어내는 것보다 낫습니다.
+       */
+      function restoreSelection(el: HTMLElement, state: HistoryState) {
+        if (!state.selection) return
+
+        writeSelectionPositions(el, {
+          anchor: state.selection.start,
+          head: state.selection.end,
+        })
       }
 
       /**
@@ -236,6 +266,7 @@ export function createHistoryPlugin(
         if (previousState) {
           isRestoring = true
           element.innerHTML = previousState.content
+          restoreSelection(element, previousState)
 
           eventBus.emit(CoreEvents.CONTENT_RESTORED, { action: 'undo' })
           emitStateChange(eventBus)
@@ -265,6 +296,7 @@ export function createHistoryPlugin(
         if (nextState) {
           isRestoring = true
           element.innerHTML = nextState.content
+          restoreSelection(element, nextState)
 
           eventBus.emit(CoreEvents.CONTENT_RESTORED, { action: 'redo' })
           emitStateChange(eventBus)

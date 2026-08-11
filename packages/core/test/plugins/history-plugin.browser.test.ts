@@ -61,12 +61,23 @@ class MockEventBus {
 }
 
 // Mock HTMLElement 생성
+/**
+ * 브라우저 테스트인데도 예전에는 `innerHTML` 만 있는 평범한 객체를 썼습니다.
+ * 그러면 `ownerDocument` 도 선택 영역도 없어서, 플러그인이 실제 DOM 을 만질
+ * 때 여기서만 터집니다 — 실제로 캐럿 복원을 넣자 그렇게 됐습니다.
+ *
+ * 진짜 요소를 쓰되 리스너만 감시합니다. 기존 단언은 그대로 서고, 대신
+ * 플러그인이 진짜 DOM 위에서 돕니다.
+ */
 function createMockElement(): HTMLElement {
-  const element = {
-    innerHTML: '<p>Initial content</p>',
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  } as any
+  const element = document.createElement('div')
+  element.contentEditable = 'true'
+  element.innerHTML = '<p>Initial content</p>'
+  document.body.appendChild(element)
+
+  vi.spyOn(element, 'addEventListener')
+  vi.spyOn(element, 'removeEventListener')
+
   return element
 }
 
@@ -89,6 +100,7 @@ describe('History Plugin', () => {
     // 타이머 정리
     vi.clearAllTimers()
     vi.useRealTimers()
+    element.remove()
   })
 
   describe('초기화', () => {
