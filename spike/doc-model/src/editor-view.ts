@@ -88,7 +88,23 @@ export class EditorView {
    * 적어 둡니다 — 이때는 DOM 과 모델이 같으므로 이 값이 모델 좌표입니다.
    */
   private onBeforeInput = (): void => {
-    if (this.caretBefore === null) this.caretBefore = readCaret(this.root)
+    /*
+     * **조합 중에만 첫 값을 지킵니다.**
+     *
+     * 조합은 `beforeinput` 을 여러 번 보내는데 그때 DOM 에는 이미 조합 글자가
+     * 들어 있어서, 다시 읽으면 "편집 전" 이 아니라 "편집 중" 이 됩니다.
+     *
+     * 반대로 조합이 아닐 때 값을 지키면 **낡은 커서가 남습니다.** 브라우저가
+     * `beforeinput` 을 보내 놓고 아무것도 안 바꾸는 경우가 있기 때문입니다 —
+     * 문서 맨 앞에서 Backspace 를 누르면 그렇습니다. 그러면 `input` 이 오지
+     * 않아 `flush()` 가 돌지 않고, 적어 둔 커서가 지워지지 않은 채 남아
+     * **다음 편집의 예측을 망칩니다.**
+     *
+     * 씨앗 60개 × 60걸음짜리 편집 열이 이걸 잡았습니다. 25개 × 40걸음
+     * 에서는 안 나왔습니다.
+     */
+    if (this.composing && this.caretBefore !== null) return
+    this.caretBefore = readCaret(this.root)
   }
 
   private onInput = (): void => {

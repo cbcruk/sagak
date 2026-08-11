@@ -176,6 +176,16 @@ function commonSuffix(a: string, b: string): number {
   return i
 }
 
+/** 문서 위치가 몇 번째 문단에 있는가 */
+function paragraphAt(texts: string[], pos: number): number {
+  let base = 0
+  for (let i = 0; i < texts.length; i += 1) {
+    base += texts[i].length + 2
+    if (pos < base) return i
+  }
+  return Math.max(texts.length - 1, 0)
+}
+
 /**
  * DOM 의 현재 모습과 모델을 비교해 변경 목록을 만듭니다.
  *
@@ -211,6 +221,29 @@ export function diffParagraphs(
 
   let a = 0
   while (a < model.length && a < dom.length && model[a] === dom[a]) a += 1
+
+  /*
+   * **문단 단위에도 같은 애매함이 있습니다.**
+   *
+   * 빈 문단이 양쪽에 똑같이 있으면 앞부분 훑기가 **편집 지점을 지나쳐**
+   * 버립니다. 문단 1 끝에서 Enter 를 친 것과 문단 2 앞에서 친 것이 같은
+   * 문서를 만들기 때문입니다.
+   *
+   * ```
+   * doc = ["시작a", ""]   커서 4 (문단 0 끝) 에서 Enter
+   * dom = ["시작a", "", ""]
+   *
+   * 막지 않으면 a 가 2 까지 가고 → 진단 from=6, 실제 4   ✗
+   * 커서가 있는 문단에서 멈추면  → 진단 from=4          ✓
+   * ```
+   *
+   * 글자 단위에서 커서로 보정한 것과 **같은 기법을 한 층 위에** 씁니다.
+   * 3단계에서 "구조 쪽에도 있다" 고 적어만 두고 넘어갔던 것을, 씨앗을
+   * 25개로 넓힌 편집 열이 8개에서 잡아냈습니다.
+   */
+  if (caret !== undefined && dom.length > 0) {
+    a = Math.min(a, paragraphAt(dom, caret))
+  }
 
   let mEnd = model.length
   let dEnd = dom.length
