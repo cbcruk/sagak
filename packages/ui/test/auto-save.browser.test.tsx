@@ -132,21 +132,7 @@ describe('자동 저장', () => {
     expect(discard()).not.toBeNull()
   })
 
-  /**
-   * 버튼의 의미가 **바뀌었습니다.**
-   *
-   * 예전에는 "글을 되돌린다" 가 아니라 "저장된 초안을 버린다" 로 못박아
-   * 뒀습니다. 그런데 그 동작은 사용자에게 아무 일도 안 일어난 것으로 보였습니다
-   * — 저장소만 비고 화면의 초안은 그대로 남아, 한 글자만 더 치면 같은 초안이
-   * 다시 저장됐습니다.
-   *
-   * 이제 "Discard draft" 는 문서까지 초안 이전으로 되돌립니다. 잘못 눌러도
-   * 되돌리기로 살아납니다.
-   *
-   * 자세한 것은 `auto-save-discard.browser.test.tsx` 에 있습니다. 여기서는
-   * 자동 저장 흐름 안에서 저장소가 비는 것만 확인합니다.
-   */
-  it('버리기 버튼이 저장소를 비우고 문서를 되돌려야 함', async () => {
+  it('버리기 버튼이 저장소를 비우고, 쓰던 글은 남겨야 함', async () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options })
     await settle(4)
 
@@ -164,13 +150,16 @@ describe('자동 저장', () => {
 
     // 저장소는 비고
     expect(saved()).toBeNull()
-    // 문서도 초안 이전으로 돌아가며
-    expect(ed.editable.textContent).toContain('처음')
-    expect(ed.editable.textContent).not.toContain('초안')
+    // 쓰던 글은 그대로이며
+    expect(ed.editable.textContent).toContain('초안')
     // 버튼도 사라집니다 (버릴 초안이 없으므로)
     expect(ed.root.querySelector('[data-scope="auto-save"] button')).toBeNull()
   })
 
+  /**
+   * 버튼의 의미를 정확히 못박아 둡니다 — "글을 되돌린다" 가 아니라 "저장된
+   * 초안을 버린다" 입니다. 다음 입력에서 자동 저장이 다시 씁니다.
+   */
   it('버린 뒤 이어서 쓰면 다시 저장되어야 함', async () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options })
     await settle(4)
@@ -181,19 +170,14 @@ describe('자동 저장', () => {
     await flushSave()
 
     ed.context.eventBus.emit('AUTO_SAVE_CLEAR')
-    await settle(4)
+    await settle(2)
     expect(saved()).toBeNull()
 
-    /*
-     * 되돌린 뒤라 `p` 참조가 죽었습니다 — `innerHTML` 을 갈아끼웠으므로 노드가
-     * 새것입니다. 다시 찾아야 합니다.
-     */
-    const revived = ed.editable.querySelector('p')!
-    revived.textContent = '처음 이어서'
+    p.textContent = '초안 이어서'
     ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
     await flushSave()
 
-    expect(saved()).toContain('처음 이어서')
+    expect(saved()).toContain('초안 이어서')
   })
 
   it('지우면 저장소가 비어야 함', async () => {

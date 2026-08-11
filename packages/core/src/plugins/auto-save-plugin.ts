@@ -80,16 +80,6 @@ export function createAutoSavePlugin(
   let isDirty = false
   let lastSavedContent = ''
 
-  /**
-   * 초안이 얹히기 **전**의 문서입니다.
-   *
-   * `AUTO_SAVE_CLEAR`(Discard) 가 여기로 되돌립니다. 이게 없으면 "초안을
-   * 버린다" 면서 저장소만 지우고 화면의 초안은 그대로 두게 됩니다.
-   *
-   * `null` 은 아직 정하지 못했다는 뜻입니다 — `initialContent` 는 플러그인
-   * 초기화가 끝난 **뒤에** 들어오므로 한 틱 기다려야 합니다.
-   */
-  let baselineContent: string | null = null
 
   // eventBus가 준비되기 전 기본 리포터(로그만). initialize에서 이벤트 발행 리포터로 교체됩니다.
   let reportError: ErrorReporter = (error, message) =>
@@ -242,17 +232,19 @@ export function createAutoSavePlugin(
         AutoSaveEvents.AUTO_SAVE_CLEAR,
         'on',
         () => {
-          clearStorage()
-
           /*
-           * 저장소만 지우면 "버렸다" 는 말과 화면이 어긋납니다. 초안이 얹히기
-           * 전으로 문서를 되돌려야 버린 것입니다.
+           * **저장소만 비웁니다.** 쓰던 글은 건드리지 않습니다.
+           *
+           * 문서까지 되돌리게 만들어 봤다가 되돌렸습니다. 자동 저장은 여기서
+           * 문서의 **백업**이지 문서 자체가 아닙니다 — 백업을 지운다고 원본을
+           * 되감을 이유가 없습니다. TinyMCE·WordPress·CKEditor 도 같은 모델이고,
+           * 셋 다 "버리기" 버튼 없이 복원 쪽만 둡니다.
+           *
+           * 대신 눌러도 아무 일 없어 보이던 문제는 **라벨**에서 풉니다
+           * (`auto-save-indicator`).
            */
-          if (baselineContent !== null) {
-            replaceContent(baselineContent)
-          }
-
-          lastSavedContent = element?.innerHTML ?? ''
+          clearStorage()
+          lastSavedContent = ''
           isDirty = false
           emitStatus('idle')
         }
@@ -296,13 +288,11 @@ export function createAutoSavePlugin(
       if (element) {
         /*
          * `initialContent` 는 플러그인이 다 붙은 **뒤에** 들어옵니다
-         * (`createEditor` 가 `run()` 다음에 `setContent` 합니다). 그래서 한 틱
-         * 기다려야 "초안 이전의 문서" 를 볼 수 있습니다.
+         * (`createEditor` 가 `run()` 다음에 `setContent` 합니다). 그래서 복원은
+         * 한 틱 기다려야 초기 내용을 덮어쓸 수 있습니다.
          */
         setTimeout(() => {
           void (async () => {
-            baselineContent = element.innerHTML
-
             if (!restoreOnInit) return
 
             try {
