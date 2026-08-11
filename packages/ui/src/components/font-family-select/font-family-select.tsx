@@ -2,29 +2,40 @@ import type { ComponentChildren } from 'preact'
 import { useFontState, useLocalFonts } from '../../hooks'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
 import type { ToolbarSelectOption } from '../toolbar-select/toolbar-select'
+import { sameFontFamily } from './font-family-select.utils'
 
 /**
- * 내장 목록 — **어느 기계에나 있는 이름은 아닙니다.**
+ * 기본 목록 — **한글을 그릴 수 있는 것만** 둡니다.
  *
- * 이 컨테이너에서 실제 설치 여부를 재 보면 여섯 개 중 **하나도 설치돼 있지
- * 않습니다.** Arial·Times·Courier·Helvetica 는 fontconfig 가 Liberation 계열로
- * 바꿔치기한 것이고, Georgia·Verdana 는 대체도 없어 일반 글꼴로 떨어집니다.
+ * 예전에는 Helvetica·Arial·Georgia·Times·Courier·Verdana 여섯 개였습니다.
+ * 그런데 폰트 파일을 열어 확인해 보면 **여섯 개 전부 U+AC00(가) 이 없습니다.**
+ * 한국어로 쓰는 에디터에서 고를 수 없는 것만 늘어놓고 있었던 셈입니다.
  *
- * 그래도 남겨 둡니다. **되돌아갈 바닥**이기 때문입니다 — Local Font Access API
- * 는 Chromium 데스크톱에만 있고 권한도 필요해서, 없거나 거절당한 자리에서
- * 폰트 메뉴가 비면 안 됩니다.
+ * 그래서 이름 대신 **스택**으로 둡니다. 기계마다 있는 한국어 폰트가 다르므로
+ * 이름 하나를 박으면 또 같은 문제가 됩니다 — 앞에서부터 있는 것이 잡힙니다.
+ *
+ * 이건 **되돌아갈 바닥**입니다. Local Font Access API 는 Chromium 데스크톱에만
+ * 있고 권한도 필요해서, 없거나 거절당한 자리에서 폰트 메뉴가 비면 안 됩니다.
+ * 그 자리에서도 최소한 고딕/명조는 고를 수 있어야 합니다.
  */
-const fonts = [
-  { label: 'Helvetica', value: 'Helvetica, Arial, sans-serif' },
-  { label: 'Arial', value: 'Arial, sans-serif' },
-  { label: 'Georgia', value: 'Georgia, serif' },
-  { label: 'Times', value: 'Times New Roman, serif' },
-  { label: 'Courier', value: 'Courier New, monospace' },
-  { label: 'Verdana', value: 'Verdana, sans-serif' },
+const fallbackFonts = [
+  {
+    label: 'Sans',
+    value:
+      '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Nanum Gothic", sans-serif',
+  },
+  {
+    label: 'Serif',
+    value: '"AppleMyungjo", "Batang", "Noto Serif KR", "Nanum Myeongjo", serif',
+  },
+  {
+    label: 'Mono',
+    value: '"D2Coding", "Nanum Gothic Coding", ui-monospace, monospace',
+  },
 ]
 
 /** 각 옵션을 자기 폰트로 렌더해 미리보기가 되게 합니다 */
-const builtIn: ToolbarSelectOption[] = fonts.map((font) => ({
+const fallback: ToolbarSelectOption[] = fallbackFonts.map((font) => ({
   ...font,
   fontFamily: font.value,
 }))
@@ -54,12 +65,13 @@ const builtIn: ToolbarSelectOption[] = fonts.map((font) => ({
 export const LOAD_SYSTEM_FONTS_VALUE = '__sagak_load_system_fonts__'
 
 /**
- * 시스템 폰트를 `<optgroup>` 으로 묶는 이름.
+ * `<optgroup>` 이름.
  *
- * 내장 목록과 섞으면 어느 것이 진짜 그 기계에 있는 것인지 구분이 안 됩니다.
+ * 섞어 두면 어느 것이 진짜 그 기계에 깔린 폰트이고 어느 것이 폴백 스택인지
+ * 구분이 안 됩니다.
  */
-const SYSTEM_GROUP = 'System'
-const BUILT_IN_GROUP = 'Built-in'
+const SYSTEM_GROUP = 'Korean'
+const FALLBACK_GROUP = 'Default'
 
 /**
  * 폰트 메뉴의 고정 폭 — **이 기능을 쓰기 전의 폭 그대로**입니다.
@@ -67,7 +79,7 @@ const BUILT_IN_GROUP = 'Built-in'
  * ## 왜 고정하는가 (재 봤습니다)
  *
  * `<select>` 의 폭은 **가장 긴 항목**이 정합니다. 시스템 폰트를 불러오면 항목이
- * 6개에서 28개로 늘고 그중에 `WenQuanYi Zen Hei Sharp` 같은 이름이 있습니다.
+ * 크게 늘고 그중에 `Apple SD Gothic Neo` 같은 긴 이름이 있습니다.
  *
  * | | 셀렉트 폭 |
  * | --- | --- |
@@ -114,8 +126,8 @@ export function FontFamilySelect(): ComponentChildren {
 
   const options: ToolbarSelectOption[] = [
     ...(systemOptions.length > 0
-      ? builtIn.map((option) => ({ ...option, group: BUILT_IN_GROUP }))
-      : builtIn),
+      ? fallback.map((option) => ({ ...option, group: FALLBACK_GROUP }))
+      : fallback),
     ...systemOptions,
   ]
 
@@ -130,14 +142,24 @@ export function FontFamilySelect(): ComponentChildren {
    */
   if (status === 'idle' || status === 'loading') {
     options.push({
-      label: status === 'loading' ? 'Loading system fonts…' : 'System fonts…',
+      label: status === 'loading' ? 'Loading fonts…' : 'System fonts…',
       value: LOAD_SYSTEM_FONTS_VALUE,
       group: systemOptions.length > 0 ? SYSTEM_GROUP : undefined,
     })
   }
 
-  const known = options.some((option) => option.value === fontFamily)
-  const currentValue = known ? fontFamily : builtIn[0].value
+  /*
+   * 글자 그대로 비교하면 안 됩니다 — 브라우저가 값을 다시 직렬화하면서
+   * 따옴표를 떼거나 붙입니다. `font-family-select.utils` 참고.
+   *
+   * 그리고 `<select>` 에 넣는 값은 **옵션에 있는 그 문자열**이어야 합니다.
+   * 읽어온 값을 그대로 넣으면 같은 폰트인데도 아무 옵션과 안 맞아 첫 항목이
+   * 선택된 것처럼 보입니다.
+   */
+  const matched = options.find((option) =>
+    sameFontFamily(option.value, fontFamily)
+  )
+  const currentValue = matched ? matched.value : fallback[0].value
 
   const onSelect = (value: string): void => {
     /*
