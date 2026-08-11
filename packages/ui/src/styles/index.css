@@ -26,6 +26,15 @@
   --sagak-paper-border: #d1d5db;
   --sagak-paper-hover: #f3f4f6;
 
+  /*
+   * 툴바 컨트롤의 높이. 버튼과 셀렉트가 **같은 값을 봅니다.**
+   *
+   * 전에는 버튼만 26px 을 갖고 셀렉트는 브라우저 기본값이라 **40px** 이었습니다.
+   * 14px 차이가 나란히 놓여 있었습니다. 한쪽만 고치면 또 벌어지므로 토큰
+   * 하나를 둘이 같이 봅니다.
+   */
+  --sagak-control-height: 26px;
+
   /* 강조색은 두 테마에서 같습니다 */
   --sagak-accent: #007aff;
   --sagak-accent-fg: #ffffff;
@@ -63,6 +72,27 @@
   color: var(--sagak-chrome-fg);
 }
 
+/*
+ * 툴바의 `<select>` 5종입니다. 높이를 안 주면 브라우저 기본값(40px)이라
+ * 옆의 버튼(26px)보다 14px 큽니다.
+ *
+ * `line-height` 를 높이에 맞춰야 글자가 가운데 옵니다 — 높이만 줄이면 네이티브
+ * 셀렉트는 글자를 위쪽에 붙여 놓습니다.
+ *
+ * **가로는 건드리지 않습니다.** `padding` 을 같이 손댔더니 셀렉트 다섯 개의
+ * 폭 합이 442 → 298px 로 줄었고, 그 바람에 툴바가 줄바꿈 경계에 걸려 자동 저장
+ * 표시가 `saved` 로 바뀔 때 줄이 하나 늘었습니다. 높이를 맞추라는 일에 가로
+ * 변경을 끼워 넣을 이유가 없습니다.
+ */
+[data-scope='toolbar'] select {
+  height: var(--sagak-control-height);
+  line-height: calc(var(--sagak-control-height) - 2px);
+  border: 1px solid var(--sagak-chrome-border);
+  border-radius: 6px;
+  background: var(--sagak-chrome-bg);
+  color: var(--sagak-chrome-fg);
+}
+
 [data-scope='toolbar'] [data-part='separator'] {
   width: 1px;
   height: 24px;
@@ -79,7 +109,7 @@
   align-items: center;
   justify-content: center;
   width: 28px;
-  height: 26px;
+  height: var(--sagak-control-height);
   padding: 0;
   border: 1px solid var(--sagak-chrome-border);
   border-radius: 6px;
