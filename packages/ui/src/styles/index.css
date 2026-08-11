@@ -86,6 +86,14 @@
  */
 [data-scope='toolbar'] select {
   height: var(--sagak-control-height);
+  /*
+   * 12px 은 임의로 고른 값이 아니라 자동 저장 표시가 이미 쓰고 있는 크기입니다.
+   * 툴바에 있는 글자끼리 크기를 맞춥니다.
+   *
+   * 폭도 조금 줄지만(합 442 → 420px) 줄바꿈 경계를 넘지는 않습니다 — `padding`
+   * 을 건드렸을 때의 442 → 298px 과는 규모가 다릅니다.
+   */
+  font-size: 12px;
   line-height: calc(var(--sagak-control-height) - 2px);
   border: 1px solid var(--sagak-chrome-border);
   border-radius: 6px;
