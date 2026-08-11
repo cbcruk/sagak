@@ -7,7 +7,6 @@ import {
   EditorContainer,
   Toolbar,
   AutocompletePopover,
-  AutoSaveIndicator,
 } from '../src'
 import '../src/styles/index.css'
 
@@ -49,7 +48,6 @@ function Harness({
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
-            <AutoSaveIndicator />
             <AutocompletePopover />
           </EditorProvider>
         ) : null}

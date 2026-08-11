@@ -5,7 +5,6 @@ import {
   EditorContainer,
   Toolbar,
   AutocompletePopover,
-  AutoSaveIndicator,
 } from 'sagak-ui'
 
 const INITIAL_CONTENT = `
@@ -49,7 +48,6 @@ export function App(): JSX.Element {
         {ready && editor ? (
           <EditorProvider context={editor.context}>
             <Toolbar />
-            <AutoSaveIndicator />
             <AutocompletePopover />
           </EditorProvider>
         ) : null}
