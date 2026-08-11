@@ -15,6 +15,20 @@ export type {
 
 export { SelectionManager } from './selection-manager'
 
+/**
+ * DOM 좌표를 정수 위치로. `SelectionManager` 가 못 하는 일 —
+ * `innerHTML` 교체를 견디는 위치입니다.
+ */
+export {
+  nodeSize,
+  contentSize,
+  domToPos,
+  posToDom,
+  readSelectionPositions,
+  writeSelectionPositions,
+} from './dom-position'
+export type { DomPoint, PositionRange } from './dom-position'
+
 export { logger, setLogLevel, getLogLevel } from './logger'
 export type { LogLevel, Logger } from './logger'
 
