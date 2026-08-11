@@ -1,6 +1,6 @@
 # 툴바를 옵션으로 제어하기 — 설계 노트
 
-> 상태: 제안(Draft) · 대상: `sagak-ui` (일부 `sagak-core` 읽기)
+> 상태: **보류** · 대상: `sagak-ui` (일부 `sagak-core` 읽기)
 > 관련: [`app-or-library.md`](./app-or-library.md), [`event-bus-refactor.md`](./event-bus-refactor.md)
 
 ## 요약 (결론 먼저)
