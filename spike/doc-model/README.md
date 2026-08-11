@@ -1,6 +1,8 @@
 # 문서 모델 스파이크
 
-> 상태: 스파이크 (버려도 되는 코드) · 관련: [`docs/phase-8-entry.md`](../../docs/phase-8-entry.md), [`docs/reference-codemirror-state.md`](../../docs/reference-codemirror-state.md)
+> 상태: 스파이크 (버려도 되는 코드)
+> 세션 정리: [`docs/session-doc-model-spike.md`](../../docs/session-doc-model-spike.md)
+> 관련: [`docs/phase-8-entry.md`](../../docs/phase-8-entry.md), [`docs/reference-codemirror-state.md`](../../docs/reference-codemirror-state.md)
 
 ## 이게 뭔가
 
