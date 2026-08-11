@@ -2,6 +2,7 @@
 
 > 상태: 스파이크 (버려도 되는 코드)
 > 세션 정리: [`docs/session-doc-model-spike.md`](../../docs/session-doc-model-spike.md)
+> 본체 적용 검토: [`docs/spike-to-product.md`](../../docs/spike-to-product.md)
 > 관련: [`docs/phase-8-entry.md`](../../docs/phase-8-entry.md), [`docs/reference-codemirror-state.md`](../../docs/reference-codemirror-state.md)
 
 ## 이게 뭔가
