@@ -130,4 +130,53 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
       (indicator as HTMLElement).getBoundingClientRect().height
     ).toBeGreaterThan(0)
   })
+
+  /**
+   * 표시는 **툴바 안**에 있습니다. 툴바가 이미 자기 높이를 갖고 있으므로
+   * 새 줄을 안 쓰고, 그래서 처음 뜰 때의 23px 이 사라졌습니다.
+   *
+   * 대신 새 위험면이 생겼습니다 — 툴바는 `flex-wrap: wrap` 이라 폭에 따라
+   * 줄이 늘어납니다. 표시가 줄바꿈을 하나 더 만들면 툴바 높이가 변하고,
+   * 그건 예전보다 나쁩니다.
+   *
+   * 줄 수가 폭에 따라 달라지는 것은 괜찮습니다 — 글을 쓰는 도중에 폭이
+   * 바뀌지는 않으니까요. 문제가 되는 것은 **같은 폭에서 저장 상태에 따라**
+   * 달라지는 경우입니다. 그것만 막으면 됩니다.
+   */
+  describe('툴바 안에서도 상태에 따라 흔들리지 않습니다', () => {
+    for (const width of [1200, 900, 700, 500, 380]) {
+      it(`폭 ${width}px`, async () => {
+        ed = await mountEditor(undefined, { autoSave: true })
+        ed.root.style.width = `${width}px`
+        await settle()
+
+        const bar = ed.root.querySelector(
+          '[data-scope="toolbar"]'
+        ) as HTMLElement
+        const area = ed.root.querySelector(
+          '[data-scope="editing-area"]'
+        ) as HTMLElement
+
+        await setStatus(ed.context.eventBus, 'idle')
+        const height = bar.getBoundingClientRect().height
+        const top = area.getBoundingClientRect().top
+
+        for (const status of STATES) {
+          await setStatus(
+            ed.context.eventBus,
+            status,
+            status === 'saved' ? Date.now() : undefined
+          )
+          expect(
+            bar.getBoundingClientRect().height,
+            `${status} 에서 툴바 높이가 변했습니다 (줄바꿈)`
+          ).toBe(height)
+          expect(
+            area.getBoundingClientRect().top,
+            `${status} 에서 아래 영역이 움직였습니다`
+          ).toBe(top)
+        }
+      })
+    }
+  })
 })
