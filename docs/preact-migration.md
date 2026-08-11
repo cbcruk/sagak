@@ -59,19 +59,19 @@ esbuild: { jsx: 'automatic', jsxImportSource: 'preact' },
 
 ### 결과
 
-| 검증 항목 | preact/compat | React 19 (대조군) |
-| --- | --- | --- |
-| 마운트 | PASS | PASS |
-| Toggle `pressed` 전환 | PASS | PASS |
-| Select Popup 렌더 (Portal + Positioner) | PASS | PASS |
-| Select Popup 위치 계산 (floating-ui) | PASS | PASS |
-| Select 값 반영 | FAIL | **FAIL (동일)** |
-| Menu Popup 렌더 | PASS | PASS |
-| Menu 항목 선택 콜백 | PASS | PASS |
-| Dialog Popup 렌더 (Portal + Backdrop) | PASS | PASS |
-| Dialog 제어 입력 리렌더 | PASS | PASS |
-| Dialog 포커스 트랩 (FloatingFocusManager) | PASS | PASS |
-| Dialog Escape 닫기 | PASS | PASS |
+| 검증 항목                                 | preact/compat | React 19 (대조군) |
+| ----------------------------------------- | ------------- | ----------------- |
+| 마운트                                    | PASS          | PASS              |
+| Toggle `pressed` 전환                     | PASS          | PASS              |
+| Select Popup 렌더 (Portal + Positioner)   | PASS          | PASS              |
+| Select Popup 위치 계산 (floating-ui)      | PASS          | PASS              |
+| Select 값 반영                            | FAIL          | **FAIL (동일)**   |
+| Menu Popup 렌더                           | PASS          | PASS              |
+| Menu 항목 선택 콜백                       | PASS          | PASS              |
+| Dialog Popup 렌더 (Portal + Backdrop)     | PASS          | PASS              |
+| Dialog 제어 입력 리렌더                   | PASS          | PASS              |
+| Dialog 포커스 트랩 (FloatingFocusManager) | PASS          | PASS              |
+| Dialog Escape 닫기                        | PASS          | PASS              |
 
 **두 환경의 결과가 완전히 일치합니다.** 유일한 FAIL은 양쪽 모두에서 `trigger="5"`로 동일하게
 났는데, `<Select.Value />`가 `ItemText`의 label이 아니라 raw value를 렌더하는 **base-ui의 원래
@@ -86,11 +86,11 @@ esbuild: { jsx: 'automatic', jsxImportSource: 'preact' },
 
 동일한 앱, 동일한 base-ui:
 
-| | raw | gzip |
-| --- | --- | --- |
-| preact/compat | 191.2 KB | 66.2 KB |
-| React 19 | 361.3 KB | 116.7 KB |
-| **차이** | **−47%** | **−43%** |
+|               | raw      | gzip     |
+| ------------- | -------- | -------- |
+| preact/compat | 191.2 KB | 66.2 KB  |
+| React 19      | 361.3 KB | 116.7 KB |
+| **차이**      | **−47%** | **−43%** |
 
 ### 타입 호환성
 
@@ -129,37 +129,52 @@ useMemo 2     useContext 1   createContext 1   type ReactNode 10
 
 ### 주변 정리
 
-| 항목 | 현재 | 전환 후 | 비고 |
-| --- | --- | --- | --- |
-| 패키지 이름 | `sagak-editor` | 그대로 | `sagak-react`가 아니라 개명 불필요 |
-| 아이콘 | `lucide-react` | `lucide-preact` | 기계적 치환 |
-| Storybook | `@storybook/react-vite` | `@storybook/preact-vite` | 스토리 파일 1개뿐 |
-| 테스트 | `vitest-browser-react` | preact 대응 필요 | react 패키지 테스트 1개뿐 |
-| 코어 테스트 | 65개 | 영향 없음 | 프레임워크 무관 |
+| 항목        | 현재                    | 전환 후                  | 비고                               |
+| ----------- | ----------------------- | ------------------------ | ---------------------------------- |
+| 패키지 이름 | `sagak-editor`          | 그대로                   | `sagak-react`가 아니라 개명 불필요 |
+| 아이콘      | `lucide-react`          | `lucide-preact`          | 기계적 치환                        |
+| Storybook   | `@storybook/react-vite` | `@storybook/preact-vite` | 스토리 파일 1개뿐                  |
+| 테스트      | `vitest-browser-react`  | preact 대응 필요         | react 패키지 테스트 1개뿐          |
+| 코어 테스트 | 65개                    | 영향 없음                | 프레임워크 무관                    |
 
 ---
 
 ## 3. EventBus 작별
 
+> **갱신 (2026-08)** — 아래 수치는 측정 당시의 것입니다. 뷰 계층이 정리된 뒤
+> 다시 쟀고, 그 결과와 단계별 이전 계획(D1~D4)은
+> [`event-bus-refactor.md`](./event-bus-refactor.md) §11·§12 에 있습니다.
+>
+> 바뀐 것 셋 —
+>
+> 1. **역할 ④(호스트 확장점) 은 실사용자가 0 입니다.** 아래 표가 근거로 든
+>    `getEventBus()`·`core.exec()`·`eventName` 재지정이 전부 자기 정의와
+>    JSDoc 예시뿐이었습니다. 버스를 남길 근거 하나가 사라졌습니다.
+> 2. **아래 "①은 1:1" 은 여전히 맞습니다** — 다만 이번엔 grep 이 아니라 앱을
+>    띄운 뒤 구독 맵을 세어 확인했습니다. 처리자가 2개로 보이는 36종의 두
+>    번째는 같은 플러그인의 IME 가드입니다.
+> 3. **역할 ②(상태 알림) 는 이미 절반 넘게 signals 로 갔습니다.** UI 의
+>    `useEditorEvent` 구독이 8곳만 남았습니다.
+
 ### 현황 측정
 
-| 항목 | 수치 |
-| --- | --- |
-| `eventBus` 참조 파일 | 61 (core 37, react 21) |
-| `emit` 호출 | 153 |
-| 구독(`on`) | 89 |
-| 이벤트 상수 | 65종 |
-| `(data?: unknown)` 시그니처 | 26 |
-| 손으로 쓴 런타임 타입 가드 | 15 |
+| 항목                        | 수치                   |
+| --------------------------- | ---------------------- |
+| `eventBus` 참조 파일        | 61 (core 37, react 21) |
+| `emit` 호출                 | 153                    |
+| 구독(`on`)                  | 89                     |
+| 이벤트 상수                 | 65종                   |
+| `(data?: unknown)` 시그니처 | 26                     |
+| 손으로 쓴 런타임 타입 가드  | 15                     |
 
 ### 진단 — 버스가 4가지 역할을 겸하고 있다
 
-| 역할 | 성격 | 근거 |
-| --- | --- | --- |
+| 역할            | 성격               | 근거                                                              |
+| --------------- | ------------------ | ----------------------------------------------------------------- |
 | ① 명령 디스패치 | UI → core, **1:1** | 같은 이벤트를 2개 이상 플러그인이 처리하는 경우가 **하나도 없음** |
-| ② 상태 알림 | core → 다수 | `STYLE_CHANGED` 구독 10곳, `CONTENT_RESTORED` 6곳 |
-| ③ 거부권 | `before` 단계 취소 | 실질 용도는 대부분 IME composition 가드 |
-| ④ 호스트 확장점 | 공개 API | `core.exec()`, `getEventBus()`, 플러그인 `eventName` 옵션 |
+| ② 상태 알림     | core → 다수        | `STYLE_CHANGED` 구독 10곳, `CONTENT_RESTORED` 6곳                 |
+| ③ 거부권        | `before` 단계 취소 | 실질 용도는 대부분 IME composition 가드                           |
+| ④ 호스트 확장점 | 공개 API           | `core.exec()`, `getEventBus()`, 플러그인 `eventName` 옵션         |
 
 **역할 ①은 이미 중복입니다.** execCommand 마이그레이션이 `CommandRegistry`라는 두 번째 디스패치
 계층을 만들었습니다. 지금 Bold 한 번 누르면:
@@ -182,12 +197,12 @@ toggleBold()
 
 ### 대체 수단 매핑
 
-| 역할 | signals | CustomEvent |
-| --- | --- | --- |
-| ① 명령 디스패치 | ✗ signal은 "값"이지 "행위"가 아님 | ✓ |
-| ② 상태 알림 | ✓ 최적 | △ 구독자가 매번 재조회해야 함 |
-| ③ 거부권 | ✗ 개념 없음 | ✓ `cancelable` + `preventDefault()` |
-| ④ 호스트 확장점 | ✗ | ✓ |
+| 역할            | signals                           | CustomEvent                         |
+| --------------- | --------------------------------- | ----------------------------------- |
+| ① 명령 디스패치 | ✗ signal은 "값"이지 "행위"가 아님 | ✓                                   |
+| ② 상태 알림     | ✓ 최적                            | △ 구독자가 매번 재조회해야 함       |
+| ③ 거부권        | ✗ 개념 없음                       | ✓ `cancelable` + `preventDefault()` |
+| ④ 호스트 확장점 | ✗                                 | ✓                                   |
 
 **둘은 경쟁이 아니라 분업입니다.** 어느 한쪽만으로는 EventBus를 걷어낼 수 없습니다.
 
@@ -236,11 +251,11 @@ core는 `@preact/signals-core`, 뷰는 `@preact/signals`를 쓰면 임피던스�
 기술 문제가 아니라 제품 결정이라 따로 둡니다. 현재 `sagak-editor`는
 `peerDependencies: react ^18 || ^19`로 **React 사용자에게 배포되는 라이브러리**입니다.
 
-| 안 | 내용 | 대가 |
-| --- | --- | --- |
-| **A. React 지원 포기** | Preact 단독 | 가장 단순. 기존/잠재 React 소비자를 버림. 되돌리기 어려움 |
-| **B. `preact/compat`로 React 호환 산출물 유지** | Preact를 구현 세부로 은닉 | 소비자가 React 엘리먼트·ref를 경계 너머로 넘기면 깨짐. 툴바 커스터마이징 API를 열 계획이면 특히 위험 |
-| **C. `sagak-editor`(React) + `sagak-preact` 병행** | core 공유, 뷰 2벌 | 컴포넌트 23개를 두 번 유지 |
+| 안                                                 | 내용                      | 대가                                                                                                 |
+| -------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **A. React 지원 포기**                             | Preact 단독               | 가장 단순. 기존/잠재 React 소비자를 버림. 되돌리기 어려움                                            |
+| **B. `preact/compat`로 React 호환 산출물 유지**    | Preact를 구현 세부로 은닉 | 소비자가 React 엘리먼트·ref를 경계 너머로 넘기면 깨짐. 툴바 커스터마이징 API를 열 계획이면 특히 위험 |
+| **C. `sagak-editor`(React) + `sagak-preact` 병행** | core 공유, 뷰 2벌         | 컴포넌트 23개를 두 번 유지                                                                           |
 
 라이브러리 배포가 확실하면 A는 되돌리기 어렵고 C는 유지비가 계속 나갑니다. Preact의 이점을
 취하는 게 주목적이라면 **A**가 맞습니다.
