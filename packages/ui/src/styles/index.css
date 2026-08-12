@@ -58,6 +58,46 @@
   box-shadow: 0 0 0 3px var(--sagak-accent-soft);
 }
 
+/*
+ * 문서 줄 — 제목과 저장 메뉴입니다.
+ *
+ * 툴바 위에 놓입니다. 툴바가 서식이라면 여기는 문서 자체를 다룹니다.
+ */
+[data-scope='document-bar'][data-part='root'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--sagak-chrome-border);
+  background: var(--sagak-chrome-raised);
+  color: var(--sagak-chrome-fg);
+}
+
+[data-scope='document-bar'] [data-part='title'] {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-scope='document-bar'] [data-part='dot'] {
+  color: var(--sagak-accent);
+}
+
+[data-scope='document-bar'] button,
+[data-scope='document-bar'] select {
+  height: var(--sagak-control-height);
+  font-size: 12px;
+  padding: 0 8px;
+  border: 1px solid var(--sagak-chrome-border);
+  border-radius: 6px;
+  background: var(--sagak-chrome-bg);
+  color: var(--sagak-chrome-fg);
+  cursor: pointer;
+}
+
+[data-scope='document-bar'] button:hover {
+  background: var(--sagak-chrome-hover);
+}
+
 /* Toolbar */
 [data-scope='toolbar'][data-part='root'] {
   display: flex;

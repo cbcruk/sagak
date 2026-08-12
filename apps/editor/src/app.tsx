@@ -3,6 +3,7 @@ import {
   useEditor,
   EditorProvider,
   EditorContainer,
+  DocumentBar,
   Toolbar,
   AutocompletePopover,
 } from 'sagak-ui'
@@ -56,6 +57,11 @@ export function App(): JSX.Element {
         */}
         {ready && editor ? (
           <EditorProvider context={editor.context}>
+            {/*
+              문서 줄이 툴바 위입니다 — 툴바가 서식이라면 여기는 문서 자체를
+              다룹니다 (`docs/document-model.md`).
+            */}
+            <DocumentBar />
             <Toolbar />
             <AutocompletePopover />
           </EditorProvider>

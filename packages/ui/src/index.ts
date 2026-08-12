@@ -50,6 +50,7 @@ export {
   MoreMenu,
   AutoSaveIndicator,
   ExportMenu,
+  DocumentBar,
 } from './components'
 export type {
   EditingAreaProps,
@@ -57,4 +58,5 @@ export type {
   ColorPickerProps,
   AutoSaveIndicatorProps,
   ExportMenuProps,
+  DocumentBarProps,
 } from './components'

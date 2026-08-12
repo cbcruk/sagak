@@ -4,6 +4,9 @@ export type { EditingAreaProps } from './editing-area/editing-area'
 export { EditorContainer } from './editor-container/editor-container'
 export type { EditorContainerProps } from './editor-container/editor-container'
 
+export { DocumentBar } from './document-bar/document-bar'
+export type { DocumentBarProps } from './document-bar/document-bar'
+
 export { Toolbar } from './toolbar/toolbar'
 export { FontFamilySelect } from './font-family-select/font-family-select'
 export { FontSizeSelect } from './font-size-select/font-size-select'
