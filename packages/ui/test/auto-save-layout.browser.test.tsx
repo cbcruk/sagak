@@ -1,6 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { AutoSaveEvents } from 'sagak-core'
-import { mountEditor, settle, type MountedEditor } from './harness'
+import {
+  mountEditor,
+  settle,
+  placeCaretInText,
+  type MountedEditor,
+} from './harness'
 
 /**
  * 자동 저장 표시가 **레이아웃을 밀지 않아야 합니다.**
@@ -45,9 +50,56 @@ async function setStatus(
   await settle()
 }
 
+/**
+ * 표시는 **기본값으로 툴바에 안 나옵니다.**
+ *
+ * 저장이 끝날 때마다 아이콘·색·문구가 통째로 뒤집혀 툴바 구석이 깜빡입니다.
+ * 재 보면 **입력 3번에 표시가 6번** 바뀝니다 — `Unsaved changes`(회색 구름)
+ * 와 `Saved at …`(초록 체크) 를 오갑니다. 글 쓰는 내내 시야 가장자리에서
+ * 움직이는 것이라 알려주는 값보다 방해가 컸습니다.
+ *
+ * 아래 테스트들이 `showAutoSaveIndicator: true` 를 켜는 것은 **컴포넌트 자체를
+ * 계속 검사하기 위해서**입니다. 끄고 지나가면 되살릴 때 무엇이 깨졌는지 알
+ * 길이 없어집니다.
+ */
+describe('자동 저장 표시는 기본으로 숨겨져 있습니다', () => {
+  it('툴바에 안 나옵니다', async () => {
+    ed = await mountEditor(undefined, { autoSave: true })
+    await settle(5)
+
+    expect(
+      ed.root.querySelector('[data-scope="auto-save"]'),
+      '기본값인데 표시가 툴바에 있습니다'
+    ).toBeNull()
+  })
+
+  it('그래도 자동 저장은 계속 동작합니다', async () => {
+    const key = 'sagak-test-hidden-still-saves'
+    localStorage.removeItem(key)
+    ed = await mountEditor('<p>글</p>', {
+      autoSave: { storageKey: key, debounceMs: 10, intervalMs: 0 },
+    })
+    await settle(5)
+
+    placeCaretInText(ed.editable, 1)
+    ed.editable.innerHTML = '<p>고친 글</p>'
+    ed.editable.dispatchEvent(new InputEvent('input', { bubbles: true }))
+
+    const deadline = performance.now() + 5000
+    let saved: string | null = null
+    while (performance.now() < deadline && !saved) {
+      await settle(1)
+      saved = localStorage.getItem(key)
+    }
+
+    expect(saved, '표시만 내렸는데 저장까지 멈췄습니다').toBe('<p>고친 글</p>')
+    localStorage.removeItem(key)
+  })
+})
+
 describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
   it('상태가 바뀌어도 아래 편집 영역이 움직이지 않습니다', async () => {
-    ed = await mountEditor(undefined, { autoSave: true })
+    ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })
     await settle()
 
     const area = ed.root.querySelector(
@@ -68,7 +120,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
   })
 
   it('상태가 바뀌어도 Discard 버튼이 좌우로 튀지 않습니다', async () => {
-    ed = await mountEditor(undefined, { autoSave: true })
+    ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })
     await settle()
 
     // lastSaved 가 있어야 버튼이 나옵니다
@@ -96,7 +148,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
    * 그래서 오전·오후 양쪽으로 재 둡니다.
    */
   it('오전·오후 어느 쪽이어도 폭이 같습니다', async () => {
-    ed = await mountEditor(undefined, { autoSave: true })
+    ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })
     await settle()
 
     const slot = (): number =>
@@ -121,7 +173,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
   })
 
   it('표시가 항상 자리를 차지합니다 — 처음부터', async () => {
-    ed = await mountEditor(undefined, { autoSave: true })
+    ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })
     await settle()
 
     const indicator = ed.root.querySelector('[data-scope="auto-save"]')
@@ -146,7 +198,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
   describe('툴바 안에서도 상태에 따라 흔들리지 않습니다', () => {
     for (const width of [1200, 900, 700, 500, 380]) {
       it(`폭 ${width}px`, async () => {
-        ed = await mountEditor(undefined, { autoSave: true })
+        ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })
         ed.root.style.width = `${width}px`
         await settle()
 

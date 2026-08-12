@@ -71,10 +71,11 @@ describe('툴바', () => {
       )!
       expect(sel.tagName).toBe('SELECT')
 
-      const georgia = [...sel.options].find((o) => o.text === 'Georgia')!
+      const serif = [...sel.options].find((o) => o.text === 'Serif')
+      expect(serif, '폴백 목록에서 Serif 를 찾지 못했습니다').toBeDefined()
       // base-ui 를 걷어낼 때 "네이티브 select 는 option 폰트가 죽는다" 고
       // 근거 없이 단정했었습니다. 실제로는 적용됩니다.
-      expect(getComputedStyle(georgia).fontFamily).toMatch(/Georgia/i)
+      expect(getComputedStyle(serif!).fontFamily).toMatch(/AppleMyungjo/i)
     })
 
     it('줄 간격을 반영해야 함 (선택 영역 저장/복원)', async () => {

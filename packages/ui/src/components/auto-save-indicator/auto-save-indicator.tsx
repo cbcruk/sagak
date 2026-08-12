@@ -1,4 +1,5 @@
 import type { ComponentChildren, JSX } from 'preact'
+import { useEffect, useState } from 'preact/hooks'
 import { Cloud, CloudOff, Loader2, Check, AlertCircle } from 'lucide-preact'
 import type { AutoSaveStatus } from 'sagak-core'
 import { useAutoSave } from '../../hooks'
@@ -42,6 +43,9 @@ interface StatusView {
  * 안 그리면 다음 상태에서 아래가 밀립니다.
  */
 const INVISIBLE: AutoSaveStatus[] = ['idle']
+
+/** 확인 문구가 머무는 시간 */
+const DELETED_MS = 4000
 
 function viewFor(
   status: AutoSaveStatus,
@@ -124,11 +128,14 @@ const SAMPLE_TIMES = [
  * 문구 자리의 폭을 정하는 후보들 — 실제로 뜨는 문구가 아니라 **자리를 재기
  * 위한** 것입니다.
  */
+const DELETED_TEXT = 'Draft deleted'
+
 const WIDEST_LABELS = [
   'Unsaved changes',
   'Saving...',
   'Save failed',
   'Saved',
+  DELETED_TEXT,
   ...SAMPLE_TIMES.map((time) => `Saved at ${formatTime(time)}`),
 ]
 
@@ -171,20 +178,67 @@ export interface AutoSaveIndicatorProps {
 }
 
 /**
- * 저장된 초안을 버리는 버튼은 초안이 있을 때만 **눌립니다.**
+ * 저장된 초안을 지우는 버튼은 초안이 있을 때만 **눌립니다.**
+ *
+ * ## 왜 "Discard draft" 가 아닌가
  *
  * 저장소만 비웁니다 — 편집 중인 글은 그대로 남고, 다음 입력에서 자동 저장이
- * 다시 씁니다. 그래서 "글을 되돌린다" 가 아니라 "저장된 초안을 버린다" 이고,
+ * 다시 씁니다. 그래서 "글을 되돌린다" 가 아니라 "저장된 초안을 지운다" 이고,
  * 쓸모가 있는 순간은 *다음에 열었을 때 이 초안이 되살아나지 않게 하고 싶을
  * 때* 입니다.
+ *
+ * 그 동작은 맞는데 **문구가 다른 모델에서 온 말**이었습니다.
+ *
+ * | 초안의 정체 | 버리기 UI | 예 |
+ * | --- | --- | --- |
+ * | 초안이 **문서 자체** | 있음 — 진짜로 지웁니다 | Gmail |
+ * | 초안은 문서의 **백업** | **없음** — 복원 쪽만 둡니다 | TinyMCE · WordPress · CKEditor 5 |
+ *
+ * sagak 은 아래쪽(백업)인데 위쪽(Gmail)의 말인 "Discard draft" 를 쓰고
+ * 있었습니다. 그래서 눌러도 글이 안 사라지니 **아무 일도 안 일어난 것처럼**
+ * 보였습니다. 실제로 그 오해가 "discard 가 동작하지 않는다" 는 보고로
+ * 돌아왔습니다.
+ *
+ * 고친 것은 동작이 아니라 말입니다.
+ *
+ * - `Discard draft` → **`Delete saved draft`** — 지우는 대상이 *저장된 초안*
+ *   이라는 것이 문구 안에 들어옵니다
+ * - 누른 뒤 표시가 **빈 칸이 되던 것**을 잠깐 `Draft deleted` 로 바꿉니다.
+ *   예전에는 버튼만 사라져서 무엇이 일어났는지 알 길이 없었습니다
  */
 export function AutoSaveIndicator({
   showTime = true,
 }: AutoSaveIndicatorProps): ComponentChildren {
   const { status, lastSaved, clear } = useAutoSave()
 
-  const { icon, text, color } = viewFor(status, lastSaved, showTime)
-  const hidden = INVISIBLE.includes(status) && !lastSaved
+  /** 지운 직후 잠깐만 뜨는 확인 문구 */
+  const [justDeleted, setJustDeleted] = useState(false)
+
+  useEffect(() => {
+    if (!justDeleted) return
+    const timer = setTimeout(() => setJustDeleted(false), DELETED_MS)
+    return () => clearTimeout(timer)
+  }, [justDeleted])
+
+  /*
+   * 다시 저장되기 시작하면 확인 문구는 자리를 비켜야 합니다 — 이어서 쓰면
+   * 곧바로 새 초안이 생기고, 그때까지 "지웠음" 이 남아 있으면 거짓말입니다.
+   *
+   * 이것을 `useEffect` 로 맞추려다 한 번 틀렸습니다. 클릭 시점에는 아직
+   * `status` 가 `saved` 라, **직전 렌더의 효과가 클릭 뒤에 흘러나와** 방금 켠
+   * 플래그를 도로 껐습니다. 상태를 맞추는 대신 **끌어내면** 그 경합이 없습니다.
+   */
+  const showDeleted = justDeleted && status === 'idle'
+
+  const base = viewFor(status, lastSaved, showTime)
+  const { icon, text, color } = showDeleted
+    ? {
+        icon: base.icon,
+        text: DELETED_TEXT,
+        color: 'var(--sagak-chrome-muted-fg)',
+      }
+    : base
+  const hidden = INVISIBLE.includes(status) && !lastSaved && !showDeleted
 
   return (
     <div
@@ -224,11 +278,14 @@ export function AutoSaveIndicator({
       {lastSaved && (
         <button
           type="button"
-          onClick={clear}
+          onClick={() => {
+            clear()
+            setJustDeleted(true)
+          }}
           style={discardStyle}
           title="Deletes the saved draft so it won't be restored next time. Your current text stays as it is, and editing saves again."
         >
-          Discard draft
+          Delete saved draft
         </button>
       )}
     </div>

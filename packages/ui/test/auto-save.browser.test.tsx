@@ -49,7 +49,7 @@ describe('자동 저장', () => {
   })
 
   it('입력하면 저장되어야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
     expect(saved()).toBeNull()
 
@@ -62,7 +62,7 @@ describe('자동 저장', () => {
   })
 
   it('상태 표시가 저장 결과를 보여야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
     const p = ed.editable.querySelector('p')!
@@ -80,7 +80,7 @@ describe('자동 저장', () => {
    */
   it('다시 열면 쓰던 글이 살아나야 함 (initialContent 를 이겨야 함)', async () => {
     // Given: 한 번 쓰고 저장된 상태
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
     const p = ed.editable.querySelector('p')!
     p.textContent = '쓰던 글'
@@ -92,7 +92,7 @@ describe('자동 저장', () => {
     ed = null
 
     // When: 다른 initialContent 로 다시 연다
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     // restoreOnInit 은 setTimeout 으로 initialContent 뒤에 끼어듭니다
     await settle(6)
 
@@ -102,7 +102,7 @@ describe('자동 저장', () => {
   })
 
   it('저장된 것이 없으면 initialContent 가 그대로여야 함', async () => {
-    ed = await mountEditor('<p>첫 방문</p>', { autoSave: options })
+    ed = await mountEditor('<p>첫 방문</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(6)
 
     expect(ed.editable.textContent).toContain('첫 방문')
@@ -113,7 +113,7 @@ describe('자동 저장', () => {
    * 저장되면 사용자가 지울 방법이 없었습니다. 인디케이터에 버튼을 붙였습니다.
    */
   it('저장된 초안이 있을 때만 버리기 버튼이 보여야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
     const discard = (): HTMLButtonElement | null =>
@@ -133,7 +133,7 @@ describe('자동 저장', () => {
   })
 
   it('버리기 버튼이 저장소를 비우고, 쓰던 글은 남겨야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
     const p = ed.editable.querySelector('p')!
@@ -161,7 +161,7 @@ describe('자동 저장', () => {
    * 초안을 버린다" 입니다. 다음 입력에서 자동 저장이 다시 씁니다.
    */
   it('버린 뒤 이어서 쓰면 다시 저장되어야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
     const p = ed.editable.querySelector('p')!
@@ -181,7 +181,7 @@ describe('자동 저장', () => {
   })
 
   it('지우면 저장소가 비어야 함', async () => {
-    ed = await mountEditor('<p>처음</p>', { autoSave: options })
+    ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
     const p = ed.editable.querySelector('p')!

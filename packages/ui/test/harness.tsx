@@ -32,9 +32,11 @@ let mountedContext: EditorContext | null = null
 function Harness({
   initialContent,
   autoSave,
+  showAutoSaveIndicator,
 }: {
   initialContent: string
   autoSave?: CreateEditorOptions['autoSave']
+  showAutoSaveIndicator?: boolean
 }) {
   const { containerRef, editor, ready } = useEditor({
     initialContent,
@@ -47,7 +49,7 @@ function Harness({
       <EditorContainer>
         {ready && editor ? (
           <EditorProvider context={editor.context}>
-            <Toolbar />
+            <Toolbar showAutoSaveIndicator={showAutoSaveIndicator} />
             <AutocompletePopover />
           </EditorProvider>
         ) : null}
@@ -84,6 +86,15 @@ export interface MountOptions {
    * 필요한 테스트만 켜고 `storageKey` 를 따로 줍니다.
    */
   autoSave?: CreateEditorOptions['autoSave']
+
+  /**
+   * 자동 저장 표시를 툴바에 띄웁니다.
+   *
+   * 제품 기본값은 **꺼짐**입니다 (깜빡여서 내렸습니다 — `ToolbarProps` 참고).
+   * 그 컴포넌트를 검사하는 테스트만 켭니다. 끄고 지나가면 되살릴 때 무엇이
+   * 깨졌는지 알 길이 없어집니다.
+   */
+  showAutoSaveIndicator?: boolean
 }
 
 export async function mountEditor(
@@ -94,7 +105,11 @@ export async function mountEditor(
   document.body.appendChild(root)
 
   render(
-    <Harness initialContent={initialContent} autoSave={options.autoSave} />,
+    <Harness
+      initialContent={initialContent}
+      autoSave={options.autoSave}
+      showAutoSaveIndicator={options.showAutoSaveIndicator}
+    />,
     root
   )
 
