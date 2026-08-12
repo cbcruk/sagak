@@ -28,6 +28,9 @@ export type { FindState, UseFindStateReturn } from './use-find-state'
 export { useFontState } from './use-font-state'
 export type { FontState, UseFontStateReturn } from './use-font-state'
 
+export { useDocument, UNTITLED } from './use-document'
+export type { UseDocumentReturn } from './use-document'
+
 export { useLocalFonts } from './use-local-fonts'
 export type { LocalFontsStatus, UseLocalFontsReturn } from './use-local-fonts'
 

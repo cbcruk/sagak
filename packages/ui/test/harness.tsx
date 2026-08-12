@@ -5,6 +5,7 @@ import {
   useEditor,
   EditorProvider,
   EditorContainer,
+  DocumentBar,
   Toolbar,
   AutocompletePopover,
 } from '../src'
@@ -33,10 +34,12 @@ function Harness({
   initialContent,
   autoSave,
   showAutoSaveIndicator,
+  showDocumentBar,
 }: {
   initialContent: string
   autoSave?: CreateEditorOptions['autoSave']
   showAutoSaveIndicator?: boolean
+  showDocumentBar?: boolean
 }) {
   const { containerRef, editor, ready } = useEditor({
     initialContent,
@@ -49,6 +52,7 @@ function Harness({
       <EditorContainer>
         {ready && editor ? (
           <EditorProvider context={editor.context}>
+            {showDocumentBar ? <DocumentBar /> : null}
             <Toolbar showAutoSaveIndicator={showAutoSaveIndicator} />
             <AutocompletePopover />
           </EditorProvider>
@@ -95,6 +99,14 @@ export interface MountOptions {
    * 깨졌는지 알 길이 없어집니다.
    */
   showAutoSaveIndicator?: boolean
+
+  /**
+   * 문서 줄(제목·저장 메뉴)을 띄웁니다.
+   *
+   * 앱은 늘 띄우지만 harness 는 **끄고 시작합니다** — 문서 줄이 붙으면
+   * OPFS 를 건드리므로, 상관없는 테스트끼리 저장소로 간섭하게 됩니다.
+   */
+  showDocumentBar?: boolean
 }
 
 export async function mountEditor(
@@ -109,6 +121,7 @@ export async function mountEditor(
       initialContent={initialContent}
       autoSave={options.autoSave}
       showAutoSaveIndicator={options.showAutoSaveIndicator}
+      showDocumentBar={options.showDocumentBar}
     />,
     root
   )
