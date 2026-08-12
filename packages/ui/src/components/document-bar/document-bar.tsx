@@ -1,6 +1,7 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useCallback, useEffect } from 'preact/hooks'
 import { useDocument } from '../../hooks'
+import { DocumentDialog } from '../document-dialog/document-dialog'
 
 /**
  * 문서 줄 — 레거시 텍스트 에디터의 제목과 메뉴입니다.
@@ -74,22 +75,8 @@ const defaultRequestName = (current: string): string | null =>
 export function DocumentBar({
   requestName = defaultRequestName,
 }: DocumentBarProps = {}): ComponentChildren {
-  const {
-    name,
-    untitled,
-    dirty,
-    available,
-    documents,
-    refresh,
-    create,
-    open,
-    save,
-    saveAs,
-  } = useDocument()
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
+  const { name, untitled, dirty, available, create, save, saveAs } =
+    useDocument()
 
   /** 이름이 없으면 물어보고 저장합니다 — 레거시 에디터의 ⌘S 그대로입니다 */
   const saveOrAsk = useCallback(async (): Promise<void> => {
@@ -158,28 +145,7 @@ export function DocumentBar({
           New
         </button>
 
-        <select
-          data-part="open"
-          aria-label="Open document"
-          value=""
-          onChange={(event) => {
-            const target = event.currentTarget
-            const next = target.value
-            /*
-             * 고른 뒤 곧바로 빈 값으로 되돌립니다. 안 그러면 같은 문서를 두 번
-             * 고를 수 없습니다 — `change` 가 안 나니까요.
-             */
-            target.value = ''
-            if (next) void open(next)
-          }}
-        >
-          <option value="">Open…</option>
-          {documents.map((item) => (
-            <option key={item.name} value={item.name}>
-              {item.name}
-            </option>
-          ))}
-        </select>
+        <DocumentDialog requestName={requestName} />
 
         <button type="button" data-part="save" onClick={() => void saveOrAsk()}>
           Save

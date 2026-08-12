@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mountEditor, settle, click } from './harness'
+import { mountEditor, settle, click, dialog } from './harness'
 import type { MountedEditor } from './harness'
 
 /**
@@ -74,6 +74,27 @@ async function mount(content = '<p>처음</p>'): Promise<MountedEditor> {
   return editor
 }
 
+/** 문서 목록 다이얼로그를 열고 그 요소를 돌려줍니다 */
+async function openDocuments(e: MountedEditor): Promise<HTMLDialogElement> {
+  await click(part(e, 'documents'))
+  await settle(4)
+  return dialog('Documents')
+}
+
+const rowNames = (dlg: HTMLDialogElement): string[] =>
+  [...dlg.querySelectorAll<HTMLElement>('[data-part="row"]')].map(
+    (row) => row.dataset.name ?? ''
+  )
+
+const rowButton = (
+  dlg: HTMLDialogElement,
+  name: string,
+  part: string
+): HTMLButtonElement =>
+  dlg.querySelector<HTMLButtonElement>(
+    `[data-part="row"][data-name="${name}"] [data-part="${part}"]`
+  )!
+
 async function type(e: MountedEditor, html: string): Promise<void> {
   e.editable.innerHTML = html
   e.editable.dispatchEvent(new InputEvent('input', { bubbles: true }))
@@ -125,10 +146,9 @@ describe('문서 줄', () => {
     await settle(5)
     expect(ed.editable.innerHTML).not.toContain('돌아와야 하는 글')
 
-    // 다시 엽니다
-    const open = part<HTMLSelectElement>(ed, 'open')
-    open.value = '메모.html'
-    open.dispatchEvent(new Event('change', { bubbles: true }))
+    // 목록에서 다시 엽니다
+    const dlg = await openDocuments(ed)
+    await click(rowButton(dlg, '메모.html', 'open'))
     await settle(6)
 
     expect(ed.editable.innerHTML).toContain('돌아와야 하는 글')
@@ -136,17 +156,15 @@ describe('문서 줄', () => {
     expect(isDirty(ed)).toBe(false)
   })
 
-  it('저장한 문서가 열기 목록에 나옵니다', async () => {
+  it('저장한 문서가 목록에 나옵니다', async () => {
     ed = await mount()
     answerName('첫째.html')
     await click(part(ed, 'save'))
     await settle(5)
 
-    const values = [...part<HTMLSelectElement>(ed, 'open').options].map(
-      (option) => option.value
-    )
+    const dlg = await openDocuments(ed)
 
-    expect(values).toContain('첫째.html')
+    expect(rowNames(dlg)).toContain('첫째.html')
   })
 
   it('다른 이름으로 저장하면 둘 다 남습니다', async () => {
@@ -160,13 +178,10 @@ describe('문서 줄', () => {
     await click(part(ed, 'save-as'))
     await settle(5)
 
-    const values = [...part<HTMLSelectElement>(ed, 'open').options].map(
-      (option) => option.value
-    )
+    const dlg = await openDocuments(ed)
 
     expect(titleName(ed)).toBe('사본.html')
-    expect(values).toContain('원본.html')
-    expect(values).toContain('사본.html')
+    expect(rowNames(dlg).sort()).toEqual(['사본.html', '원본.html'])
   })
 
   it('⌘S 로도 저장됩니다', async () => {

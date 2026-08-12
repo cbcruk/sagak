@@ -223,23 +223,33 @@ describe('열려 있는 문서', () => {
     await doc!.saveAs('예전.html')
     await settle(3)
 
-    await doc!.rename('새이름.html')
+    await doc!.rename('예전.html', '새이름.html')
     await settle(3)
 
     expect(doc!.name).toBe('새이름.html')
     expect(doc!.documents.map((d) => d.name)).toEqual(['새이름.html'])
   })
 
-  it('이름 없는 문서의 이름을 바꾸면 그 이름으로 저장됩니다', async () => {
+  /**
+   * 목록에서 부르므로 열어 두지 않은 문서도 바꿀 수 있어야 합니다.
+   */
+  it('열어 두지 않은 문서의 이름도 바꿉니다', async () => {
     await mount()
-    await type('<p>이름 없이 쓰던 글</p>')
-
-    await doc!.rename('처음이름.html')
+    await type('<p>다른 문서</p>')
+    await doc!.saveAs('다른.html')
+    await settle(3)
+    await doc!.create()
+    await doc!.saveAs('지금.html')
     await settle(3)
 
-    expect(doc!.untitled).toBe(false)
-    expect(doc!.name).toBe('처음이름.html')
-    expect(doc!.dirty).toBe(false)
+    await doc!.rename('다른.html', '바뀐.html')
+    await settle(3)
+
+    expect(doc!.name, '열어 둔 문서의 이름이 왜 바뀝니까').toBe('지금.html')
+    expect(doc!.documents.map((d) => d.name).sort()).toEqual([
+      '바뀐.html',
+      '지금.html',
+    ])
   })
 
   /**

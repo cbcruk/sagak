@@ -51,6 +51,7 @@ export {
   AutoSaveIndicator,
   ExportMenu,
   DocumentBar,
+  DocumentDialog,
 } from './components'
 export type {
   EditingAreaProps,
@@ -59,4 +60,5 @@ export type {
   AutoSaveIndicatorProps,
   ExportMenuProps,
   DocumentBarProps,
+  DocumentDialogProps,
 } from './components'

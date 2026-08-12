@@ -71,7 +71,13 @@ export interface UseDocumentReturn {
    */
   save: () => Promise<void>
   saveAs: (name: string) => Promise<void>
-  rename: (to: string) => Promise<void>
+  /**
+   * 저장된 문서의 이름을 바꿉니다.
+   *
+   * 열려 있는 문서가 아니어도 됩니다 — 문서 목록에서 부르기 때문입니다.
+   * 바꾼 것이 지금 열어 둔 문서면 제목도 따라 바뀝니다.
+   */
+  rename: (from: string, to: string) => Promise<void>
   remove: (name: string) => Promise<void>
 }
 
@@ -148,17 +154,12 @@ export function useDocument(): UseDocumentReturn {
   }, [saveAs])
 
   const rename = useCallback(
-    async (to: string): Promise<void> => {
-      const from = nameSignal.value
-      if (!from) {
-        await saveAs(to)
-        return
-      }
+    async (from: string, to: string): Promise<void> => {
       await store.rename(from, to)
-      nameSignal.value = to
+      if (nameSignal.value === from) nameSignal.value = to
       await refresh()
     },
-    [saveAs, refresh]
+    [refresh]
   )
 
   const remove = useCallback(
