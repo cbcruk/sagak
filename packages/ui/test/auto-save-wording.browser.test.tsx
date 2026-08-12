@@ -67,7 +67,7 @@ async function draft(e: MountedEditor): Promise<void> {
 
 describe('초안 지우기 — 말과 피드백', () => {
   it('무엇을 지우는지 버튼에 적혀 있습니다', async () => {
-    ed = await mountEditor(ORIGINAL, { autoSave: options })
+    ed = await mountEditor(ORIGINAL, { autoSave: options, showAutoSaveIndicator: true })
     await settle(5)
     await draft(ed)
 
@@ -83,7 +83,7 @@ describe('초안 지우기 — 말과 피드백', () => {
   })
 
   it('지운 뒤 빈 칸이 아니라 지웠다고 알려줍니다', async () => {
-    ed = await mountEditor(ORIGINAL, { autoSave: options })
+    ed = await mountEditor(ORIGINAL, { autoSave: options, showAutoSaveIndicator: true })
     await settle(5)
     await draft(ed)
 
@@ -97,7 +97,7 @@ describe('초안 지우기 — 말과 피드백', () => {
   })
 
   it('알려주면서도 쓰던 글은 건드리지 않습니다', async () => {
-    ed = await mountEditor(ORIGINAL, { autoSave: options })
+    ed = await mountEditor(ORIGINAL, { autoSave: options, showAutoSaveIndicator: true })
     await settle(5)
     await draft(ed)
 
@@ -113,7 +113,7 @@ describe('초안 지우기 — 말과 피드백', () => {
    * 거짓말이 됩니다.
    */
   it('다시 저장되기 시작하면 확인 문구가 비켜납니다', async () => {
-    ed = await mountEditor(ORIGINAL, { autoSave: options })
+    ed = await mountEditor(ORIGINAL, { autoSave: options, showAutoSaveIndicator: true })
     await settle(5)
     await draft(ed)
 
