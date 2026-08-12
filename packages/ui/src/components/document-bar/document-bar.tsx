@@ -2,6 +2,7 @@ import type { ComponentChildren, JSX } from 'preact'
 import { useCallback, useEffect } from 'preact/hooks'
 import { useDocument } from '../../hooks'
 import { DocumentDialog } from '../document-dialog/document-dialog'
+import { canSaveToComputer, saveToComputer } from './document-bar.utils'
 
 /**
  * 문서 줄 — 레거시 텍스트 에디터의 제목과 메뉴입니다.
@@ -75,7 +76,7 @@ const defaultRequestName = (current: string): string | null =>
 export function DocumentBar({
   requestName = defaultRequestName,
 }: DocumentBarProps = {}): ComponentChildren {
-  const { name, untitled, dirty, available, create, save, saveAs } =
+  const { name, untitled, dirty, available, create, save, saveAs, readNow } =
     useDocument()
 
   /** 이름이 없으면 물어보고 저장합니다 — 레거시 에디터의 ⌘S 그대로입니다 */
@@ -94,6 +95,16 @@ export function DocumentBar({
     if (!next) return
     await saveAs(next)
   }, [name, saveAs, requestName])
+
+  /**
+   * 진짜 파일로 꺼냅니다.
+   *
+   * 대화상자를 먼저 띄우고 그 뒤에 내용을 읽습니다 — 순서가 바뀌면 사용자
+   * 제스처를 잃어 대화상자가 안 뜹니다 (`document-bar.utils`).
+   */
+  const exportToComputer = useCallback((): void => {
+    void saveToComputer(untitled ? 'Untitled.html' : name, readNow)
+  }, [untitled, name, readNow])
 
   /*
    * ⌘S 는 **문서** 동작이라 편집 커맨드용 단축키 플러그인과 층이 다릅니다.
@@ -158,6 +169,21 @@ export function DocumentBar({
         >
           Save As…
         </button>
+
+        {/*
+          진짜 파일은 Chromium 계열에만 있습니다. 없는 브라우저에서는 아예
+          안 내놓습니다 — `docs/toolbar-options.md` 의 규칙과 같습니다.
+        */}
+        {canSaveToComputer() && (
+          <button
+            type="button"
+            data-part="save-to-computer"
+            onClick={exportToComputer}
+            title="Save a copy to your computer"
+          >
+            Save to Computer…
+          </button>
+        )}
       </span>
     </div>
   )

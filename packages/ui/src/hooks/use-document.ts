@@ -60,6 +60,14 @@ export interface UseDocumentReturn {
   /** 최근에 고친 것이 앞인 목록. `refresh()` 로 갱신합니다 */
   documents: DocumentMeta[]
 
+  /**
+   * 지금 편집 영역의 내용을 그 자리에서 읽습니다.
+   *
+   * 내보내기처럼 저장을 거치지 않고 내용만 필요한 쪽이 씁니다. 시그널에 담긴
+   * 값은 비동기로 채워지므로 치자마자 부르면 예전 값입니다.
+   */
+  readNow: () => Promise<string>
+
   refresh: () => Promise<void>
   /** 빈 문서로 시작합니다 */
   create: () => Promise<void>
@@ -179,6 +187,7 @@ export function useDocument(): UseDocumentReturn {
   const name = nameSignal.value
 
   return {
+    readNow: readContent,
     name: name ?? UNTITLED,
     untitled: name === null,
     dirty: contentSignal.value !== savedSignal.value,
