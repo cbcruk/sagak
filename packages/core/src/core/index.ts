@@ -16,6 +16,16 @@ export type {
 export { SelectionManager } from './selection-manager'
 
 /**
+ * 브라우저 안의 파일 시스템(OPFS) 위에 놓인 문서 저장소 —
+ * 레거시 텍스트 에디터의 뼈대입니다 (`docs/document-model.md`).
+ */
+export {
+  createDocumentStore,
+  isDocumentStorageAvailable,
+} from './document-store'
+export type { DocumentStore, DocumentMeta } from './document-store'
+
+/**
  * DOM 좌표를 정수 위치로. `SelectionManager` 가 못 하는 일 —
  * `innerHTML` 교체를 견디는 위치입니다.
  */

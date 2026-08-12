@@ -10,6 +10,11 @@ export { EVENT_KIND } from './core/event-map'
 export type { EventKind, RequestEvent, NotifyEvent } from './core/event-map'
 export { PluginManager } from './core/plugin-manager'
 export { SelectionManager } from './core/selection-manager'
+export {
+  createDocumentStore,
+  isDocumentStorageAvailable,
+} from './core/document-store'
+export type { DocumentStore, DocumentMeta } from './core/document-store'
 export { logger, setLogLevel, getLogLevel } from './core/logger'
 export type { LogLevel, Logger } from './core/logger'
 export { createErrorReporter } from './core/errors'
