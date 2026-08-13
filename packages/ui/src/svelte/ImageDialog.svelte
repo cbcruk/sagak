@@ -186,7 +186,7 @@
   {@html icon(ImageIcon, 18).outerHTML}
 </button>
 
-<dialog bind:this={dialogEl} aria-label={isEditing ? 'Edit Image' : 'Insert Image'}>
+<dialog bind:this={dialogEl} k="dialog-content" aria-label={isEditing ? 'Edit Image' : 'Insert Image'}>
   <h2>{isEditing ? 'Edit Image' : 'Insert Image'}</h2>
 
   {#if !isEditing}

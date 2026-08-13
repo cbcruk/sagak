@@ -137,6 +137,23 @@ export async function mountEditor(
     throw new Error('에디터가 마운트되지 않았습니다')
   }
 
+  /*
+   * 툴바는 **두 번에 걸쳐 채워집니다.**
+   *
+   * 이주 중이라 Preact 가 그리는 것과 Svelte 가 그리는 것이 섞여 있는데,
+   * Svelte 쪽은 `SvelteHost` 의 `useEffect` 에서 마운트하므로 한 틱 늦습니다.
+   * 뼈대만 보고 돌려주면 **아직 없는 버튼을 찾으려다 실패**합니다 —
+   * `theme.browser.test.tsx` 가 "Insert Table 버튼을 찾지 못했습니다" 로
+   * 실제로 걸렸습니다.
+   *
+   * 그래서 Svelte 가 그리는 컨트롤 하나가 나타날 때까지 더 기다립니다.
+   * 툴바가 전부 Svelte 로 넘어가면 이 대기는 필요 없어집니다.
+   */
+  for (let i = 0; i < 60; i += 1) {
+    if (root.querySelector('button[title="Insert Table"]')) break
+    await settle(1)
+  }
+
   if (!mountedContext) throw new Error('에디터 컨텍스트를 찾지 못했습니다')
 
   return {

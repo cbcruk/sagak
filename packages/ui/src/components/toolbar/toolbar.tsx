@@ -12,7 +12,7 @@ import '../../elements/link-dialog'
 import { SvelteHost } from '../../svelte/host'
 import HorizontalRuleButton from '../../svelte/HorizontalRuleButton.svelte'
 import ImageDialog from '../../svelte/ImageDialog.svelte'
-import { TableDialog } from '../table-dialog/table-dialog'
+import TableDialog from '../../svelte/TableDialog.svelte'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
@@ -106,7 +106,7 @@ export function Toolbar({
         <div style={{ display: 'flex', gap: 4 }}>
           <sagak-link-dialog />
           <SvelteHost component={ImageDialog} />
-          <TableDialog />
+          <SvelteHost component={TableDialog} />
           <SvelteHost component={HorizontalRuleButton} />
           <SpecialCharacterDialog />
         </div>

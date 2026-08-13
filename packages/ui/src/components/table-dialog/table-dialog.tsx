@@ -7,27 +7,10 @@ import { useEditorContext } from '../../context/editor-context'
 import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
+import { findTableAtSelection } from './table-dialog.shared'
 
 const ICON_SIZE = 18
 
-function findTableAtSelection(): HTMLTableElement | null {
-  const selection = window.getSelection()
-  if (!selection || !selection.anchorNode) return null
-
-  let node: Node | null = selection.anchorNode
-
-  while (node && node !== document.body) {
-    if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      (node as Element).tagName === 'TABLE'
-    ) {
-      return node as HTMLTableElement
-    }
-    node = node.parentNode
-  }
-
-  return null
-}
 
 const rowStyle = { display: 'flex', gap: 8 } as const
 

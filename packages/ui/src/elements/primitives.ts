@@ -96,6 +96,12 @@ export interface DialogParts {
  */
 export function dialog(ariaLabel: string): DialogParts {
   const root = document.createElement('dialog')
+  /*
+   * kinu 의 다이얼로그 스타일을 받습니다 — 배경·모서리·그림자·백드롭이
+   * 여기서 옵니다. 이걸 안 달면 네이티브 기본 스타일이 남아 **테마를 안
+   * 따라갑니다.** `theme.browser.test.tsx` 가 실제로 그 회귀를 잡았습니다.
+   */
+  root.setAttribute('k', 'dialog-content')
   root.setAttribute('aria-label', ariaLabel)
 
   const heading = document.createElement('h2')
