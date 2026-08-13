@@ -9,6 +9,8 @@ import '../../elements/color-picker'
 import '../../elements/auto-save-indicator'
 import '../../elements/more-menu'
 import '../../elements/link-dialog'
+import { SvelteHost } from '../../svelte/host'
+import HorizontalRuleButton from '../../svelte/HorizontalRuleButton.svelte'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
 import { ListButtons } from '../list-buttons/list-buttons'
@@ -105,7 +107,7 @@ export function Toolbar({
           <sagak-link-dialog />
           <ImageDialog />
           <TableDialog />
-          <sagak-horizontal-rule-button />
+          <SvelteHost component={HorizontalRuleButton} />
           <SpecialCharacterDialog />
         </div>
 

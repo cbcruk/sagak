@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import preact from '@preact/preset-vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 /**
  * 브라우저를 **UTF-8 로케일**로 띄웁니다.
@@ -22,7 +23,15 @@ import preact from '@preact/preset-vite'
 const UTF8_LOCALE = { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }
 
 export default defineConfig({
-  plugins: [preact()],
+  /*
+   * Preact 와 Svelte 를 **같이** 둡니다.
+   *
+   * 이주 중에는 두 렌더러가 공존합니다. 각 플러그인은 자기 확장자만 다루므로
+   * (`.tsx` / `.svelte`) 서로 안 부딪힙니다.
+   *
+   * 이 줄이 이주 전체의 전제입니다 — 안 물리면 Svelte 로 가는 길이 막힙니다.
+   */
+  plugins: [preact(), svelte()],
   resolve: {
     // preact 인스턴스가 둘로 갈리면 훅이 렌더 컨텍스트를 못 찾습니다
     dedupe: ['preact', 'preact/hooks'],
