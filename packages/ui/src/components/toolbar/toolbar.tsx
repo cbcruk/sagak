@@ -5,10 +5,10 @@ import '../../elements/font-family-select'
 import '../../elements/toolbar-selects'
 import '../../elements/toolbar-commands'
 import '../../elements/toolbar-state-buttons'
+import '../../elements/color-picker'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
-import { ColorPicker } from '../color-picker/color-picker'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
@@ -73,8 +73,8 @@ export function Toolbar({
       <FormatToggles />
 
       {/* Colors */}
-      <ColorPicker type="text" />
-      <ColorPicker type="background" />
+      <sagak-color-picker type="text" />
+      <sagak-color-picker type="background" />
 
       <div data-part="separator" />
 
