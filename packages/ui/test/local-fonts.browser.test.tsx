@@ -5,7 +5,7 @@ import { cdp } from '@vitest/browser/context'
 import { useLocalFonts } from '../src/hooks'
 import { mountEditor, placeCaretInText, selectAll, settle } from './harness'
 import type { MountedEditor } from './harness'
-import { LOAD_SYSTEM_FONTS_VALUE } from '../src/components/font-family-select/font-family-select'
+import { LOAD_SYSTEM_FONTS_VALUE } from '../src/components/font-family-select/font-family-select.shared'
 import { supportsKorean } from '../src/hooks/use-local-fonts.utils'
 
 /**
