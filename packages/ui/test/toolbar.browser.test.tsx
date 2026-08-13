@@ -169,6 +169,12 @@ describe('툴바', () => {
 
       await click(button(ed.root, 'Insert Link'))
       const dlg = dialog('Insert Link')
+      /*
+       * **열렸는지**까지 봐야 합니다. `dialog()` 는 이름으로 요소를 찾을 뿐이라
+       * 안 열려도 내용은 읽힙니다 — 실제로 `showModal()` 을 지워도 이 파일이
+       * 전부 통과했습니다.
+       */
+      expect(isOpen(dlg), '다이얼로그가 안 열렸습니다').toBe(true)
       await fillInput(
         dlg.querySelector<HTMLInputElement>('input')!,
         'https://example.com'

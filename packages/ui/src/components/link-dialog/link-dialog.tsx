@@ -7,25 +7,10 @@ import { useEditorContext } from '../../context/editor-context'
 import { useDialogHandle } from '../../hooks/use-dialog-handle'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
+import { getSelectedLink } from './link-dialog.shared'
 
 const ICON_SIZE = 18
 
-function getSelectedLink(): HTMLAnchorElement | null {
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) return null
-
-  let node: Node | null = selection.anchorNode
-  while (node) {
-    if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      (node as Element).tagName === 'A'
-    ) {
-      return node as HTMLAnchorElement
-    }
-    node = node.parentNode
-  }
-  return null
-}
 
 export function LinkDialog(): ComponentChildren {
   const { eventBus } = useEditorContext()

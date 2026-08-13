@@ -8,7 +8,7 @@ import '../../elements/toolbar-state-buttons'
 import '../../elements/color-picker'
 import '../../elements/auto-save-indicator'
 import '../../elements/more-menu'
-import { LinkDialog } from '../link-dialog/link-dialog'
+import '../../elements/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
 import { ListButtons } from '../list-buttons/list-buttons'
@@ -102,7 +102,7 @@ export function Toolbar({
       <div data-part="mobile-hidden" style={{ display: 'contents' }}>
         <div data-part="separator" />
         <div style={{ display: 'flex', gap: 4 }}>
-          <LinkDialog />
+          <sagak-link-dialog />
           <ImageDialog />
           <TableDialog />
           <sagak-horizontal-rule-button />

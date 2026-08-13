@@ -79,6 +79,7 @@ declare module 'preact' {
       'sagak-alignment-buttons': JSX.HTMLAttributes<HTMLElement>
       'sagak-history-buttons': JSX.HTMLAttributes<HTMLElement>
       'sagak-more-menu': JSX.HTMLAttributes<HTMLElement>
+      'sagak-link-dialog': JSX.HTMLAttributes<HTMLElement>
       'sagak-auto-save-indicator': JSX.HTMLAttributes<HTMLElement> & {
         'show-time'?: string
       }
