@@ -1,52 +1,37 @@
-import { signal } from '@preact/signals'
-import { useCallback } from 'preact/hooks'
-import {
-  createDocumentStore,
-  isDocumentStorageAvailable,
-  CoreEvents,
-  WysiwygEvents,
-  type DocumentMeta,
-} from 'sagak-core'
+import { useCallback, useEffect, useState } from 'preact/hooks'
+import type { DocumentMeta } from 'sagak-core'
 import { useEditorContext } from '../context/editor-context'
-import { useEditorEvent } from './use-editor-event'
+import {
+  UNTITLED,
+  attachDocument,
+  create as createDocument,
+  open as openDocument,
+  readDocument,
+  readNow as readContentNow,
+  refresh as refreshDocuments,
+  remove as removeDocument,
+  rename as renameDocument,
+  save as saveDocument,
+  saveAs as saveDocumentAs,
+  subscribeToDocument,
+} from '../state/document-store'
 
 /**
- * 열려 있는 문서 하나 — 레거시 텍스트 에디터의 상태입니다.
+ * 열려 있는 문서 하나 — **Preact 쪽 어댑터**입니다.
  *
- * 새로 만들기 · 열기 · 저장 · 다른 이름으로 저장. 자동 저장은 **없습니다**
- * (`docs/document-model.md`). 저장은 사용자가 시킬 때만 일어납니다.
+ * 값과 동작은 전부 `state/document-store.ts` 에 있습니다. 여기서는 그것을
+ * 구독해 다시 그리고, `EditorContext` 를 받아 넘겨 주기만 합니다.
  *
- * ## `dirty` 를 플래그로 들고 있지 않습니다
+ * ## 왜 얇아졌나
  *
- * 지금 내용과 **마지막으로 저장한 내용을 비교해서** 얻습니다.
+ * 문서 줄과 문서 목록을 Svelte 로 옮기려면 둘이 같은 상태를 봐야 합니다.
+ * 상태가 훅 안에 있으면 훅을 부를 수 있는 쪽만 볼 수 있으니, 밖으로 꺼내고
+ * 여기는 얇은 껍데기만 남겼습니다. 이 훅도 결국 마지막에 사라집니다.
  *
- * 자동 저장에는 `isDirty` 라는 플래그가 있었고, 저장·복원·비우기 등 여러
- * 자리에서 갱신되다가 실제 상태와 어긋났습니다. 비교로 얻으면 어긋날 자리가
- * 없습니다 — 두 문자열이 같으면 안 더러운 것이고, 그게 정의입니다.
- *
- * ## 상태가 모듈에 있는 이유
- *
- * 제목 · 메뉴 · 문서 목록이 **같은 문서를 봐야** 합니다. 컴포넌트마다 사본을
- * 들면 셋이 어긋납니다. 폰트 목록에서 같은 결론에 도달했고
- * (`use-local-fonts`), 그때 컴포넌트 3개가 각자 API 를 부르던 것을 재서
- * 확인했습니다.
+ * 자세한 배경은 `docs/document-model.md` 참고.
  */
 
-/** 아직 이름이 없는 문서 */
-export const UNTITLED = 'Untitled'
-
-const store = createDocumentStore()
-
-/** 열려 있는 문서 이름 — 저장한 적이 없으면 `null` */
-const nameSignal = signal<string | null>(null)
-
-/** 마지막으로 저장한 내용. 여기에 안 맞으면 더러운 것입니다 */
-const savedSignal = signal<string>('')
-
-/** 지금 편집 영역의 내용 — 내용 변경 이벤트마다 갱신합니다 */
-const contentSignal = signal<string>('')
-
-const listSignal = signal<DocumentMeta[]>([])
+export { UNTITLED }
 
 export interface UseDocumentReturn {
   /** 열려 있는 문서 이름. 저장한 적이 없으면 `'Untitled'` */
@@ -63,8 +48,8 @@ export interface UseDocumentReturn {
   /**
    * 지금 편집 영역의 내용을 그 자리에서 읽습니다.
    *
-   * 내보내기처럼 저장을 거치지 않고 내용만 필요한 쪽이 씁니다. 시그널에 담긴
-   * 값은 비동기로 채워지므로 치자마자 부르면 예전 값입니다.
+   * 내보내기처럼 저장을 거치지 않고 내용만 필요한 쪽이 씁니다. 담아 둔 값은
+   * 비동기로 채워지므로 치자마자 부르면 예전 값입니다.
    */
   readNow: () => Promise<string>
 
@@ -90,115 +75,33 @@ export interface UseDocumentReturn {
 }
 
 export function useDocument(): UseDocumentReturn {
-  const { editingAreaManager } = useEditorContext()
-
-  const readContent = useCallback(async (): Promise<string> => {
-    return (await editingAreaManager?.getContent()) ?? ''
-  }, [editingAreaManager])
+  const context = useEditorContext()
+  const [, bump] = useState(0)
 
   /*
-   * 내용이 바뀌는 길은 셋입니다 — 타이핑, 서식 커맨드, 프로그램적 교체(열기·
-   * 되돌리기). 셋 다 같은 자리로 모읍니다.
+   * 신호는 `.value` 를 읽은 컴포넌트를 알아서 다시 그렸습니다. 저장소는
+   * 그런 것이 없으므로 구독해서 직접 다시 그립니다 — 이 훅을 부른 컴포넌트가
+   * 통째로 그려지는 것은 신호를 쓰기 전과 같습니다.
    */
-  const sync = useCallback(() => {
-    void readContent().then((content) => {
-      contentSignal.value = content
-    })
-  }, [readContent])
+  useEffect(() => {
+    attachDocument(context)
+    return subscribeToDocument(() => bump((n) => n + 1))
+  }, [context])
 
-  useEditorEvent(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', sync)
-  useEditorEvent(CoreEvents.STYLE_CHANGED, 'after', sync)
-  useEditorEvent(CoreEvents.CONTENT_RESTORED, 'on', sync)
-
-  const refresh = useCallback(async (): Promise<void> => {
-    if (!isDocumentStorageAvailable()) return
-    listSignal.value = await store.list()
-  }, [])
-
-  /** 편집 영역에 넣고, 그것을 저장된 상태로 삼습니다 */
-  const load = useCallback(
-    async (name: string | null, content: string): Promise<void> => {
-      await editingAreaManager?.setContent(content)
-      nameSignal.value = name
-      savedSignal.value = content
-      contentSignal.value = content
-    },
-    [editingAreaManager]
-  )
-
-  const create = useCallback(async (): Promise<void> => {
-    await load(null, '')
-  }, [load])
-
-  const open = useCallback(
-    async (name: string): Promise<void> => {
-      await load(name, await store.read(name))
-    },
-    [load]
-  )
-
-  const saveAs = useCallback(
-    async (name: string): Promise<void> => {
-      /*
-       * 저장 직전의 내용을 **그 자리에서 읽습니다.** 시그널에 담긴 값을 쓰면
-       * 마지막 이벤트 이후의 타이핑이 빠질 수 있습니다.
-       */
-      const content = await readContent()
-      await store.write(name, content)
-      nameSignal.value = name
-      savedSignal.value = content
-      contentSignal.value = content
-      await refresh()
-    },
-    [readContent, refresh]
-  )
-
-  const save = useCallback(async (): Promise<void> => {
-    const name = nameSignal.value
-    if (!name) {
-      throw new Error('Untitled document — ask for a name and use saveAs')
-    }
-    await saveAs(name)
-  }, [saveAs])
-
-  const rename = useCallback(
-    async (from: string, to: string): Promise<void> => {
-      await store.rename(from, to)
-      if (nameSignal.value === from) nameSignal.value = to
-      await refresh()
-    },
-    [refresh]
-  )
-
-  const remove = useCallback(
-    async (name: string): Promise<void> => {
-      await store.remove(name)
-      /*
-       * 열어 둔 문서를 지우면 이름만 떼고 내용은 그대로 둡니다 — 화면의 글을
-       * 지우는 것은 사용자가 시킨 일이 아닙니다. 이름 없는 문서가 되므로
-       * 다음 저장은 이름을 묻습니다.
-       */
-      if (nameSignal.value === name) nameSignal.value = null
-      await refresh()
-    },
-    [refresh]
-  )
-
-  const name = nameSignal.value
+  const snapshot = readDocument()
 
   return {
-    readNow: readContent,
-    name: name ?? UNTITLED,
-    untitled: name === null,
-    dirty: contentSignal.value !== savedSignal.value,
-    available: isDocumentStorageAvailable(),
-    documents: listSignal.value,
-    refresh,
-    create,
-    open,
-    save,
-    saveAs,
-    rename,
-    remove,
+    ...snapshot,
+    readNow: useCallback(() => readContentNow(context), [context]),
+    refresh: refreshDocuments,
+    create: useCallback(() => createDocument(context), [context]),
+    open: useCallback((name: string) => openDocument(context, name), [context]),
+    save: useCallback(() => saveDocument(context), [context]),
+    saveAs: useCallback(
+      (name: string) => saveDocumentAs(context, name),
+      [context]
+    ),
+    rename: renameDocument,
+    remove: removeDocument,
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mountEditor, settle, click, dialog } from './harness'
+import { mountEditor, settle, click, dialog, isOpen } from './harness'
 import type { MountedEditor } from './harness'
 
 /**
@@ -78,7 +78,15 @@ async function mount(content = '<p>처음</p>'): Promise<MountedEditor> {
 async function openDocuments(e: MountedEditor): Promise<HTMLDialogElement> {
   await click(part(e, 'documents'))
   await settle(4)
-  return dialog('Documents')
+  const dlg = dialog('Documents')
+  /*
+   * **열렸는지**까지 봅니다. `dialog()` 는 이름으로 요소를 찾을 뿐이라 안
+   * 열려도 내용은 읽힙니다 — `showModal()` 을 지워도 이 파일 11개와 문서 줄
+   * 9개가 전부 통과했습니다. 링크·이미지 다이얼로그에서 이미 한 번 겪은
+   * 구멍입니다.
+   */
+  expect(isOpen(dlg), '문서 목록이 안 열렸습니다').toBe(true)
+  return dlg
 }
 
 const rowNames = (dlg: HTMLDialogElement): string[] =>
@@ -248,6 +256,37 @@ describe('문서 줄', () => {
 
     expect(titleName(ed)).toBe('단축키.html')
     expect(isDirty(ed)).toBe(false)
+  })
+
+  /**
+   * ## 대조군에서 안 물던 것 — 저장 안 한 채로 닫는 것
+   *
+   * 자동 저장이 없으므로 이 경고가 **마지막 방어선**입니다. 그런데 Svelte 로
+   * 옮기며 `beforeunload` 등록을 통째로 지워도 178개가 전부 통과했습니다.
+   * 코드에는 "저장 안 한 채로 닫으면 글이 사라집니다" 라고 적혀 있는데
+   * 정작 그걸 지키는 검사가 없었습니다.
+   *
+   * `preventDefault()` 를 불렀는지로 봅니다 — 브라우저에게 "물어봐 달라" 고
+   * 말하는 방법이 그것입니다.
+   */
+  it('저장 안 한 글이 있으면 닫기를 막습니다', async () => {
+    ed = await mount()
+
+    const askedOnClose = (): boolean => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    answerName('메모.html')
+    await click(part(ed, 'save'))
+    await settle(5)
+    expect(isDirty(ed)).toBe(false)
+    expect(askedOnClose(), '저장했는데도 닫기를 막습니다').toBe(false)
+
+    await type(ed, '<p>고쳐서 더러워짐</p>')
+    expect(isDirty(ed)).toBe(true)
+    expect(askedOnClose(), '저장 안 했는데 그냥 닫힙니다').toBe(true)
   })
 
   /**

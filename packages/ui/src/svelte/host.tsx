@@ -30,9 +30,20 @@ type SvelteComponent = any
 
 export interface SvelteHostProps {
   component: SvelteComponent
+  /**
+   * `editor` 말고 더 넘길 것 — 대부분은 필요 없습니다.
+   *
+   * 문서 줄이 `requestName` 을 받습니다(테스트가 사람 없이 이름을 넣으려고
+   * 쓰는 자리입니다). **바뀌면 다시 마운트되므로** 부르는 쪽이 같은 객체를
+   * 유지해야 합니다.
+   */
+  props?: Record<string, unknown>
 }
 
-export function SvelteHost({ component }: SvelteHostProps): ComponentChildren {
+export function SvelteHost({
+  component,
+  props,
+}: SvelteHostProps): ComponentChildren {
   const ref = useRef<HTMLSpanElement>(null)
   const context = useEditorContext()
 
@@ -41,13 +52,13 @@ export function SvelteHost({ component }: SvelteHostProps): ComponentChildren {
 
     const instance = mount(component, {
       target: ref.current,
-      props: { editor: context },
+      props: { editor: context, ...props },
     })
 
     return () => {
       void unmount(instance)
     }
-  }, [component, context])
+  }, [component, context, props])
 
   /*
    * `display: contents` 라 툴바의 줄바꿈 계산에 끼어들지 않습니다 —

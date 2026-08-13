@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createDocumentStore } from 'sagak-core'
-import { mountEditor, settle, click, dialog } from './harness'
+import { mountEditor, settle, click, dialog, isOpen } from './harness'
 import type { MountedEditor } from './harness'
 
 /**
@@ -64,7 +64,15 @@ async function saveAs(e: MountedEditor, name: string): Promise<void> {
 async function openDocuments(e: MountedEditor): Promise<HTMLDialogElement> {
   await click(barPart(e, 'documents'))
   await settle(4)
-  return dialog('Documents')
+  const dlg = dialog('Documents')
+  /*
+   * **열렸는지**까지 봅니다. `dialog()` 는 이름으로 요소를 찾을 뿐이라 안
+   * 열려도 내용은 읽힙니다 — `showModal()` 을 지워도 이 파일 11개와 문서 줄
+   * 9개가 전부 통과했습니다. 링크·이미지 다이얼로그에서 이미 한 번 겪은
+   * 구멍입니다.
+   */
+  expect(isOpen(dlg), '문서 목록이 안 열렸습니다').toBe(true)
+  return dlg
 }
 
 const rowNames = (dlg: HTMLDialogElement): string[] =>
