@@ -3,6 +3,12 @@ import { useEffect, useState } from 'preact/hooks'
 import { Cloud, CloudOff, Loader2, Check, AlertCircle } from 'lucide-preact'
 import type { AutoSaveStatus } from 'sagak-core'
 import { useAutoSave } from '../../hooks'
+import {
+  DELETED_MS,
+  DELETED_TEXT,
+  WIDEST_LABELS,
+  formatTime,
+} from './auto-save-indicator.shared'
 
 const ICON_SIZE = 14
 
@@ -45,7 +51,6 @@ interface StatusView {
 const INVISIBLE: AutoSaveStatus[] = ['idle']
 
 /** 확인 문구가 머무는 시간 */
-const DELETED_MS = 4000
 
 function viewFor(
   status: AutoSaveStatus,
@@ -88,9 +93,6 @@ function viewFor(
   }
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
 
 /**
  * 시간 문구의 폭을 재기 위한 표본 시각들.
@@ -117,27 +119,12 @@ function formatTime(date: Date): string {
  * 표본을 하나만 두고 **가장 넓지 않은 시각을 고르면** 그만큼 버튼이 튑니다.
  * 오전·오후와 자릿수가 다른 것을 몇 개 두면 가장 넓은 것이 폭을 잡습니다.
  */
-const SAMPLE_TIMES = [
-  new Date(2000, 0, 1, 0, 0),
-  new Date(2000, 0, 1, 10, 0),
-  new Date(2000, 0, 1, 13, 45),
-  new Date(2000, 0, 1, 23, 59),
-]
 
 /**
  * 문구 자리의 폭을 정하는 후보들 — 실제로 뜨는 문구가 아니라 **자리를 재기
  * 위한** 것입니다.
  */
-const DELETED_TEXT = 'Draft deleted'
 
-const WIDEST_LABELS = [
-  'Unsaved changes',
-  'Saving...',
-  'Save failed',
-  'Saved',
-  DELETED_TEXT,
-  ...SAMPLE_TIMES.map((time) => `Saved at ${formatTime(time)}`),
-]
 
 const rowStyle: JSX.CSSProperties = {
   display: 'flex',

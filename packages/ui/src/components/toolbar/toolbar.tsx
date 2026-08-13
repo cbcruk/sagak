@@ -6,6 +6,7 @@ import '../../elements/toolbar-selects'
 import '../../elements/toolbar-commands'
 import '../../elements/toolbar-state-buttons'
 import '../../elements/color-picker'
+import '../../elements/auto-save-indicator'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
@@ -15,7 +16,6 @@ import { SpecialCharacterDialog } from '../special-character-dialog/special-char
 import { MoreMenu } from '../more-menu/more-menu'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
-import { AutoSaveIndicator } from '../auto-save-indicator/auto-save-indicator'
 
 export interface ToolbarProps {
   /**
@@ -137,7 +137,7 @@ export function Toolbar({
       */}
       {showAutoSaveIndicator && (
         <div data-part="trailing" style={{ marginLeft: 'auto' }}>
-          <AutoSaveIndicator />
+          <sagak-auto-save-indicator />
         </div>
       )}
       </sagak-editor-provider>

@@ -78,6 +78,9 @@ declare module 'preact' {
       'sagak-horizontal-rule-button': JSX.HTMLAttributes<HTMLElement>
       'sagak-alignment-buttons': JSX.HTMLAttributes<HTMLElement>
       'sagak-history-buttons': JSX.HTMLAttributes<HTMLElement>
+      'sagak-auto-save-indicator': JSX.HTMLAttributes<HTMLElement> & {
+        'show-time'?: string
+      }
       'sagak-color-picker': JSX.HTMLAttributes<HTMLElement> & {
         type: 'text' | 'background'
       }
