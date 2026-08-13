@@ -133,7 +133,7 @@ afterAll(async () => {
 })
 
 describe('시스템 폰트 불러오기', () => {
-  it('예전 내장 목록은 한글을 못 그립니다 — 그래서 걷어냈습니다', async () => {
+  it('한글 능력으로 거릅니다 — 이름으로 거르지 않습니다', async () => {
     await setPermission('granted')
     const query = (
       window as unknown as {
@@ -168,7 +168,29 @@ describe('시스템 폰트 불러오기', () => {
       ).toBe(false)
     }
 
-    expect(checked.length, '옛 목록 중 하나도 이 기계에 없어 확인하지 못했습니다').toBeGreaterThan(0)
+    /*
+     * 옛 이름이 이 기계에 하나도 없을 수 있습니다 (이 컨테이너가 그렇습니다 —
+     * Liberation·DejaVu 계열만 깔려 있습니다). 그때 그냥 통과시키면 **아무것도
+     * 안 보고 초록**이 되므로, 원래 이 테스트가 지키려던 성질을 대신 봅니다.
+     *
+     * 지키려던 것은 "이름이 아니라 **실제 한글 능력**으로 거른다" 입니다. 그게
+     * 성립하려면 판별기가 이 기계에서 실제로 **양쪽으로 갈라야** 합니다 — 늘
+     * true 나 늘 false 를 돌려주면 거르기 자체가 무의미합니다.
+     */
+    let korean = 0
+    let notKorean = 0
+    for (const [, font] of byFamily) {
+      if (korean > 0 && notKorean > 0) break
+      if (await supportsKorean(await font.blob())) korean += 1
+      else notKorean += 1
+    }
+
+    expect(korean, '이 기계에 한글 폰트가 하나도 없습니다').toBeGreaterThan(0)
+    expect(
+      notKorean,
+      '판별기가 전부 한글이라고 합니다 — 그러면 거르는 의미가 없습니다'
+    ).toBeGreaterThan(0)
+    expect(checked.length + korean + notKorean).toBeGreaterThan(0)
   })
 
   it('고른 한국어 폰트는 실제로 한글을 그릴 수 있습니다', async () => {

@@ -55,3 +55,22 @@ define(EDITOR_PROVIDER_TAG, (ctx) => {
     },
   }
 })
+
+/**
+ * 이주 중에는 Preact 가 커스텀 엘리먼트를 그리므로 JSX 가 태그를 알아야 합니다.
+ *
+ * 별도 `.d.ts` 로 뒀다가 앱 typecheck 에서 터졌습니다 — 아무도 import 하지
+ * 않는 선언 파일은 앱의 프로그램에 안 들어옵니다. 실제로 import 되는 이
+ * 모듈 안에 두면 어디서 컴파일하든 따라옵니다.
+ *
+ * 툴바가 전부 넘어가면 이 선언은 없어집니다 — 그때는 JSX 를 안 거칩니다.
+ */
+declare module 'preact' {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace JSX {
+    interface IntrinsicElements {
+      'sagak-editor-provider': JSX.HTMLAttributes<EditorProviderElement>
+      'sagak-font-family-select': JSX.HTMLAttributes<HTMLElement>
+    }
+  }
+}

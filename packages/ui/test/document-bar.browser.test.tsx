@@ -229,7 +229,19 @@ describe('문서 줄', () => {
     await type(ed, '<p>단축키로 저장</p>')
 
     answerName('단축키.html')
-    document.dispatchEvent(
+    /*
+     * `document` 에 직접 쏘면 `event.target` 이 `document` 가 됩니다. 실제
+     * 브라우저에서는 ⌘S 도 **포커스된 엘리먼트**에서 올라오므로 그런 이벤트는
+     * 존재하지 않습니다.
+     *
+     * 그 차이가 실제로 문제를 냈습니다 — 문서 줄의 kinu Menubar 가 같은
+     * keydown 을 받아 `target.closest(...)` 를 하다가 터졌고, 테스트는
+     * 통과하는데 실행마다 "Unhandled Error" 가 하나 남았습니다.
+     *
+     * 편집 영역에서 올려 보냅니다. 단축키 핸들러는 `document` 에서 듣고 있으니
+     * 버블링으로 똑같이 닿습니다.
+     */
+    ed.editable.dispatchEvent(
       new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true })
     )
     await settle(6)
