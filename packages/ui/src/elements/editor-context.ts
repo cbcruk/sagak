@@ -76,6 +76,8 @@ declare module 'preact' {
       'sagak-letter-spacing-select': JSX.HTMLAttributes<HTMLElement>
       'sagak-heading-select': JSX.HTMLAttributes<HTMLElement>
       'sagak-horizontal-rule-button': JSX.HTMLAttributes<HTMLElement>
+      'sagak-alignment-buttons': JSX.HTMLAttributes<HTMLElement>
+      'sagak-history-buttons': JSX.HTMLAttributes<HTMLElement>
     }
   }
 }

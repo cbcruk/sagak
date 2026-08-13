@@ -127,4 +127,60 @@ describe('옮긴 툴바 컨트롤', () => {
 
     expect(editable().querySelector('h2')).not.toBeNull()
   })
+
+  /**
+   * 정렬 버튼은 **누르면 먹고, 먹은 것이 눌린 것처럼 보여야** 합니다.
+   *
+   * 둘 다 검사가 없었습니다 — 정렬을 항상 `left` 로 쏘게 만들어도, 활성 표시를
+   * 통째로 지워도 139개가 전부 통과했습니다.
+   */
+  it('정렬 버튼이 실제로 정렬을 바꿉니다', async () => {
+    ed = await mountEditor('<p>hello world</p>')
+    await settle()
+
+    selectAll(editable())
+    await click(button(ed.root, 'Align Center'))
+
+    expect(editable().innerHTML, '가운데 정렬이 안 먹었습니다').toContain(
+      'center'
+    )
+  })
+
+  it('먹은 정렬이 버튼에 눌린 것으로 보입니다', async () => {
+    ed = await mountEditor('<p>hello world</p>')
+    await settle()
+
+    const center = (): HTMLElement => button(ed!.root, 'Align Center')
+    expect(center().dataset.state).toBeUndefined()
+
+    selectAll(editable())
+    await click(center())
+    placeCaretInText(editable(), 2)
+    await settle()
+
+    expect(
+      center().dataset.state,
+      '정렬은 먹었는데 버튼이 눌린 것으로 안 보입니다'
+    ).toBe('active')
+  })
+
+  /**
+   * 되돌릴 것이 없으면 실행 취소가 눌리면 안 됩니다. `undo.disabled` 를 늘
+   * `false` 로 만들어도 아무 검사가 안 걸렸습니다.
+   */
+  it('되돌릴 것이 생기기 전에는 실행 취소가 안 눌립니다', async () => {
+    ed = await mountEditor('<p>hello</p>')
+    await settle()
+
+    const undo = (): HTMLButtonElement =>
+      button(ed!.root, 'Undo (⌘Z)') as HTMLButtonElement
+
+    expect(undo().disabled, '되돌릴 것이 없는데 눌립니다').toBe(true)
+
+    editable().innerHTML = '<p>hello world</p>'
+    editable().dispatchEvent(new InputEvent('input', { bubbles: true }))
+    for (let i = 0; i < 40 && undo().disabled; i += 1) await settle(1)
+
+    expect(undo().disabled, '고쳤는데도 실행 취소가 안 눌립니다').toBe(false)
+  })
 })

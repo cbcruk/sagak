@@ -4,8 +4,10 @@ import { ParagraphEvents } from 'sagak-core'
 import { useEditorContext } from '../../context/editor-context'
 import { useSelectionDerived } from '../../hooks/use-selection-derived'
 import { ToolbarButton } from '../toolbar-button/toolbar-button'
-
-type AlignmentType = 'left' | 'center' | 'right' | 'justify'
+import {
+  getCurrentAlignment,
+  type AlignmentType,
+} from './alignment-buttons.shared'
 
 const ICON_SIZE = 16
 
@@ -15,28 +17,6 @@ const alignments = [
   { value: 'right', label: 'Align Right', Icon: AlignRight },
   { value: 'justify', label: 'Justify', Icon: AlignJustify },
 ] as const
-
-function getCurrentAlignment(): AlignmentType {
-  const selection = window.getSelection()
-  if (!selection || !selection.anchorNode) return 'left'
-
-  let node: Node | null = selection.anchorNode
-
-  while (node && node !== document.body) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as HTMLElement
-      const textAlign = window.getComputedStyle(element).textAlign
-
-      if (textAlign === 'center') return 'center'
-      if (textAlign === 'right') return 'right'
-      if (textAlign === 'justify') return 'justify'
-      if (textAlign === 'start' || textAlign === 'left') return 'left'
-    }
-    node = node.parentNode
-  }
-
-  return 'left'
-}
 
 export function AlignmentButtons(): ComponentChildren {
   const { eventBus } = useEditorContext()

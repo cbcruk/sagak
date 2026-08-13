@@ -4,18 +4,17 @@ import { type EditorProviderElement } from '../../elements/editor-context'
 import '../../elements/font-family-select'
 import '../../elements/toolbar-selects'
 import '../../elements/toolbar-commands'
+import '../../elements/toolbar-state-buttons'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
 import { ColorPicker } from '../color-picker/color-picker'
-import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { MoreMenu } from '../more-menu/more-menu'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
-import { HistoryButtons } from '../history-buttons/history-buttons'
 import { AutoSaveIndicator } from '../auto-save-indicator/auto-save-indicator'
 
 export interface ToolbarProps {
@@ -62,7 +61,7 @@ export function Toolbar({
       <sagak-editor-provider
         ref={(el: EditorProviderElement | null) => el?.setEditor(context)}
       >
-      <HistoryButtons />
+      <sagak-history-buttons />
 
       <div data-part="separator" />
 
@@ -92,7 +91,7 @@ export function Toolbar({
       <div data-part="separator" />
 
       {/* Alignment */}
-      <AlignmentButtons />
+      <sagak-alignment-buttons />
 
       <div data-part="separator" />
 
