@@ -13,8 +13,8 @@ import { SvelteHost } from '../../svelte/host'
 import HorizontalRuleButton from '../../svelte/HorizontalRuleButton.svelte'
 import ImageDialog from '../../svelte/ImageDialog.svelte'
 import TableDialog from '../../svelte/TableDialog.svelte'
+import FindReplaceDialog from '../../svelte/FindReplaceDialog.svelte'
 import { ListButtons } from '../list-buttons/list-buttons'
-import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
@@ -115,7 +115,7 @@ export function Toolbar({
 
         {/* Find & Export */}
         <div style={{ display: 'flex', gap: 4 }}>
-          <FindReplaceDialog />
+          <SvelteHost component={FindReplaceDialog} />
           <ExportMenu />
         </div>
       </div>

@@ -116,4 +116,52 @@ describe('찾기/바꾸기', () => {
     await press('Prev')
     expect(matches(dlg)).toBe('3 of 3 matches')
   })
+
+  /**
+   * ## 대조군에서 안 물던 둘
+   *
+   * Svelte 로 옮기며 사보타주를 돌렸더니 두 가지가 **아무 검사도 안 걸렸습니다.**
+   *
+   * | 사보타주 | 결과 |
+   * | --- | --- |
+   * | 닫을 때 강조 정리를 지움 | 17개 전부 통과 |
+   * | Enter 로 다음 찾기를 지움 | 17개 전부 통과 |
+   *
+   * 둘 다 원래 없던 검사입니다. 특히 첫째는 Preact 판 주석이 **일부러 짚어
+   * 두었던 것**입니다 — "Esc 든 Close 버튼이든 어느 경로로 닫혀도 강조가
+   * 정리되도록" 이라고 적혀 있는데, 정작 그걸 지키는 검사는 없었습니다.
+   */
+  it('닫으면 강조가 정리됩니다', async () => {
+    ed = await mountEditor('<p>hello hello hello</p>')
+    const dlg = await openFind(ed.root, 'hello')
+    expect(matches(dlg)).toBe('1 of 3 matches')
+
+    /* 강조는 `find-highlight` 클래스로 편집 영역에 남습니다 */
+    expect(ed.editable.innerHTML, '강조가 안 걸렸습니다').toContain(
+      'find-highlight'
+    )
+
+    dlg.close()
+    await settle(4)
+
+    expect(ed.editable.innerHTML, '닫았는데 강조가 남았습니다').not.toContain(
+      'find-highlight'
+    )
+  })
+
+  it('Enter 로 다음 일치로 넘어갑니다', async () => {
+    ed = await mountEditor('<p>hello hello hello</p>')
+    const dlg = await openFind(ed.root, 'hello')
+    expect(matches(dlg)).toBe('1 of 3 matches')
+
+    const input = dlg.querySelector<HTMLInputElement>('input[type="text"]')!
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    )
+    await settle(4)
+
+    expect(matches(dlg), 'Enter 가 다음으로 안 넘어갑니다').toBe(
+      '2 of 3 matches'
+    )
+  })
 })
