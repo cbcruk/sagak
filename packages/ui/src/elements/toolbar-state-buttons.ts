@@ -79,10 +79,17 @@ define(ALIGNMENT_BUTTONS_TAG, (ctx) => {
    * 켜진 것 하나만 `data-state="active"` 입니다. Preact 판이 `state` prop 으로
    * 하던 것과 같은 속성이라 `[data-part='icon-button'][data-state]` 스타일이
    * 그대로 걸립니다.
+   *
+   * **같은 값이면 안 씁니다.** 예전에는 캐럿이 움직일 때마다 켜진 버튼에
+   * `active` 를 다시 써 넣었습니다 — 값이 그대로여도 DOM 변경으로 잡히고,
+   * 화면 열 번 갱신에 열 번 다 일어났습니다. `render.browser.test.tsx` 를
+   * Preact 렌더 세기에서 DOM 변경 세기로 바꾸고 나서야 보였습니다.
    */
   function paint(current: AlignmentType): void {
     for (const { value, button } of buttons) {
-      if (value === current) button.dataset.state = 'active'
+      const next = value === current ? 'active' : undefined
+      if (button.dataset.state === next) continue
+      if (next) button.dataset.state = next
       else delete button.dataset.state
     }
   }

@@ -53,6 +53,62 @@ describe('툴바', () => {
       expect(bold.getAttribute('aria-pressed')).toBe('true')
     })
 
+    /**
+     * ## 대조군에서 안 물던 것 — 넷 중 **하나만** 검사가 있었습니다
+     *
+     * 서식 토글을 Svelte 로 옮기며 사보타주를 돌렸더니, 굵게만 물고 기울임·
+     * 밑줄·취소선은 상태 반영을 통째로 지워도 176개가 그대로 통과했습니다.
+     * 굵게 아이콘의 획 두께(`stroke-width: 2.5`)도 마찬가지입니다 — 되돌리면
+     * 그 버튼만 가늘어 보이는데 아무것도 안 걸립니다.
+     */
+    it('네 토글이 각자 자기 서식만 눌린 것으로 보여야 함', async () => {
+      ed = await mountEditor(
+        '<p><strong>굵게</strong><em>기울임</em><u>밑줄</u><s>취소선</s></p>'
+      )
+      await settle(6)
+
+      const pressed = (label: string): string | null =>
+        ed!.root
+          .querySelector(`button[aria-label="${label}"]`)!
+          .getAttribute('aria-pressed')
+
+      for (const [selector, label] of [
+        ['strong', 'Bold'],
+        ['em', 'Italic'],
+        ['u', 'Underline'],
+        ['s', 'Strikethrough'],
+      ]) {
+        const range = document.createRange()
+        range.selectNodeContents(ed.editable.querySelector(selector)!)
+        const selection = window.getSelection()
+        selection?.removeAllRanges()
+        selection?.addRange(range)
+        document.dispatchEvent(new Event('selectionchange'))
+        await settle(6)
+
+        expect(pressed(label), `${label} 이 안 눌린 것으로 보입니다`).toBe(
+          'true'
+        )
+        for (const other of ['Bold', 'Italic', 'Underline', 'Strikethrough']) {
+          if (other === label) continue
+          expect(pressed(other), `${label} 인데 ${other} 도 눌렸습니다`).toBe(
+            'false'
+          )
+        }
+      }
+    })
+
+    it('굵게 아이콘만 획이 두꺼워야 함', async () => {
+      ed = await mountEditor()
+      const stroke = (label: string): string | null =>
+        ed!.root
+          .querySelector(`button[aria-label="${label}"] svg`)!
+          .getAttribute('stroke-width')
+
+      expect(stroke('Bold'), '굵게 아이콘이 가늘어졌습니다').toBe('2.5')
+      expect(stroke('Italic')).toBe('2')
+    })
+
     it('세그먼트 모서리를 이어붙여야 함', async () => {
       ed = await mountEditor()
       const toggles = ed.root.querySelectorAll<HTMLElement>(

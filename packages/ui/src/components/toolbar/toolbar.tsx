@@ -17,7 +17,7 @@ import FindReplaceDialog from '../../svelte/FindReplaceDialog.svelte'
 import SpecialCharacterDialog from '../../svelte/SpecialCharacterDialog.svelte'
 import ListButtons from '../../svelte/ListButtons.svelte'
 import ExportMenu from '../../svelte/ExportMenu.svelte'
-import { FormatToggles } from '../format-toggles/format-toggles'
+import FormatToggles from '../../svelte/FormatToggles.svelte'
 
 export interface ToolbarProps {
   /**
@@ -72,7 +72,7 @@ export function Toolbar({
 
       <div data-part="separator" />
 
-      <FormatToggles />
+      <SvelteHost component={FormatToggles} />
 
       {/* Colors */}
       <sagak-color-picker type="text" />
