@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useState } from 'preact/hooks'
-import { Dialog, Button } from 'kinu'
+import { Dialog, Button, MenubarItem } from 'kinu'
 import { useDocument } from '../../hooks'
 import { useDialogHandle } from '../../hooks/use-dialog-handle'
 
@@ -88,15 +88,20 @@ export function DocumentDialog({
 
   return (
     <Dialog id={dialogId}>
+      {/*
+        문서 줄의 메뉴 안에 서므로 `MenubarItem` 입니다. `Dialog.Trigger` 는
+        자체 요소를 만들지 않고 자식에 `commandfor`/`command` 를 얹으므로,
+        그 속성이 실제 버튼까지 닿습니다 (`toolbar-button` 과 같은 이유).
+      */}
       <Dialog.Trigger>
-        <button
+        <MenubarItem
           type="button"
           data-part="documents"
           onClick={handleOpen}
           title="Documents"
         >
           Documents…
-        </button>
+        </MenubarItem>
       </Dialog.Trigger>
 
       <Dialog.Content id={dialogId} aria-label="Documents">

@@ -82,7 +82,34 @@
   color: var(--sagak-accent);
 }
 
-[data-scope='document-bar'] button,
+/*
+ * 메뉴 항목입니다. kinu 의 `[k=menubar]` 가 배치를, 여기가 색을 맡습니다.
+ *
+ * 테두리가 없습니다 — 메뉴는 버튼 다섯 개가 아니라 한 줄이어야 하고,
+ * 경계는 hover 로만 드러나면 됩니다. 높이는 옆의 컨트롤과 같은 토큰을
+ * 씁니다.
+ */
+[data-scope='document-bar'] [k='menubar-item'] {
+  height: var(--sagak-control-height);
+  font-size: 12px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--sagak-chrome-fg);
+  cursor: pointer;
+}
+
+[data-scope='document-bar'] [k='menubar-item']:hover {
+  background: var(--sagak-chrome-hover);
+}
+
+/*
+ * 문서 목록 다이얼로그의 버튼들입니다. `<dialog>` 가 문서 줄 **안**에
+ * 렌더되므로 이 선택자에 걸립니다 — 메뉴 항목만 빼고 예전 모양 그대로
+ * 둡니다.
+ */
+[data-scope='document-bar'] button:not([k='menubar-item']),
 [data-scope='document-bar'] select {
   height: var(--sagak-control-height);
   font-size: 12px;
@@ -94,7 +121,7 @@
   cursor: pointer;
 }
 
-[data-scope='document-bar'] button:hover {
+[data-scope='document-bar'] button:not([k='menubar-item']):hover {
   background: var(--sagak-chrome-hover);
 }
 
