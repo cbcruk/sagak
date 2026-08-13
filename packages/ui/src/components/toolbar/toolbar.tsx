@@ -1,5 +1,7 @@
 import type { ComponentChildren } from 'preact'
-import { FontFamilySelect } from '../font-family-select/font-family-select'
+import { useEditorContext } from '../../context/editor-context'
+import { type EditorProviderElement } from '../../elements/editor-context'
+import '../../elements/font-family-select'
 import { FontSizeSelect } from '../font-size-select/font-size-select'
 import { HeadingSelect } from '../heading-select/heading-select'
 import { LinkDialog } from '../link-dialog/link-dialog'
@@ -42,6 +44,8 @@ export interface ToolbarProps {
 export function Toolbar({
   showAutoSaveIndicator = false,
 }: ToolbarProps = {}): ComponentChildren {
+  const context = useEditorContext()
+
   return (
     <div
       data-scope="toolbar"
@@ -67,7 +71,18 @@ export function Toolbar({
       <div data-part="separator" />
 
       {/* Font Family, Size - always visible */}
-      <FontFamilySelect />
+      {/*
+        nanotags 이주 1번 — 폰트 메뉴만 커스텀 엘리먼트입니다.
+
+        provider 가 에디터를 실어 주고, 그 아래 커스텀 엘리먼트가 DOM 이벤트로
+        받아 갑니다. 둘 다 `display: contents` 라 툴바의 줄바꿈 계산은 예전과
+        같습니다.
+      */}
+      <sagak-editor-provider
+        ref={(el: EditorProviderElement | null) => el?.setEditor(context)}
+      >
+        <sagak-font-family-select />
+      </sagak-editor-provider>
       <FontSizeSelect />
 
       {/* Line Height & Letter Spacing - hidden on mobile */}

@@ -100,6 +100,21 @@ function createTracker(context: EditorContext): Tracker {
   }
 }
 
+/**
+ * 선택 영역 구독 — **렌더러와 무관합니다.**
+ *
+ * 위의 가드 셋(IME 조합 중 무시 · 다음 프레임까지 지연 · 에디터 밖이면 건너뜀)은
+ * Preact 를 하나도 안 씁니다. 커스텀 엘리먼트로 옮기는 컴포넌트도 이 구독을
+ * **그대로** 써야 합니다 — 안 그러면 가드를 다시 구현하게 되고, 그건 이 파일
+ * 첫머리에 적힌 "여섯 곳이 제각각이던" 상태로 되돌아가는 길입니다.
+ */
+export function subscribeToSelection(
+  context: EditorContext,
+  listener: Listener
+): () => void {
+  return getTracker(context).subscribe(listener)
+}
+
 function getTracker(context: EditorContext): Tracker {
   let tracker = trackers.get(context)
   if (!tracker) {

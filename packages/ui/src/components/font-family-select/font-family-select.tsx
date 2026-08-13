@@ -3,6 +3,15 @@ import { useFontState, useLocalFonts } from '../../hooks'
 import { ToolbarSelect } from '../toolbar-select/toolbar-select'
 import type { ToolbarSelectOption } from '../toolbar-select/toolbar-select'
 import { sameFontFamily } from './font-family-select.utils'
+import {
+  FALLBACK_FONTS as fallbackFonts,
+  FIXED_WIDTH,
+  LOAD_SYSTEM_FONTS_VALUE,
+  SYSTEM_GROUP,
+  FALLBACK_GROUP,
+} from './font-family-select.shared'
+
+export { LOAD_SYSTEM_FONTS_VALUE }
 
 /**
  * 기본 목록 — **한글을 그릴 수 있는 것만** 둡니다.
@@ -18,21 +27,6 @@ import { sameFontFamily } from './font-family-select.utils'
  * 있고 권한도 필요해서, 없거나 거절당한 자리에서 폰트 메뉴가 비면 안 됩니다.
  * 그 자리에서도 최소한 고딕/명조는 고를 수 있어야 합니다.
  */
-const fallbackFonts = [
-  {
-    label: 'Sans',
-    value:
-      '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Nanum Gothic", sans-serif',
-  },
-  {
-    label: 'Serif',
-    value: '"AppleMyungjo", "Batang", "Noto Serif KR", "Nanum Myeongjo", serif',
-  },
-  {
-    label: 'Mono',
-    value: '"D2Coding", "Nanum Gothic Coding", ui-monospace, monospace',
-  },
-]
 
 /** 각 옵션을 자기 폰트로 렌더해 미리보기가 되게 합니다 */
 const fallback: ToolbarSelectOption[] = fallbackFonts.map((font) => ({
@@ -62,7 +56,6 @@ const fallback: ToolbarSelectOption[] = fallbackFonts.map((font) => ({
  * 그래서 지금은 이 상수를 export 해서 테스트가 **같은 것**을 보게 하고,
  * 눈에 보이는 ASCII 만 씁니다.
  */
-export const LOAD_SYSTEM_FONTS_VALUE = '__sagak_load_system_fonts__'
 
 /**
  * `<optgroup>` 이름.
@@ -70,8 +63,6 @@ export const LOAD_SYSTEM_FONTS_VALUE = '__sagak_load_system_fonts__'
  * 섞어 두면 어느 것이 진짜 그 기계에 깔린 폰트이고 어느 것이 폴백 스택인지
  * 구분이 안 됩니다.
  */
-const SYSTEM_GROUP = 'Korean'
-const FALLBACK_GROUP = 'Default'
 
 /**
  * 폰트 메뉴의 고정 폭 — **이 기능을 쓰기 전의 폭 그대로**입니다.
@@ -110,7 +101,6 @@ const FALLBACK_GROUP = 'Default'
  * 대신 닫힌 상태에서 긴 이름은 말줄임으로 잘립니다. 고른 폰트가 무엇인지는
  * 메뉴를 열면 보이므로 이쪽을 택했습니다.
  */
-const FIXED_WIDTH = 104
 
 export function FontFamilySelect(): ComponentChildren {
   const { fontFamily, setFontFamily } = useFontState()

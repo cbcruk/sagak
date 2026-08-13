@@ -1,4 +1,5 @@
-import { signal } from '@preact/signals'
+import { atom } from 'nanostores'
+import { useSyncExternalStore } from 'preact/compat'
 import { supportsKorean } from './use-local-fonts.utils'
 
 /**
@@ -101,10 +102,8 @@ const CONCURRENCY = 8
 /*
  * 기계 하나에 목록도 하나입니다. 컴포넌트가 몇 개든 여기를 같이 봅니다.
  */
-const statusSignal = signal<LocalFontsStatus>(
-  queryFn() ? 'idle' : 'unsupported'
-)
-const familiesSignal = signal<string[]>([])
+export const $status = atom<LocalFontsStatus>(queryFn() ? 'idle' : 'unsupported')
+export const $families = atom<string[]>([])
 
 /** 진행 중인 호출 — 같은 요청이 겹쳐 나가지 않게 합니다 */
 let inFlight: Promise<void> | null = null
@@ -189,6 +188,10 @@ async function filterKorean(fonts: FontData[]): Promise<string[]> {
   return korean.sort((a, b) => a.localeCompare(b))
 }
 
+export function loadLocalFonts(): void {
+  load()
+}
+
 function load(): void {
   const query = queryFn()
   /*
@@ -202,7 +205,7 @@ function load(): void {
     return
   }
 
-  statusSignal.value = 'loading'
+  $status.set('loading')
   inFlight = query()
     .then(async (fonts) => {
       const all = [...new Set(fonts.map((font) => font.family))].sort()
@@ -214,15 +217,15 @@ function load(): void {
        */
       const cached = readCache(signature)
       if (cached) {
-        familiesSignal.value = cached
-        statusSignal.value = 'ready'
+        $families.set(cached)
+        $status.set('ready')
         return
       }
 
       const korean = await filterKorean(fonts)
       writeCache(signature, korean)
-      familiesSignal.value = korean
-      statusSignal.value = 'ready'
+      $families.set(korean)
+      $status.set('ready')
     })
     .catch((error: Error) => {
       /*
@@ -232,7 +235,7 @@ function load(): void {
        * 나머지는 한 번 해 봤다는 사실만 남깁니다 — 목록이 비어 있으므로
        * 보여줄 것이 없고, 다시 조르지도 않습니다.
        */
-      statusSignal.value = error.name === 'SecurityError' ? 'idle' : 'ready'
+      $status.set(error.name === 'SecurityError' ? 'idle' : 'ready')
     })
     .finally(() => {
       inFlight = null
@@ -245,8 +248,8 @@ function load(): void {
 
 /** 권한이 사라졌으면 들고 있던 목록도 버립니다 */
 function forget(): void {
-  familiesSignal.value = []
-  statusSignal.value = 'idle'
+  $families.set([])
+  $status.set('idle')
 }
 
 let watching = false
@@ -257,7 +260,7 @@ let watching = false
  * 훅이 처음 불릴 때 시작합니다 — 모듈을 읽는 것만으로 `navigator` 를 건드리지
  * 않도록, 그리고 폰트 메뉴가 화면에 없으면 아무것도 안 하도록.
  */
-function watchPermission(): void {
+export function watchLocalFontPermission(): void {
   if (watching || !queryFn()) return
   watching = true
 
@@ -278,15 +281,15 @@ function watchPermission(): void {
 }
 
 export function useLocalFonts(): UseLocalFontsReturn {
-  watchPermission()
+  watchLocalFontPermission()
 
   /*
    * `.value` 를 읽는 것만으로 이 컴포넌트가 구독됩니다. 훅은 모듈 상태를
    * 비추기만 하고 자기 상태를 갖지 않습니다.
    */
   return {
-    status: statusSignal.value,
-    families: familiesSignal.value,
+    status: useSyncExternalStore($status.subscribe, $status.get),
+    families: useSyncExternalStore($families.subscribe, $families.get),
     load,
   }
 }
