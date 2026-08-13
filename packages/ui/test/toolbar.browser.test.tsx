@@ -16,6 +16,7 @@ import {
 import { List, ListOrdered } from 'lucide'
 import type { IconNode } from 'lucide'
 import { icon } from '../src/elements/icon'
+import { ExportEvents } from 'sagak-core'
 
 /**
  * kinu 이전(#13·#14) 때 브라우저를 직접 몰아 확인했던 것들입니다.
@@ -302,6 +303,55 @@ describe('툴바', () => {
       await settle(6)
 
       expect(isOpen(menu)).toBe(false)
+    })
+
+    /**
+     * ## 대조군에서 안 물던 것 — **내보내기가 실제로 나가는지**
+     *
+     * Export 메뉴를 옮기며 사보타주를 돌렸더니 지금까지 중 가장 큰 구멍이
+     * 나왔습니다.
+     *
+     * | 사보타주 | 결과 |
+     * | --- | --- |
+     * | 고른 형식을 무시하고 항상 `html` | 175개 전부 통과 |
+     * | 발행 자체를 **삭제** | 175개 전부 통과 |
+     *
+     * 있던 검사는 "열리고 항목이 셋이고 누르면 닫힌다" 까지였습니다. 메뉴가
+     * 여닫히는 것만 보고 있었던 셈이라, **Markdown 을 눌러도 아무 일이 안
+     * 일어나는 상태**가 검사를 다 통과합니다.
+     */
+    it('고른 형식이 그대로 발행되어야 함', async () => {
+      ed = await mountEditor()
+      const sent: unknown[] = []
+      const off = ed.context.eventBus.on(
+        ExportEvents.EXPORT_DOWNLOAD,
+        'after',
+        (payload?: unknown) => {
+          sent.push(payload)
+        }
+      )
+
+      /* 형식 이름은 아래 `toEqual` 에서 순서대로 확인합니다 */
+      for (const label of ['HTML', 'Markdown', 'Plain Text']) {
+        await click(button(ed.root, 'Export'))
+        const menu = dialog('Export as')
+        /* 이름과 설명이 각각 `<span>` 이라 이름 쪽만 정확히 맞춥니다 */
+        const item = [...menu.querySelectorAll('button')].find((b) =>
+          [...b.querySelectorAll('span')].some(
+            (s) => s.textContent?.trim() === label
+          )
+        )!
+        expect(item, `${label} 항목을 찾지 못했습니다`).toBeDefined()
+        await click(item)
+        await settle(6)
+      }
+
+      off()
+      expect(sent, '고른 형식이 그대로 안 나갑니다').toEqual([
+        { format: 'html', filename: 'document' },
+        { format: 'markdown', filename: 'document' },
+        { format: 'text', filename: 'document' },
+      ])
     })
 
     it('목록 메뉴로 번호/글머리 목록을 만들어야 함', async () => {

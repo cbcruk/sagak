@@ -16,7 +16,7 @@ import TableDialog from '../../svelte/TableDialog.svelte'
 import FindReplaceDialog from '../../svelte/FindReplaceDialog.svelte'
 import SpecialCharacterDialog from '../../svelte/SpecialCharacterDialog.svelte'
 import ListButtons from '../../svelte/ListButtons.svelte'
-import { ExportMenu } from '../export-menu/export-menu'
+import ExportMenu from '../../svelte/ExportMenu.svelte'
 import { FormatToggles } from '../format-toggles/format-toggles'
 
 export interface ToolbarProps {
@@ -116,7 +116,7 @@ export function Toolbar({
         {/* Find & Export */}
         <div style={{ display: 'flex', gap: 4 }}>
           <SvelteHost component={FindReplaceDialog} />
-          <ExportMenu />
+          <SvelteHost component={ExportMenu} />
         </div>
       </div>
 
