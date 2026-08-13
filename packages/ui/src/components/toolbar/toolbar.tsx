@@ -7,13 +7,13 @@ import '../../elements/toolbar-commands'
 import '../../elements/toolbar-state-buttons'
 import '../../elements/color-picker'
 import '../../elements/auto-save-indicator'
+import '../../elements/more-menu'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
-import { MoreMenu } from '../more-menu/more-menu'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
 
@@ -119,7 +119,7 @@ export function Toolbar({
       </div>
 
       {/* More Menu - visible on mobile */}
-      <MoreMenu />
+      <sagak-more-menu />
 
       {/*
         자동 저장 표시는 **툴바 안**에 있습니다 (`showAutoSaveIndicator`).
