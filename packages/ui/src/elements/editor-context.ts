@@ -71,6 +71,11 @@ declare module 'preact' {
     interface IntrinsicElements {
       'sagak-editor-provider': JSX.HTMLAttributes<EditorProviderElement>
       'sagak-font-family-select': JSX.HTMLAttributes<HTMLElement>
+      'sagak-font-size-select': JSX.HTMLAttributes<HTMLElement>
+      'sagak-line-height-select': JSX.HTMLAttributes<HTMLElement>
+      'sagak-letter-spacing-select': JSX.HTMLAttributes<HTMLElement>
+      'sagak-heading-select': JSX.HTMLAttributes<HTMLElement>
+      'sagak-horizontal-rule-button': JSX.HTMLAttributes<HTMLElement>
     }
   }
 }

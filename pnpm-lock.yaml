@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      lucide:
+        specifier: ^1.31.0
+        version: 1.31.0
       nanostores:
         specifier: ^1.4.2
         version: 1.4.2
@@ -1556,6 +1559,9 @@ packages:
     resolution: {integrity: sha512-1LOH/QVkxZ0zMspMPcVAbEfmwKHM3llG8ikA8j2M7GaMKRHZLn32PohXnvmsqDMhrCBsBc9pt1ybPCUYteywtQ==}
     peerDependencies:
       preact: ^10.27.2
+
+  lucide@1.31.0:
+    resolution: {integrity: sha512-iPJC7py8o990ZSmvFZlS+4+bNasP+ANDkD0IeDOGgQZjTm3p85F2Ldut7leM1yhYavr1pmoPfigm9MDHyyCOrw==}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -3574,6 +3580,8 @@ snapshots:
   lucide-preact@0.562.0(preact@10.28.0):
     dependencies:
       preact: 10.28.0
+
+  lucide@1.31.0: {}
 
   lz-string@1.5.0: {}
 

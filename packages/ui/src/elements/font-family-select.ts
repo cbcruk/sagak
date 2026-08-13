@@ -69,6 +69,7 @@ define(FONT_FAMILY_SELECT_TAG, (ctx) => {
   /* ② 템플릿은 컨테이너(select/optgroup) 바깥 — host 직속입니다 */
   const template = ctx.getElement<HTMLTemplateElement>(ctx.host, 'template')
 
+  select.setAttribute('k', 'select')
   select.title = 'Font Family'
   select.setAttribute('aria-label', 'Font Family')
   select.style.width = `${FIXED_WIDTH}px`

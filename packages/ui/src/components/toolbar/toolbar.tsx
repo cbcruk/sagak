@@ -2,8 +2,8 @@ import type { ComponentChildren } from 'preact'
 import { useEditorContext } from '../../context/editor-context'
 import { type EditorProviderElement } from '../../elements/editor-context'
 import '../../elements/font-family-select'
-import { FontSizeSelect } from '../font-size-select/font-size-select'
-import { HeadingSelect } from '../heading-select/heading-select'
+import '../../elements/toolbar-selects'
+import '../../elements/toolbar-commands'
 import { LinkDialog } from '../link-dialog/link-dialog'
 import { ImageDialog } from '../image-dialog/image-dialog'
 import { TableDialog } from '../table-dialog/table-dialog'
@@ -11,9 +11,6 @@ import { ColorPicker } from '../color-picker/color-picker'
 import { AlignmentButtons } from '../alignment-buttons/alignment-buttons'
 import { ListButtons } from '../list-buttons/list-buttons'
 import { FindReplaceDialog } from '../find-replace-dialog/find-replace-dialog'
-import { HorizontalRuleButton } from '../horizontal-rule-button/horizontal-rule-button'
-import { LineHeightSelect } from '../line-height-select/line-height-select'
-import { LetterSpacingSelect } from '../letter-spacing-select/letter-spacing-select'
 import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { MoreMenu } from '../more-menu/more-menu'
 import { ExportMenu } from '../export-menu/export-menu'
@@ -53,12 +50,24 @@ export function Toolbar({
       role="toolbar"
       aria-label="Text formatting"
     >
+      {/*
+        이주 중 배선 — 커스텀 엘리먼트가 에디터에 닿는 통로입니다.
+
+        Preact 컨텍스트는 커스텀 엘리먼트가 못 봅니다. provider 가 DOM 이벤트로
+        내려 주고, 아래의 `sagak-*` 들이 받아 갑니다. `display: contents` 라
+        툴바의 줄바꿈 계산에는 끼어들지 않습니다.
+
+        툴바가 전부 넘어가면 이 배선은 앱 진입점으로 올라갑니다.
+      */}
+      <sagak-editor-provider
+        ref={(el: EditorProviderElement | null) => el?.setEditor(context)}
+      >
       <HistoryButtons />
 
       <div data-part="separator" />
 
       {/* Heading/Paragraph */}
-      <HeadingSelect />
+      <sagak-heading-select />
 
       <div data-part="separator" />
 
@@ -71,24 +80,13 @@ export function Toolbar({
       <div data-part="separator" />
 
       {/* Font Family, Size - always visible */}
-      {/*
-        nanotags 이주 1번 — 폰트 메뉴만 커스텀 엘리먼트입니다.
-
-        provider 가 에디터를 실어 주고, 그 아래 커스텀 엘리먼트가 DOM 이벤트로
-        받아 갑니다. 둘 다 `display: contents` 라 툴바의 줄바꿈 계산은 예전과
-        같습니다.
-      */}
-      <sagak-editor-provider
-        ref={(el: EditorProviderElement | null) => el?.setEditor(context)}
-      >
-        <sagak-font-family-select />
-      </sagak-editor-provider>
-      <FontSizeSelect />
+      <sagak-font-family-select />
+      <sagak-font-size-select />
 
       {/* Line Height & Letter Spacing - hidden on mobile */}
       <div data-part="mobile-hidden" style={{ display: 'contents' }}>
-        <LineHeightSelect />
-        <LetterSpacingSelect />
+        <sagak-line-height-select />
+        <sagak-letter-spacing-select />
       </div>
 
       <div data-part="separator" />
@@ -108,7 +106,7 @@ export function Toolbar({
           <LinkDialog />
           <ImageDialog />
           <TableDialog />
-          <HorizontalRuleButton />
+          <sagak-horizontal-rule-button />
           <SpecialCharacterDialog />
         </div>
 
@@ -143,6 +141,7 @@ export function Toolbar({
           <AutoSaveIndicator />
         </div>
       )}
+      </sagak-editor-provider>
     </div>
   )
 }
