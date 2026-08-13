@@ -162,6 +162,62 @@ describe('툴바', () => {
       expect(ed.editable.textContent).toContain('α')
     })
 
+    /**
+     * ## 대조군에서 안 물던 것 — 탭 줄의 생김새
+     *
+     * Svelte 로 옮기며 `k="tablist"`·`k="tab"`·`k="button"` 을 전부 떼어도
+     * 163개가 그대로 통과했습니다. 화면에서는 탭 줄이 무너져 기본 버튼들이
+     * 세로로 늘어서고 문자 칸이 40px 에서 21px 로 쪼그라드는데도요.
+     *
+     * 링크·이미지 다이얼로그에서 이미 한 번 겪은 회귀입니다 (`k` 를 안 달아
+     * 테마를 안 따라갔던 것). **옮기는 동안 생김새가 갈리지 않는 것**이 검사로
+     * 남아 있어야 합니다.
+     *
+     * 재 본 값들입니다.
+     *
+     * | | `k` 있음 | `k` 없음 |
+     * | --- | --- | --- |
+     * | 탭 줄 `display` | `flex` | `block` |
+     * | 문자 칸 | 40×40 | 21px 높이 |
+     * | 고른 표시 위치 | 3px → 194px | 없음(`content: none`) |
+     *
+     * 마지막 줄이 핵심입니다. kinu 의 탭 표시는 **순수 CSS**
+     * (`anchor-name`/`position-anchor`)라 `aria-selected` 만 옮기면 따라옵니다.
+     */
+    it('특수문자 탭 줄이 kinu 생김새를 유지해야 함', async () => {
+      ed = await mountEditor('<p>x</p>')
+      await click(button(ed.root, 'Insert Special Character'))
+      const dlg = dialog('Insert Special Character')
+
+      const tabRow = dlg.querySelector('div')!
+      expect(
+        getComputedStyle(tabRow).display,
+        '탭이 한 줄로 늘어서지 않습니다'
+      ).toBe('flex')
+
+      const indicator = (): string =>
+        getComputedStyle(tabRow, ':before').insetInlineStart
+      const startLeft = indicator()
+      expect(startLeft, '고른 탭을 가리키는 표시가 없습니다').not.toBe('auto')
+
+      const greek = [...tabRow.querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Greek'
+      )!
+      await click(greek)
+      await settle(20)
+      expect(indicator(), '표시가 고른 탭을 따라오지 않습니다').not.toBe(startLeft)
+
+      /* 문자 칸은 `size="icon"` 이라 정사각형입니다 */
+      const charButton = [...dlg.querySelectorAll('button')].find(
+        (b) => b.getAttribute('title') === 'α'
+      )!
+      const box = charButton.getBoundingClientRect()
+      expect(box.height, '문자 칸이 기본 버튼 높이로 쪼그라들었습니다').toBe(40)
+      expect(box.width).toBe(40)
+
+      dlg.close()
+    })
+
     it('링크를 삽입하고, 다시 열면 기존 URL 을 미리 채워야 함', async () => {
       ed = await mountEditor('<p>link me</p>')
       selectAll(ed.editable)

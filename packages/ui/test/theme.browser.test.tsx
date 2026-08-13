@@ -6,6 +6,7 @@ import {
   click,
   button,
   dialog,
+  isOpen,
   placeCaretInText,
   type MountedEditor,
 } from './harness'
@@ -166,11 +167,39 @@ describe('테마', () => {
         ).toBeGreaterThanOrEqual(3)
       })
 
-      it('다이얼로그가 테마를 따라야 함', async () => {
-        ed = await mountEditor()
-        await click(button(ed.root, 'Insert Table'))
+      /**
+       * **다이얼로그 전부**를 봅니다 — 예전엔 표 하나만 봤습니다.
+       *
+       * 다이얼로그의 생김새는 `k="dialog-content"` 속성 하나에 달려 있는데
+       * 이걸 빼먹기가 아주 쉽습니다. Preact 를 걷어내며 링크·이미지
+       * 다이얼로그가 실제로 이 속성 없이 옮겨졌습니다.
+       *
+       * ## 대비만 봐서는 안 물립니다 — 재 보고 알았습니다
+       *
+       * 목록으로 돌리기만 하면 잡힐 줄 알았는데 아니었습니다. `k` 를 떼도
+       * 대조군이 **그대로 통과**합니다. UA 기본 `<dialog>` 가 `color-scheme`
+       * 을 따라가서, 다크에서 배경이 `rgb(18, 18, 18)` — 우리 것(`rgb(9, 14,
+       * 27)`)만큼이나 어둡고 흰 글씨와 대비도 충분하기 때문입니다.
+       *
+       * 즉 **테마를 따르는지와 우리 표면을 입었는지는 다른 질문**입니다.
+       * 둥근 모서리와 세로 배치가 UA 기본값과 갈라지는 지점이라 둘 다 봅니다.
+       */
+      const DIALOGS = [
+        'Insert Table',
+        'Insert Image',
+        'Insert Link',
+        'Insert Special Character',
+        'Find & Replace',
+      ]
 
-        const dlg = dialog('Insert Table')
+      it.each(DIALOGS)('%s 다이얼로그가 테마를 따라야 함', async (name) => {
+        ed = await mountEditor()
+        await click(button(ed.root, name))
+
+        /* 여는 버튼의 이름과 다이얼로그의 `aria-label` 이 같습니다 */
+        const dlg = dialog(name)
+        expect(isOpen(dlg), '다이얼로그가 안 열렸습니다').toBe(true)
+
         const style = getComputedStyle(dlg)
 
         if (scheme === 'dark') {
@@ -181,6 +210,13 @@ describe('테마', () => {
         expect(
           contrast(style.backgroundColor, style.color)
         ).toBeGreaterThanOrEqual(4.5)
+
+        /* UA 기본 `<dialog>` 는 각진 모서리에 `display: block` 입니다 */
+        expect(
+          style.borderTopLeftRadius,
+          '다이얼로그가 표면 스타일을 안 입었습니다'
+        ).not.toBe('0px')
+        expect(style.display).toBe('flex')
 
         dlg.close()
       })

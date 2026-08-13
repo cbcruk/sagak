@@ -14,8 +14,8 @@ import HorizontalRuleButton from '../../svelte/HorizontalRuleButton.svelte'
 import ImageDialog from '../../svelte/ImageDialog.svelte'
 import TableDialog from '../../svelte/TableDialog.svelte'
 import FindReplaceDialog from '../../svelte/FindReplaceDialog.svelte'
+import SpecialCharacterDialog from '../../svelte/SpecialCharacterDialog.svelte'
 import { ListButtons } from '../list-buttons/list-buttons'
-import { SpecialCharacterDialog } from '../special-character-dialog/special-character-dialog'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
 
@@ -108,7 +108,7 @@ export function Toolbar({
           <SvelteHost component={ImageDialog} />
           <SvelteHost component={TableDialog} />
           <SvelteHost component={HorizontalRuleButton} />
-          <SpecialCharacterDialog />
+          <SvelteHost component={SpecialCharacterDialog} />
         </div>
 
         <div data-part="separator" />
