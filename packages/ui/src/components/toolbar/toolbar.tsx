@@ -15,7 +15,7 @@ import ImageDialog from '../../svelte/ImageDialog.svelte'
 import TableDialog from '../../svelte/TableDialog.svelte'
 import FindReplaceDialog from '../../svelte/FindReplaceDialog.svelte'
 import SpecialCharacterDialog from '../../svelte/SpecialCharacterDialog.svelte'
-import { ListButtons } from '../list-buttons/list-buttons'
+import ListButtons from '../../svelte/ListButtons.svelte'
 import { ExportMenu } from '../export-menu/export-menu'
 import { FormatToggles } from '../format-toggles/format-toggles'
 
@@ -98,7 +98,7 @@ export function Toolbar({
       <div data-part="separator" />
 
       {/* Lists */}
-      <ListButtons />
+      <SvelteHost component={ListButtons} />
 
       {/* Link, Image, Table, HR, Special Characters - hidden on mobile */}
       <div data-part="mobile-hidden" style={{ display: 'contents' }}>

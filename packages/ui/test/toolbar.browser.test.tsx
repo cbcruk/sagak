@@ -13,6 +13,9 @@ import {
   selectOption,
   type MountedEditor,
 } from './harness'
+import { List, ListOrdered } from 'lucide'
+import type { IconNode } from 'lucide'
+import { icon } from '../src/elements/icon'
 
 /**
  * kinu 이전(#13·#14) 때 브라우저를 직접 몰아 확인했던 것들입니다.
@@ -318,6 +321,105 @@ describe('툴바', () => {
 
       expect(isOpen(menu)).toBe(false)
       expect(ed.editable.innerHTML).toMatch(/<ol[\s>]/i)
+    })
+
+    /**
+     * ## 대조군에서 안 물던 것 — 지금 상태를 보여주는 일
+     *
+     * 목록 메뉴를 옮기며 사보타주를 돌렸더니, **여는 것과 닫는 것만** 검사가
+     * 물었습니다. 지금 어떤 목록 안에 있는지 알려 주는 셋은 지워도 172개가
+     * 그대로 통과했습니다 — 버튼의 켜짐 표시, 버튼의 아이콘, 메뉴에서 고른
+     * 항목 표시.
+     *
+     * 셋 다 화면에서 바로 보이는 것들입니다. 목록 안에 있는데도 툴바 버튼이
+     * 꺼져 보이고, 번호 목록인데 글머리 아이콘이 뜨고, 메뉴를 열어도 어느
+     * 쪽인지 표시가 없는 상태가 **검사를 다 통과합니다.**
+     */
+    it.each([
+      ['<ul><li>bullet</li></ul>', List, 'Bullet', 'Numbered'],
+      ['<ol><li>numbered</li></ol>', ListOrdered, 'Numbered', 'Bullet'],
+    ])(
+      '%s 안에서는 버튼과 메뉴가 지금 갈래를 보여야 함',
+      async (html, expected, selectedLabel, otherLabel) => {
+        ed = await mountEditor(html as string)
+        /*
+         * 캐럿을 **마운트가 끝난 뒤** 옮깁니다. `SvelteHost` 는 한 틱 늦게
+         * 띄우므로, 먼저 옮기면 구독이 붙기 전에 이벤트가 지나갑니다.
+         */
+        await settle(6)
+        placeCaretInText(ed.editable, 1)
+        await settle(6)
+
+        const trigger = button(ed.root, 'List')
+
+        expect(
+          trigger.getAttribute('data-state'),
+          '목록 안인데 버튼이 꺼져 보입니다'
+        ).toBe('on')
+        expect(
+          trigger.querySelector('svg')!.outerHTML,
+          '지금 갈래와 아이콘이 다릅니다'
+        ).toBe(icon(expected as IconNode, 16).outerHTML)
+
+        await click(trigger)
+        const menu = dialog('List type')
+        const item = (text: string): HTMLButtonElement =>
+          [...menu.querySelectorAll('button')].find((b) =>
+            b.textContent?.includes(text)
+          )!
+
+        expect(
+          item(selectedLabel as string).hasAttribute('selected'),
+          '고른 항목에 표시가 없습니다'
+        ).toBe(true)
+        expect(item(otherLabel as string).hasAttribute('selected')).toBe(false)
+        menu.close()
+      }
+    )
+
+    /**
+     * ## 갈래를 **바꾼 직후**는 검사에 안 넣었습니다 — 이주 전부터 어긋납니다
+     *
+     * 원래는 위 검사에서 글머리 → 번호로 바꾼 뒤 셋이 따라오는지까지 보려
+     * 했는데 통과하지 못했습니다. 재 보니 이렇습니다.
+     *
+     * ```
+     * BEFORE  state=on
+     * AFTER   state=null  html=<ol><li>bullet</li></ol>  anchorParent=DIV
+     * ```
+     *
+     * 문서는 제대로 바뀌는데 **캐럿이 새 `<li>` 안이 아니라 편집 영역
+     * `<div>` 에 얹힙니다.** 그러면 `getCurrentListType()` 이 위로 올라가도
+     * `OL` 을 못 만나 '없음' 이 됩니다 — 눈에는 번호 목록 안인데 툴바 버튼은
+     * 꺼져 보입니다.
+     *
+     * **이주가 만든 것이 아닙니다.** 툴바를 Preact 판으로 되돌려 같은 것을
+     * 재 봤고 네 시점(2·8·20·40 프레임) 모두 똑같았습니다. 이주는 동작을 같게
+     * 두는 것이 먼저라 여기서 고치지 않고, 있는 그대로 적어 둡니다.
+     */
+
+    /**
+     * 드롭다운의 위치는 **CSS 앵커**가 잡습니다 — `[k=dropdown]` 안의
+     * `[commandfor]` 가 기준점이 되고 메뉴가 그 아래에 붙습니다. 속성을
+     * 빠뜨리면 메뉴가 화면 왼쪽 위로 떨어지는데, 그래도 172개가 통과했습니다.
+     *
+     * 재 본 값입니다 — 트리거 바로 아래 왼쪽 맞춤, 위로 `0.25rem` 띄움.
+     */
+    it('목록 메뉴가 버튼 아래에 붙어야 함', async () => {
+      ed = await mountEditor()
+      const trigger = button(ed.root, 'List')
+      await click(trigger)
+
+      const menu = dialog('List type')
+      const t = trigger.getBoundingClientRect()
+      const m = menu.getBoundingClientRect()
+
+      expect(Math.round(m.left - t.left), '왼쪽이 안 맞습니다').toBe(0)
+      expect(Math.round(m.top - t.bottom), '버튼 아래가 아닙니다').toBe(4)
+      /* `min-width: max(13.5rem, anchor-size(width))` */
+      expect(m.width).toBeGreaterThanOrEqual(216)
+
+      menu.close()
     })
   })
 
