@@ -108,6 +108,46 @@ describe('문서 줄', () => {
     expect(titleName(ed)).toBe('Untitled')
   })
 
+  /**
+   * 메뉴 자리는 kinu `Menubar` 입니다 — 버튼 다섯 개가 아니라 한 줄이어야
+   * 합니다. 되돌리면(평범한 `<span>`/`<button>`) 이 검사가 먼저 걸립니다.
+   *
+   * 동작은 넘기지 않았습니다. 항목은 여전히 한 번 누르면 그 동작이 바로
+   * 일어나고, 그건 아래 저장·열기 검사들이 그대로 지킵니다.
+   */
+  it('메뉴가 kinu Menubar 이고 항목은 테두리가 없습니다', async () => {
+    ed = await mount()
+
+    const actions = part(ed, 'actions')
+    expect(actions.getAttribute('k')).toBe('menubar')
+
+    const items = [
+      ...actions.querySelectorAll<HTMLElement>('[k="menubar-item"]'),
+    ]
+    expect(items.map((el) => el.dataset.part)).toEqual([
+      'new',
+      'documents',
+      'save',
+      'save-as',
+      // 진짜 파일 저장은 Chromium 계열에만 나옵니다
+      ...(actions.querySelector('[data-part="save-to-computer"]')
+        ? ['save-to-computer']
+        : []),
+    ])
+
+    // 다이얼로그를 여는 항목도 같은 줄에 서야 합니다 (`document-dialog`)
+    expect(part(ed, 'documents').getAttribute('k')).toBe('menubar-item')
+
+    // 테두리와 배경은 hover 에서만 드러납니다
+    const style = getComputedStyle(items[0])
+    expect(style.borderTopColor).toBe('rgba(0, 0, 0, 0)')
+    expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0)')
+
+    // 다만 높이는 툴바 컨트롤과 같은 토큰이라 줄이 들쭉날쭉하지 않습니다
+    const iconButton = ed.root.querySelector('[data-part="icon-button"]')!
+    expect(style.height).toBe(getComputedStyle(iconButton).height)
+  })
+
   it('저장하면 이름이 붙고 점이 사라집니다', async () => {
     ed = await mount()
     await type(ed, '<p>저장할 글</p>')

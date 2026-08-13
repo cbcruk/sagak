@@ -1,5 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useCallback, useEffect } from 'preact/hooks'
+import { Menubar, MenubarItem } from 'kinu'
 import { useDocument } from '../../hooks'
 import { DocumentDialog } from '../document-dialog/document-dialog'
 import { canSaveToComputer, saveToComputer } from './document-bar.utils'
@@ -9,6 +10,19 @@ import { canSaveToComputer, saveToComputer } from './document-bar.utils'
  *
  * 새로 만들기 · 열기 · 저장(⌘S) · 다른 이름으로 저장. 자동 저장은 없으므로
  * **저장은 여기서만 일어납니다** (`docs/document-model.md`).
+ *
+ * ## 동작은 kinu `Menubar` 가 아니라 여기 그대로 있습니다
+ *
+ * 메뉴 자리는 kinu 의 `Menubar`/`MenubarItem` 입니다. 다만 이건 **모양을
+ * 넘긴 것**이지 동작을 넘긴 것이 아닙니다 — 항목은 여전히 한 번 누르면 그
+ * 동작이 바로 일어납니다.
+ *
+ * 드롭다운(`File ▾` 안에 다섯 개)으로 접지 않은 이유는 저장이 **두 번
+ * 클릭**이 되기 때문입니다. 자동 저장이 없는 에디터에서 가장 자주 누르는
+ * 것이 저장인데, 그걸 한 겹 안으로 넣는 것은 모양을 위해 사용을 나쁘게
+ * 만드는 쪽입니다. `MenubarItem` 은 이미 열린 드롭다운이 있을 때만
+ * 마우스로 건너뛰는 동작을 갖고 있어서, 드롭다운이 없는 지금은 아무
+ * 부작용도 없습니다.
  *
  * ## 저장 상태가 여기 있는 이유
  *
@@ -151,40 +165,48 @@ export function DocumentBar({
         </span>
       </span>
 
-      <span data-part="actions" style={rowStyle}>
-        <button type="button" data-part="new" onClick={() => void create()}>
+      <Menubar data-part="actions" aria-label="Document">
+        <MenubarItem
+          type="button"
+          data-part="new"
+          onClick={() => void create()}
+        >
           New
-        </button>
+        </MenubarItem>
 
         <DocumentDialog requestName={requestName} />
 
-        <button type="button" data-part="save" onClick={() => void saveOrAsk()}>
+        <MenubarItem
+          type="button"
+          data-part="save"
+          onClick={() => void saveOrAsk()}
+        >
           Save
-        </button>
+        </MenubarItem>
 
-        <button
+        <MenubarItem
           type="button"
           data-part="save-as"
           onClick={() => void askAndSaveAs()}
         >
           Save As…
-        </button>
+        </MenubarItem>
 
         {/*
           진짜 파일은 Chromium 계열에만 있습니다. 없는 브라우저에서는 아예
           안 내놓습니다 — `docs/toolbar-options.md` 의 규칙과 같습니다.
         */}
         {canSaveToComputer() && (
-          <button
+          <MenubarItem
             type="button"
             data-part="save-to-computer"
             onClick={exportToComputer}
             title="Save a copy to your computer"
           >
             Save to Computer…
-          </button>
+          </MenubarItem>
         )}
-      </span>
+      </Menubar>
     </div>
   )
 }
