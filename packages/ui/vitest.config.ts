@@ -1,6 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import preact from '@preact/preset-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 /**
@@ -31,10 +30,8 @@ export default defineConfig({
    *
    * 이 줄이 이주 전체의 전제입니다 — 안 물리면 Svelte 로 가는 길이 막힙니다.
    */
-  plugins: [preact(), svelte()],
+  plugins: [svelte()],
   resolve: {
-    // preact 인스턴스가 둘로 갈리면 훅이 렌더 컨텍스트를 못 찾습니다
-    dedupe: ['preact', 'preact/hooks'],
     alias: {
       'sagak-core': fileURLToPath(
         new URL('../core/src/index.ts', import.meta.url)
@@ -66,6 +63,6 @@ export default defineConfig({
       ],
       headless: true,
     },
-    include: ['test/**/*.browser.test.{ts,tsx}'],
+    include: ['test/**/*.browser.test.ts'],
   },
 })

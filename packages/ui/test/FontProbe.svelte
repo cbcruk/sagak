@@ -1,0 +1,35 @@
+<script lang="ts">
+  /*
+   * `$` 로 시작하는 이름은 Svelte 가 스토어 자동 구독용으로 예약해 둬서
+   * 그대로는 못 씁니다. 가져오면서 이름을 바꿉니다.
+   */
+  import {
+    $families as familiesStore,
+    $status as statusStore,
+  } from '../src/hooks/use-local-fonts'
+
+  /**
+   * 폰트 목록 저장소를 **바깥에서 들여다보는 창**입니다.
+   *
+   * 재려는 것은 "여러 곳이 같은 사실을 본다" 는 것이라, 창을 여럿 띄워
+   * 값이 갈리는지 봅니다. 예전에는 Preact 훅(`useLocalFonts`)이 이 자리에
+   * 있었는데 앱이 Svelte 가 되면서 훅이 없어졌습니다. 재는 대상은
+   * 그대로입니다 — 저장소는 렌더러를 안 봅니다.
+   */
+
+  let status = $state(statusStore.get())
+  let families = $state(familiesStore.get())
+
+  $effect(() => {
+    const offStatus = statusStore.subscribe((value) => (status = value))
+    const offFamilies = familiesStore.subscribe(
+        (value) => (families = value)
+      )
+    return () => {
+      offStatus()
+      offFamilies()
+    }
+  })
+</script>
+
+<span data-probe>{status}:{families.length}</span>

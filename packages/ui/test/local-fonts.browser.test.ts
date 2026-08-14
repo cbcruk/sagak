@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach, afterAll, beforeEach } from 'vitest'
-import { render } from 'preact'
-import type { ComponentChildren } from 'preact'
+import { mount, unmount } from 'svelte'
 import { cdp } from '@vitest/browser/context'
-import { useLocalFonts } from '../src/hooks'
+import FontProbe from './FontProbe.svelte'
 import { mountEditor, placeCaretInText, selectAll, settle } from './harness'
 import type { MountedEditor } from './harness'
 import { LOAD_SYSTEM_FONTS_VALUE } from '../src/components/font-family-select/font-family-select.shared'
@@ -342,16 +341,14 @@ describe('시스템 폰트 불러오기', () => {
 })
 
 /**
- * 목록은 **기계의 사실**이라 모듈 수준 시그널에 둡니다. 아래 셋은 그 선택이
+ * 목록은 **기계의 사실**이라 모듈 수준 저장소에 둡니다. 아래 셋은 그 선택이
  * 실제로 값을 내는 지점입니다 — `useState` + `useEffect` 판에는 셋 다
  * 없었습니다.
+ *
+ * 들여다보는 창(`FontProbe.svelte`)만 렌더러를 따라 바뀌었고, 재는 대상인
+ * 저장소는 그대로입니다.
  */
 describe('목록은 컴포넌트가 아니라 기계에 붙어 있습니다', () => {
-  function Probe(): ComponentChildren {
-    const { status, families } = useLocalFonts()
-    return <span data-probe>{`${status}:${families.length}`}</span>
-  }
-
   const texts = (root: HTMLElement): string[] =>
     [...root.querySelectorAll('[data-probe]')].map((el) => el.textContent ?? '')
 
@@ -370,8 +367,21 @@ describe('목록은 컴포넌트가 아니라 기계에 붙어 있습니다', ()
   }
 
   let root: HTMLElement | null = null
+  let probes: Record<string, unknown>[] = []
+
+  /** 창을 `count` 개 띄웁니다 — 여럿이 같은 값을 보는지 재려고 */
+  function open(count = 1): HTMLElement {
+    root = document.createElement('div')
+    document.body.appendChild(root)
+    probes = Array.from({ length: count }, () =>
+      mount(FontProbe, { target: root! })
+    )
+    return root
+  }
+
   afterEach(() => {
-    if (root) render(null, root)
+    for (const probe of probes) void unmount(probe)
+    probes = []
     root?.remove()
     root = null
   })
@@ -391,24 +401,15 @@ describe('목록은 컴포넌트가 아니라 기계에 붙어 있습니다', ()
     }
 
     try {
-      root = document.createElement('div')
-      document.body.appendChild(root)
-      render(
-        <>
-          <Probe />
-          <Probe />
-          <Probe />
-        </>,
-        root
-      )
+      open(3)
       await until(
-        root,
+        root!,
         (t) => t.length === 3 && t.every((x) => x.startsWith('ready:')),
         '세 개가 모두 준비되지 않았습니다'
       )
 
-      const [first] = texts(root)
-      expect(texts(root), '같은 사실을 보는데 값이 다릅니다').toEqual([
+      const [first] = texts(root!)
+      expect(texts(root!), '같은 사실을 보는데 값이 다릅니다').toEqual([
         first,
         first,
         first,
@@ -427,16 +428,14 @@ describe('목록은 컴포넌트가 아니라 기계에 붙어 있습니다', ()
   }, 60000)
 
   it('허용으로 바뀌면 다시 띄우지 않아도 들어옵니다', async () => {
-    root = document.createElement('div')
-    document.body.appendChild(root)
-    render(<Probe />, root)
-    await until(root, (t) => t[0]?.endsWith(':0') ?? false, '빈 상태로 시작해야 합니다')
+    open()
+    await until(root!, (t) => t[0]?.endsWith(':0') ?? false, '빈 상태로 시작해야 합니다')
 
     // 화면은 그대로 두고 권한만 바꿉니다
     await setPermission('granted')
 
     await until(
-      root,
+      root!,
       (t) => /^ready:[1-9]/.test(t[0] ?? ''),
       '허용했는데 목록이 안 들어왔습니다'
     )
@@ -444,15 +443,13 @@ describe('목록은 컴포넌트가 아니라 기계에 붙어 있습니다', ()
 
   it('권한이 취소되면 들고 있던 목록을 버립니다', async () => {
     await setPermission('granted')
-    root = document.createElement('div')
-    document.body.appendChild(root)
-    render(<Probe />, root)
-    await until(root, (t) => /^ready:[1-9]/.test(t[0] ?? ''), '먼저 받아와야 합니다')
+    open()
+    await until(root!, (t) => /^ready:[1-9]/.test(t[0] ?? ''), '먼저 받아와야 합니다')
 
     await setPermission('denied')
 
     await until(
-      root,
+      root!,
       (t) => t[0]?.endsWith(':0') ?? false,
       '취소됐는데 못 쓰는 목록을 계속 들고 있습니다'
     )

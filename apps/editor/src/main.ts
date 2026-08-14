@@ -1,5 +1,5 @@
-import { render } from 'preact'
-import { App } from './app'
+import { mount } from 'svelte'
+import App from './App.svelte'
 import 'sagak-ui/styles'
 import './index.css'
 
@@ -9,4 +9,4 @@ if (!container) {
   throw new Error('#root 요소를 찾을 수 없습니다')
 }
 
-render(<App />, container)
+mount(App, { target: container })

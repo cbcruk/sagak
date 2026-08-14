@@ -1,23 +1,14 @@
-import { render } from 'preact'
-import type { CreateEditorOptions, EditorContext } from 'sagak-core'
+import { mount, unmount } from 'svelte'
+import type { CreateEditorOptions, Editor, EditorContext } from 'sagak-core'
 import { expect } from 'vitest'
-import {
-  useEditor,
-  EditorProvider,
-  EditorContainer,
-  DocumentBar,
-  Toolbar,
-  AutocompletePopover,
-} from '../src'
+import Harness from './Harness.svelte'
 import '../src/styles/index.css'
 
 /**
- * `apps/editor` 와 같은 구성으로 에디터를 띄웁니다.
+ * 검사용 마운트 — 트리는 `Harness.svelte` 에 있습니다.
  *
- * 이번 세션에서 찾은 UI 버그 — 다크 모드 분열, 다이얼로그가 안 닫힘, 툴바를 쓴
- * 뒤 타이핑 유실 — 는 전부 **컴포넌트를 따로 마운트해서는 보이지 않았습니다.**
- * 툴바와 편집 영역이 같은 에디터 컨텍스트로 이어져야 드러납니다. 그래서
- * 앱 진입점의 트리를 그대로 재현합니다.
+ * 이 파일은 그것을 띄우고 기다리고 걷어내는 일과, 검사들이 함께 쓰는 자잘한
+ * 도구(선택 영역 놓기·버튼 찾기·다이얼로그 찾기)만 갖습니다.
  */
 
 const DEFAULT_CONTENT = `
@@ -29,39 +20,6 @@ const DEFAULT_CONTENT = `
 `
 
 let mountedContext: EditorContext | null = null
-
-function Harness({
-  initialContent,
-  autoSave,
-  showAutoSaveIndicator,
-  showDocumentBar,
-}: {
-  initialContent: string
-  autoSave?: CreateEditorOptions['autoSave']
-  showAutoSaveIndicator?: boolean
-  showDocumentBar?: boolean
-}) {
-  const { containerRef, editor, ready } = useEditor({
-    initialContent,
-    autoSave,
-  })
-  if (editor) mountedContext = editor.context
-
-  return (
-    <main data-scope="app">
-      <EditorContainer>
-        {ready && editor ? (
-          <EditorProvider context={editor.context}>
-            {showDocumentBar ? <DocumentBar /> : null}
-            <Toolbar showAutoSaveIndicator={showAutoSaveIndicator} />
-            <AutocompletePopover />
-          </EditorProvider>
-        ) : null}
-        <div ref={containerRef} data-scope="editing-area" data-part="wysiwyg" />
-      </EditorContainer>
-    </main>
-  )
-}
 
 export interface MountedEditor {
   root: HTMLDivElement
@@ -116,15 +74,19 @@ export async function mountEditor(
   const root = document.createElement('div')
   document.body.appendChild(root)
 
-  render(
-    <Harness
-      initialContent={initialContent}
-      autoSave={options.autoSave}
-      showAutoSaveIndicator={options.showAutoSaveIndicator}
-      showDocumentBar={options.showDocumentBar}
-    />,
-    root
-  )
+  mountedContext = null
+  const instance = mount(Harness, {
+    target: root,
+    props: {
+      initialContent,
+      autoSave: options.autoSave,
+      showAutoSaveIndicator: options.showAutoSaveIndicator,
+      showDocumentBar: options.showDocumentBar,
+      onready: (editor: Editor) => {
+        mountedContext = editor.context
+      },
+    },
+  })
 
   // useEditor 의 비동기 초기화가 끝날 때까지 기다립니다
   let editable: HTMLElement | null = null
@@ -163,7 +125,7 @@ export async function mountEditor(
     editable,
     context: mountedContext,
     unmount: () => {
-      render(null, root)
+      void unmount(instance)
       root.remove()
     },
   }

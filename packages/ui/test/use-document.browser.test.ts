@@ -1,9 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render } from 'preact'
-import type { ComponentChildren } from 'preact'
-import { EditorProvider } from '../src/context/editor-context'
-import { useDocument, UNTITLED } from '../src/hooks'
-import type { UseDocumentReturn } from '../src/hooks'
+import type { EditorContext } from 'sagak-core'
+import {
+  UNTITLED,
+  attachDocument,
+  create,
+  open,
+  readDocument,
+  refresh,
+  remove,
+  rename,
+  save,
+  saveAs,
+} from '../src/state/document-store'
 import { mountEditor, settle } from './harness'
 import type { MountedEditor } from './harness'
 
@@ -21,8 +29,60 @@ import type { MountedEditor } from './harness'
  */
 
 let ed: MountedEditor | null = null
-let root: HTMLElement | null = null
-let doc: UseDocumentReturn | null = null
+let doc: Bound | null = null
+
+/**
+ * 저장소를 **훅과 같은 모양으로** 묶습니다.
+ *
+ * 예전에는 Preact 훅(`useDocument`)을 컴포넌트에 붙여 읽었습니다. 앱이
+ * Svelte 가 되면서 그 훅이 없어졌지만, **재는 대상은 그대로**입니다 — 값과
+ * 동작은 원래부터 `state/document-store.ts` 에 있고 훅은 껍데기였습니다.
+ *
+ * 읽는 것은 게터로 둡니다. 아래 검사들이 `doc.dirty` 를 여러 시점에 다시
+ * 읽으므로, 한 번 찍은 값을 들고 있으면 안 됩니다.
+ */
+interface Bound {
+  readonly name: string
+  readonly untitled: boolean
+  readonly dirty: boolean
+  readonly available: boolean
+  readonly documents: ReturnType<typeof readDocument>['documents']
+  refresh: () => Promise<void>
+  create: () => Promise<void>
+  open: (name: string) => Promise<void>
+  save: () => Promise<void>
+  saveAs: (name: string) => Promise<void>
+  rename: (from: string, to: string) => Promise<void>
+  remove: (name: string) => Promise<void>
+}
+
+function bind(context: EditorContext): Bound {
+  attachDocument(context)
+  return {
+    get name() {
+      return readDocument().name
+    },
+    get untitled() {
+      return readDocument().untitled
+    },
+    get dirty() {
+      return readDocument().dirty
+    },
+    get available() {
+      return readDocument().available
+    },
+    get documents() {
+      return readDocument().documents
+    },
+    refresh,
+    rename,
+    remove,
+    create: () => create(context),
+    open: (name: string) => open(context, name),
+    save: () => save(context),
+    saveAs: (name: string) => saveAs(context, name),
+  }
+}
 
 async function clearStorage(): Promise<void> {
   const dir = await navigator.storage.getDirectory()
@@ -37,24 +97,12 @@ async function clearStorage(): Promise<void> {
   }
 }
 
-function Probe(): ComponentChildren {
-  doc = useDocument()
-  return null
-}
-
-/** 에디터를 띄우고 그 컨텍스트로 훅을 붙입니다 */
+/** 에디터를 띄우고 그 컨텍스트로 저장소를 묶습니다 */
 async function mount(content = '<p>처음</p>'): Promise<void> {
   ed = await mountEditor(content)
-  root = document.createElement('div')
-  document.body.appendChild(root)
-  render(
-    <EditorProvider context={ed.context}>
-      <Probe />
-    </EditorProvider>,
-    root
-  )
+  doc = bind(ed.context)
   await settle(5)
-  await doc!.create()
+  await doc.create()
   await settle(3)
 }
 
@@ -73,9 +121,6 @@ async function type(html: string): Promise<void> {
 beforeEach(clearStorage)
 
 afterEach(async () => {
-  if (root) render(null, root)
-  root?.remove()
-  root = null
   ed?.unmount()
   ed = null
   doc = null

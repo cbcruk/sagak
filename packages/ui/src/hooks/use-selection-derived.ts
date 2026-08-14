@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks'
 import { CoreEvents, type EditorContext } from 'sagak-core'
-import { useEditorContext } from '../context/editor-context'
 
 /**
  * 선택 영역에서 값을 끌어오는 컴포넌트들이 공유하는 구독입니다.
@@ -124,33 +122,3 @@ function getTracker(context: EditorContext): Tracker {
   return tracker
 }
 
-/**
- * 선택 영역이 바뀔 때마다 `derive` 를 다시 실행하고 그 값을 돌려줍니다.
- *
- * 값이 그대로면 다시 그리지 않습니다. `derive` 는 렌더 중이 아니라 구독
- * 콜백에서 불리므로 최신 참조를 ref 로 붙듭니다.
- *
- * @example
- * ```ts
- * const alignment = useSelectionDerived(getCurrentAlignment, 'left')
- * ```
- */
-export function useSelectionDerived<T>(derive: () => T, initial: T): T {
-  const context = useEditorContext()
-  const [value, setValue] = useState<T>(initial)
-
-  const deriveRef = useRef(derive)
-  deriveRef.current = derive
-
-  useEffect(() => {
-    const update = (): void => {
-      const next = deriveRef.current()
-      setValue((prev) => (Object.is(prev, next) ? prev : next))
-    }
-
-    update()
-    return getTracker(context).subscribe(update)
-  }, [context])
-
-  return value
-}
