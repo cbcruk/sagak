@@ -126,32 +126,34 @@ export async function mountEditor(
     root
   )
 
-  // useEditor 의 비동기 초기화가 끝나고 툴바가 붙을 때까지 기다립니다
+  // useEditor 의 비동기 초기화가 끝날 때까지 기다립니다
   let editable: HTMLElement | null = null
   for (let i = 0; i < 60 && !editable; i += 1) {
     await settle(1)
     editable = root.querySelector<HTMLElement>('[contenteditable="true"]')
   }
 
-  if (!editable || !root.querySelector('[data-scope="toolbar"]')) {
-    throw new Error('에디터가 마운트되지 않았습니다')
-  }
+  if (!editable) throw new Error('에디터가 마운트되지 않았습니다')
 
   /*
-   * 툴바는 **두 번에 걸쳐 채워집니다.**
+   * 툴바는 **한 틱 늦게** 붙습니다.
    *
-   * 이주 중이라 Preact 가 그리는 것과 Svelte 가 그리는 것이 섞여 있는데,
-   * Svelte 쪽은 `SvelteHost` 의 `useEffect` 에서 마운트하므로 한 틱 늦습니다.
-   * 뼈대만 보고 돌려주면 **아직 없는 버튼을 찾으려다 실패**합니다 —
-   * `theme.browser.test.tsx` 가 "Insert Table 버튼을 찾지 못했습니다" 로
-   * 실제로 걸렸습니다.
+   * `SvelteHost` 가 `useEffect` 에서 마운트하기 때문입니다. 예전에는 Preact
+   * 가 그린 뼈대는 곧바로 있고 Svelte 조각만 늦어서, 뼈대를 보고 돌려줬다가
+   * **아직 없는 버튼을 찾으려다** 실패했습니다 (`theme.browser.test.tsx` 가
+   * "Insert Table 버튼을 찾지 못했습니다" 로 걸렸습니다).
    *
-   * 그래서 Svelte 가 그리는 컨트롤 하나가 나타날 때까지 더 기다립니다.
-   * 툴바가 전부 Svelte 로 넘어가면 이 대기는 필요 없어집니다.
+   * 이제 툴바 자체가 Svelte 라 뼈대까지 늦습니다. 그래서 툴바가 생기고
+   * 그 안의 컨트롤 하나가 나타날 때까지 기다립니다. 앱 진입점까지 Svelte 가
+   * 되면 이 대기는 필요 없어집니다.
    */
   for (let i = 0; i < 60; i += 1) {
     if (root.querySelector('button[title="Insert Table"]')) break
     await settle(1)
+  }
+
+  if (!root.querySelector('[data-scope="toolbar"]')) {
+    throw new Error('툴바가 마운트되지 않았습니다')
   }
 
   if (!mountedContext) throw new Error('에디터 컨텍스트를 찾지 못했습니다')

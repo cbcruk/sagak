@@ -8,7 +8,7 @@ import DocumentBarSvelte from '../../svelte/DocumentBar.svelte'
  *
  * 제목·메뉴·문서 목록은 `svelte/DocumentBar.svelte` 로 옮겼습니다. 여기가
  * 남아 있는 이유는 앱 진입점(`apps/editor/src/app.tsx`)과 공개 API 가 아직
- * Preact 이기 때문입니다. 툴바까지 Svelte 가 되면 이 파일과 `SvelteHost` 가
+ * Preact 이기 때문입니다. 앱까지 Svelte 가 되면 이 파일과 `SvelteHost` 가
  * 함께 사라집니다.
  */
 
