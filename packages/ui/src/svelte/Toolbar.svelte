@@ -3,7 +3,6 @@
   import type { EditorProviderElement } from '../elements/editor-context'
   import '../elements/color-picker'
   import '../elements/auto-save-indicator'
-  import '../elements/more-menu'
   import FontFamilySelect from './FontFamilySelect.svelte'
   import ToolbarSelect from './ToolbarSelect.svelte'
   import {
@@ -23,6 +22,7 @@
   import SpecialCharacterDialog from './SpecialCharacterDialog.svelte'
   import FindReplaceDialog from './FindReplaceDialog.svelte'
   import ExportMenu from './ExportMenu.svelte'
+  import MoreMenu from './MoreMenu.svelte'
 
   /**
    * 툴바 — **`SvelteHost` 가 없어지는 자리**입니다.
@@ -125,7 +125,7 @@
       </div>
     </div>
 
-    <sagak-more-menu></sagak-more-menu>
+    <MoreMenu {editor} />
 
     <!--
       자동 저장 표시는 **툴바 안**에 있습니다. 예전에는 툴바와 편집 영역
