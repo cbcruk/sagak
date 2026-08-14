@@ -3,12 +3,12 @@
   import type { EditorProviderElement } from '../elements/editor-context'
   import '../elements/font-family-select'
   import '../elements/toolbar-selects'
-  import '../elements/toolbar-commands'
-  import '../elements/toolbar-state-buttons'
   import '../elements/color-picker'
   import '../elements/auto-save-indicator'
   import '../elements/more-menu'
   import '../elements/link-dialog'
+  import HistoryButtons from './HistoryButtons.svelte'
+  import AlignmentButtons from './AlignmentButtons.svelte'
   import FormatToggles from './FormatToggles.svelte'
   import ListButtons from './ListButtons.svelte'
   import ImageDialog from './ImageDialog.svelte'
@@ -70,7 +70,7 @@
     남은 여덟까지 Svelte 가 되면 이 배선도 없어집니다.
   -->
   <sagak-editor-provider bind:this={provider}>
-    <sagak-history-buttons></sagak-history-buttons>
+    <HistoryButtons {editor} />
 
     <div data-part="separator"></div>
 
@@ -95,7 +95,7 @@
 
     <div data-part="separator"></div>
 
-    <sagak-alignment-buttons></sagak-alignment-buttons>
+    <AlignmentButtons {editor} />
 
     <div data-part="separator"></div>
 
