@@ -93,6 +93,46 @@ describe('자동 완성 팝오버', () => {
     expect(applied).toEqual({ word: 'apply' })
   })
 
+  /**
+   * ## 대조군에서 안 물던 것 — 마우스로 고른 단어
+   *
+   * Svelte 로 옮기며 "페이로드가 있으면 흘려보낸다" 는 가드를 지웠는데
+   * 179개가 전부 통과했습니다. 그 가드는 **우리가 보낸 것을 우리가 다시
+   * 받는 것**을 막습니다.
+   *
+   * 없으면 마우스로 고른 순간 확정이 두 번 나갑니다 — 누른 단어 한 번,
+   * 그리고 곧바로 **지금 강조된 단어**로 한 번 더. 둘이 다르면 누른 것이
+   * 아닌 단어가 들어갑니다.
+   *
+   * 있던 검사는 키보드 갈래(페이로드 없는 APPLY)만 봤습니다. 강조와 다른
+   * 항목을 눌러서 그 차이가 드러나게 합니다.
+   */
+  it('마우스로 고르면 강조된 것이 아니라 누른 단어가 나가야 함', async () => {
+    ed = await mountEditor('<p>안녕</p>')
+    placeCaretInText(ed.editable, 1)
+    await settle(4)
+    const bus = ed.context.eventBus
+    await show(bus)
+
+    /* 강조를 두 번째(`apply`) 로 옮겨 두고 세 번째(`apricot`) 를 누릅니다 */
+    bus.emit(AutocompleteEvents.AUTOCOMPLETE_SELECT, { direction: 'next' })
+    await settle(4)
+    expect(selectedIndex()).toBe(1)
+
+    const applied: unknown[] = []
+    bus.on(AutocompleteEvents.AUTOCOMPLETE_APPLY, 'after', (payload) => {
+      if (payload) applied.push(payload)
+    })
+
+    const items = [...popover()!.querySelectorAll('li')]
+    items[2].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    await settle(6)
+
+    expect(applied, '누른 단어 말고 다른 것이 더 나갔습니다').toEqual([
+      { word: 'apricot' },
+    ])
+  })
+
   it('HIDE 로 닫혀야 함', async () => {
     ed = await mountEditor('<p>안녕</p>')
     placeCaretInText(ed.editable, 1)
