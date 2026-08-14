@@ -4,7 +4,6 @@
   import '../elements/color-picker'
   import '../elements/auto-save-indicator'
   import '../elements/more-menu'
-  import '../elements/link-dialog'
   import FontFamilySelect from './FontFamilySelect.svelte'
   import ToolbarSelect from './ToolbarSelect.svelte'
   import {
@@ -17,6 +16,7 @@
   import AlignmentButtons from './AlignmentButtons.svelte'
   import FormatToggles from './FormatToggles.svelte'
   import ListButtons from './ListButtons.svelte'
+  import LinkDialog from './LinkDialog.svelte'
   import ImageDialog from './ImageDialog.svelte'
   import TableDialog from './TableDialog.svelte'
   import HorizontalRuleButton from './HorizontalRuleButton.svelte'
@@ -110,7 +110,7 @@
     <div data-part="mobile-hidden" style="display: contents">
       <div data-part="separator"></div>
       <div style="display: flex; gap: 4px">
-        <sagak-link-dialog></sagak-link-dialog>
+        <LinkDialog {editor} />
         <ImageDialog {editor} />
         <TableDialog {editor} />
         <HorizontalRuleButton {editor} />

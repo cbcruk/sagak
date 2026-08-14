@@ -4,6 +4,7 @@ import {
   settle,
   selectAll,
   placeCaretInText,
+  placeCaret,
   click,
   button,
   dialog,
@@ -394,15 +395,67 @@ describe('툴바', () => {
         /<a[^>]+href="https:\/\/example\.com"/i
       )
 
-      // handleOpen 이 다이얼로그가 열리기 전에 실행되는지.
-      // getSelectedLink() 는 anchorNode 에서 위로 올라가므로 캐럿이 링크
-      // 텍스트 안에 있어야 합니다.
+      /*
+       * 여는 순간 기존 URL 을 읽어 오는지.
+       *
+       * **입력칸을 먼저 비워야 합니다.** 예전에는 안 비우고 바로 다시 열어
+       * 값을 봤는데, 방금 친 값이 그대로 남아 있어서 **미리 채우기를 통째로
+       * 지워도 통과**했습니다. 안에서만 맞는 검사였습니다.
+       */
+      const field = dlg.querySelector<HTMLInputElement>('input')!
+      await fillInput(field, '')
+
+      // `getSelectedLink()` 는 위로 올라가므로 캐럿이 링크 글자 안이어야 합니다
       placeCaretInText(ed.editable, 2)
       await settle()
       await click(button(ed.root, 'Insert Link'))
-      expect(dlg.querySelector<HTMLInputElement>('input')!.value).toContain(
-        'example.com'
-      )
+      expect(field.value, '기존 URL 을 안 읽어 옵니다').toContain('example.com')
+      dlg.close()
+    })
+
+    /**
+     * ## 대조군에서 안 물던 둘
+     *
+     * 링크 다이얼로그를 Svelte 로 옮기며 사보타주를 돌렸더니 셋 중 셋이
+     * 안 물었습니다. 하나(미리 채우기)는 위 검사를 고쳐서 살렸고, 나머지
+     * 둘은 검사가 아예 없었습니다.
+     *
+     * - 캐럿이 링크 위에 있을 때 툴바 버튼이 켜지는 것
+     * - 지우기 전에 링크 전체를 범위로 다시 잡는 것
+     *
+     * 둘째가 특히 조용합니다. 범위를 안 잡으면 캐럿만 얹힌 채로 해제 이벤트가
+     * 나가서 **아무것도 안 지워집니다.**
+     */
+    it('캐럿이 링크 위면 버튼이 켜지고, 지우기가 링크를 없애야 함', async () => {
+      ed = await mountEditor('<p>앞 <a href="https://example.com">링크</a> 뒤</p>')
+      await settle(6)
+
+      const trigger = button(ed.root, 'Insert Link')
+
+      /* 링크 밖 — 꺼져 있어야 합니다 */
+      placeCaretInText(ed.editable, 1)
+      await settle(8)
+      expect(trigger.getAttribute('data-state')).toBeNull()
+
+      /* 링크 안 — 켜져야 합니다 */
+      const linkText = ed.editable.querySelector('a')!.firstChild!
+      placeCaret(linkText, 1)
+      await settle(8)
+      expect(
+        trigger.getAttribute('data-state'),
+        '링크 위인데 버튼이 꺼져 보입니다'
+      ).toBe('on')
+
+      await click(trigger)
+      const dlg = dialog('Insert Link')
+      const removeButton = [...dlg.querySelectorAll('button')].find(
+        (b) => b.textContent?.trim() === 'Remove'
+      )!
+      await click(removeButton)
+      await settle(8)
+
+      expect(ed.editable.innerHTML, '링크가 안 지워졌습니다').not.toMatch(/<a[\s>]/i)
+      expect(ed.editable.textContent).toContain('링크')
     })
 
     it('찾기에서 일치 개수를 세고, Esc 로 닫으면 강조를 지워야 함', async () => {
