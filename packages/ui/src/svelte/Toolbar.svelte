@@ -2,11 +2,17 @@
   import type { EditorContext } from 'sagak-core'
   import type { EditorProviderElement } from '../elements/editor-context'
   import '../elements/font-family-select'
-  import '../elements/toolbar-selects'
   import '../elements/color-picker'
   import '../elements/auto-save-indicator'
   import '../elements/more-menu'
   import '../elements/link-dialog'
+  import ToolbarSelect from './ToolbarSelect.svelte'
+  import {
+    FONT_SIZE,
+    LINE_HEIGHT,
+    LETTER_SPACING,
+    HEADING,
+  } from './toolbar-select.specs'
   import HistoryButtons from './HistoryButtons.svelte'
   import AlignmentButtons from './AlignmentButtons.svelte'
   import FormatToggles from './FormatToggles.svelte'
@@ -74,7 +80,7 @@
 
     <div data-part="separator"></div>
 
-    <sagak-heading-select></sagak-heading-select>
+    <ToolbarSelect {editor} spec={HEADING} />
 
     <div data-part="separator"></div>
 
@@ -86,11 +92,11 @@
     <div data-part="separator"></div>
 
     <sagak-font-family-select></sagak-font-family-select>
-    <sagak-font-size-select></sagak-font-size-select>
+    <ToolbarSelect {editor} spec={FONT_SIZE} />
 
     <div data-part="mobile-hidden" style="display: contents">
-      <sagak-line-height-select></sagak-line-height-select>
-      <sagak-letter-spacing-select></sagak-letter-spacing-select>
+      <ToolbarSelect {editor} spec={LINE_HEIGHT} />
+      <ToolbarSelect {editor} spec={LETTER_SPACING} />
     </div>
 
     <div data-part="separator"></div>
