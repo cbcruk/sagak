@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
-  import type { EditorProviderElement } from '../elements/editor-context'
-  import '../elements/auto-save-indicator'
   import ColorPicker from './ColorPicker.svelte'
   import FontFamilySelect from './FontFamilySelect.svelte'
   import ToolbarSelect from './ToolbarSelect.svelte'
@@ -23,21 +21,27 @@
   import FindReplaceDialog from './FindReplaceDialog.svelte'
   import ExportMenu from './ExportMenu.svelte'
   import MoreMenu from './MoreMenu.svelte'
+  import AutoSaveIndicator from './AutoSaveIndicator.svelte'
 
   /**
-   * 툴바 — **`SvelteHost` 가 없어지는 자리**입니다.
+   * 툴바 — **이주가 끝나는 자리**입니다.
    *
-   * 지금까지는 Preact 툴바 안에 Svelte 조각을 하나씩 띄웠습니다. 껍데기까지
-   * 넘어오면서 그 다리가 여덟 개 사라지고, Svelte 컴포넌트를 그냥 씁니다.
+   * 안에 있던 것들이 Preact → 커스텀 엘리먼트 → Svelte 를 거치는 동안, 이
+   * 파일은 그때그때 다리를 놓아 왔습니다. 마지막 커스텀 엘리먼트가 넘어오며
+   * 그 다리들이 전부 없어졌습니다.
    *
-   * ## 커스텀 엘리먼트는 그대로입니다
+   * ## `sagak-editor-provider` 가 사라졌습니다
    *
-   * 여덟은 아직 nanotags 판입니다. 그것들은 `sagak-editor-provider` 가 DOM
-   * 이벤트로 내려 주는 컨텍스트를 받아 갑니다 — **렌더러와 무관한 배선**이라
-   * Preact 에서 Svelte 로 옮겨도 손댈 것이 없었습니다.
+   * 커스텀 엘리먼트는 Preact 컨텍스트도 Svelte prop 도 못 봅니다. 그래서
+   * 에디터를 DOM 이벤트(W3C 컨텍스트 프로토콜)로 내려 주는 엘리먼트가 툴바
+   * 전체를 감싸고 있었습니다. 이제 받을 쪽이 없으니 감쌀 이유도 없습니다 —
+   * 전부 `{editor}` 하나로 받습니다.
    *
-   * Preact 판은 `ref` 콜백으로 `setEditor()` 를 불렀고 여기서는 `bind:this` +
-   * `$effect` 입니다. 그 한 줄이 다릅니다.
+   * 지울 때 한 번 걸렸습니다. `editor-context.ts` 는 **부작용 import** 로
+   * 등록되고 있었는데, 마지막 엘리먼트를 지우며 그 import 도 같이 지웠습니다.
+   * 타입만 남은 import 는 컴파일에서 지워지므로 `<sagak-editor-provider>` 가
+   * 등록되지 않았고, 53개가 무너졌습니다. 감싸는 것 자체를 걷어내는 것이
+   * 답이었습니다.
    */
 
   interface Props {
@@ -61,86 +65,73 @@
   }
 
   const { editor, showAutoSaveIndicator = false }: Props = $props()
-
-  let provider: EditorProviderElement | undefined = $state()
-
-  $effect(() => {
-    provider?.setEditor(editor)
-  })
 </script>
 
 <div data-scope="toolbar" data-part="root" role="toolbar" aria-label="Text formatting">
+  <HistoryButtons {editor} />
+
+  <div data-part="separator"></div>
+
+  <ToolbarSelect {editor} spec={HEADING} />
+
+  <div data-part="separator"></div>
+
+  <FormatToggles {editor} />
+
+  <ColorPicker {editor} type="text" />
+  <ColorPicker {editor} type="background" />
+
+  <div data-part="separator"></div>
+
+  <FontFamilySelect {editor} />
+  <ToolbarSelect {editor} spec={FONT_SIZE} />
+
+  <div data-part="mobile-hidden" style="display: contents">
+    <ToolbarSelect {editor} spec={LINE_HEIGHT} />
+    <ToolbarSelect {editor} spec={LETTER_SPACING} />
+  </div>
+
+  <div data-part="separator"></div>
+
+  <AlignmentButtons {editor} />
+
+  <div data-part="separator"></div>
+
+  <ListButtons {editor} />
+
+  <div data-part="mobile-hidden" style="display: contents">
+    <div data-part="separator"></div>
+    <div style="display: flex; gap: 4px">
+      <LinkDialog {editor} />
+      <ImageDialog {editor} />
+      <TableDialog {editor} />
+      <HorizontalRuleButton {editor} />
+      <SpecialCharacterDialog {editor} />
+    </div>
+
+    <div data-part="separator"></div>
+
+    <div style="display: flex; gap: 4px">
+      <FindReplaceDialog {editor} />
+      <ExportMenu {editor} />
+    </div>
+  </div>
+
+  <MoreMenu {editor} />
+
   <!--
-    이주 중 배선 — 커스텀 엘리먼트가 에디터에 닿는 통로입니다.
-    `display: contents` 라 툴바의 줄바꿈 계산에는 끼어들지 않습니다.
-    남은 여덟까지 Svelte 가 되면 이 배선도 없어집니다.
+    자동 저장 표시는 **툴바 안**에 있습니다. 예전에는 툴바와 편집 영역
+    사이의 독립된 줄이었는데, 그러면 처음 뜰 때 아래가 23px 밀렸습니다.
+    툴바는 이미 자기 높이를 갖고 있으므로 여기 얹으면 새 공간을 안 씁니다.
+
+    `margin-left: auto` 로 오른쪽 끝에 붙입니다. 툴바가 `flex-wrap: wrap`
+    이라 좁은 화면에서는 마지막 줄로 내려갑니다 — 그건 폭에 따른 것이지
+    저장 상태에 따른 것이 아니므로 글을 쓰는 중에 움직이지 않습니다
+    (`test/auto-save-layout.browser.test.tsx`).
   -->
-  <sagak-editor-provider bind:this={provider}>
-    <HistoryButtons {editor} />
-
-    <div data-part="separator"></div>
-
-    <ToolbarSelect {editor} spec={HEADING} />
-
-    <div data-part="separator"></div>
-
-    <FormatToggles {editor} />
-
-    <ColorPicker {editor} type="text" />
-    <ColorPicker {editor} type="background" />
-
-    <div data-part="separator"></div>
-
-    <FontFamilySelect {editor} />
-    <ToolbarSelect {editor} spec={FONT_SIZE} />
-
-    <div data-part="mobile-hidden" style="display: contents">
-      <ToolbarSelect {editor} spec={LINE_HEIGHT} />
-      <ToolbarSelect {editor} spec={LETTER_SPACING} />
+  {#if showAutoSaveIndicator}
+    <div data-part="trailing" style="margin-left: auto">
+      <AutoSaveIndicator {editor} />
     </div>
-
-    <div data-part="separator"></div>
-
-    <AlignmentButtons {editor} />
-
-    <div data-part="separator"></div>
-
-    <ListButtons {editor} />
-
-    <div data-part="mobile-hidden" style="display: contents">
-      <div data-part="separator"></div>
-      <div style="display: flex; gap: 4px">
-        <LinkDialog {editor} />
-        <ImageDialog {editor} />
-        <TableDialog {editor} />
-        <HorizontalRuleButton {editor} />
-        <SpecialCharacterDialog {editor} />
-      </div>
-
-      <div data-part="separator"></div>
-
-      <div style="display: flex; gap: 4px">
-        <FindReplaceDialog {editor} />
-        <ExportMenu {editor} />
-      </div>
-    </div>
-
-    <MoreMenu {editor} />
-
-    <!--
-      자동 저장 표시는 **툴바 안**에 있습니다. 예전에는 툴바와 편집 영역
-      사이의 독립된 줄이었는데, 그러면 처음 뜰 때 아래가 23px 밀렸습니다.
-      툴바는 이미 자기 높이를 갖고 있으므로 여기 얹으면 새 공간을 안 씁니다.
-
-      `margin-left: auto` 로 오른쪽 끝에 붙입니다. 툴바가 `flex-wrap: wrap`
-      이라 좁은 화면에서는 마지막 줄로 내려갑니다 — 그건 폭에 따른 것이지
-      저장 상태에 따른 것이 아니므로 글을 쓰는 중에 움직이지 않습니다
-      (`test/auto-save-layout.browser.test.tsx`).
-    -->
-    {#if showAutoSaveIndicator}
-      <div data-part="trailing" style="margin-left: auto">
-        <sagak-auto-save-indicator></sagak-auto-save-indicator>
-      </div>
-    {/if}
-  </sagak-editor-provider>
+  {/if}
 </div>

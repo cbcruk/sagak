@@ -97,6 +97,45 @@ describe('자동 저장 표시는 기본으로 숨겨져 있습니다', () => {
   })
 })
 
+/**
+ * ## 대조군에서 안 물던 것 — 빈 상태를 **감추되 자리는 지키는** 것
+ *
+ * Svelte 로 옮기며 사보타주를 돌렸더니 `visibility` 를 늘 `visible` 로
+ * 두어도 185개가 그대로 통과했습니다. 아무것도 저장한 적 없는데 구름
+ * 아이콘이 툴바에 떠 있는 상태입니다.
+ *
+ * 위 검사들은 **상태가 바뀔 때** 안 밀리는지를 봅니다. 처음 뜬 순간의
+ * 빈 상태는 그 사이에 안 들어 있었습니다 — 정작 23px 이 밀렸던 것이
+ * 그 자리인데요.
+ *
+ * `display: none` 이 아니라 `visibility: hidden` 이라는 것이 요점이라,
+ * **안 보이는 것과 자리를 차지하는 것을 같이** 봅니다.
+ */
+describe('아무것도 저장한 적 없을 때', () => {
+  it('보이지는 않되 자리는 지켜야 합니다', async () => {
+    ed = await mountEditor(undefined, {
+      autoSave: true,
+      showAutoSaveIndicator: true,
+    })
+    await settle(5)
+
+    const indicator = ed.root.querySelector<HTMLElement>(
+      '[data-scope="auto-save"]'
+    )!
+    expect(indicator, '표시를 켰는데 없습니다').not.toBeNull()
+
+    expect(
+      getComputedStyle(indicator).visibility,
+      '저장한 적 없는데 표시가 보입니다'
+    ).toBe('hidden')
+
+    /* `display: none` 이면 여기가 0 이 됩니다 */
+    const box = indicator.getBoundingClientRect()
+    expect(box.height, '자리를 안 잡아서 아래가 밀립니다').toBeGreaterThan(0)
+    expect(box.width).toBeGreaterThan(0)
+  })
+})
+
 describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
   it('상태가 바뀌어도 아래 편집 영역이 움직이지 않습니다', async () => {
     ed = await mountEditor(undefined, { autoSave: true, showAutoSaveIndicator: true })

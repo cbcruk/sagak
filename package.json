@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "lucide": "^1.31.0",
-    "nanostores": "^1.4.2",
-    "nanotags": "^0.15.2"
+    "nanostores": "^1.4.2"
   }
 }

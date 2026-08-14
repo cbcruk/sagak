@@ -1,13 +1,17 @@
 import type { IconNode } from 'lucide'
 
 /**
- * lucide 아이콘을 **SVG 요소로** 만듭니다 — 커스텀 엘리먼트용.
+ * lucide 아이콘을 **SVG 요소로** 만듭니다.
  *
  * ## 왜 `lucide-preact` 를 못 쓰나
  *
- * `lucide-preact` 는 아이콘을 **Preact 컴포넌트**로 줍니다. 커스텀 엘리먼트
- * 안에서는 JSX 를 안 거치므로 쓸 수 없고, 억지로 가져오면 Preact 런타임이
- * 딸려옵니다 — 이 이주가 없애려는 바로 그것입니다.
+ * `lucide-preact` 는 아이콘을 **Preact 컴포넌트**로 줍니다. 커스텀 엘리먼트로
+ * 옮기던 때 JSX 를 안 거치는 자리에서 쓸 수 없었고, 억지로 가져오면 Preact
+ * 런타임이 딸려왔습니다 — 이 이주가 없애려던 바로 그것입니다.
+ *
+ * 지금은 Svelte 뿐이지만 그대로 씁니다. `{@html icon(…).outerHTML}` 한 줄로
+ * 끝나고, 아이콘을 컴포넌트로 감싸 봐야 얻는 것이 없습니다. 이 함수는 렌더러
+ * 를 **네 번** 갈아타는 동안 한 글자도 안 바뀌었습니다.
  *
  * 형제 패키지 `lucide` 는 같은 아이콘을 **데이터**로 줍니다
  * (`[tag, attrs][]`). 프레임워크가 없습니다.
@@ -61,35 +65,4 @@ export function icon(node: IconNode, size: number): SVGElement {
   }
 
   return svg
-}
-
-export interface ToolbarButtonOptions {
-  title: string
-  /** 없으면 `title` 을 씁니다 */
-  label?: string
-}
-
-/**
- * 툴바 아이콘 버튼을 만듭니다 — `ToolbarButton` 컴포넌트와 **같은 DOM** 입니다.
- *
- * 커스텀 엘리먼트로 만들지 않은 이유는 규칙 ① 때문입니다. 버튼의 마크업은
- * `<button>` 이 아이콘을 감싼 꼴인데, 바깥에서 아이콘을 자식으로 넣어 주면
- * 엘리먼트가 그것을 자기 `<button>` 안으로 옮겨야 합니다 — Shadow DOM 없이
- * 슬롯을 흉내 내는 셈이고, 얻는 것보다 복잡합니다.
- *
- * 그래서 **함수**로 둡니다. 옮긴 컴포넌트가 자기 버튼을 직접 만들고, 아직 안
- * 옮긴 Preact 쪽은 `ToolbarButton` 을 계속 씁니다. 둘의 DOM 이 같아야
- * `[data-part='icon-button']` 한 곳에 모아 둔 스타일이 양쪽에 그대로 걸립니다.
- */
-export function toolbarButton(
-  { title, label }: ToolbarButtonOptions,
-  ...children: Node[]
-): HTMLButtonElement {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.dataset.part = 'icon-button'
-  button.title = title
-  button.setAttribute('aria-label', label ?? title)
-  button.append(...children)
-  return button
 }
