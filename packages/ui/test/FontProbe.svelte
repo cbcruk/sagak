@@ -18,7 +18,7 @@
    */
 
   let status = $state(statusStore.get())
-  let families = $state(familiesStore.get())
+  let families = $state<readonly string[]>(familiesStore.get())
 
   $effect(() => {
     const offStatus = statusStore.subscribe((value) => (status = value))

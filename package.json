@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter sagak-app dev",
     "build": "pnpm --filter sagak-app build",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && svelte-check --threshold error",
     "test": "pnpm -r --sequential test",
     "test:run": "pnpm --filter sagak-core test:run",
     "test:ui": "pnpm --filter sagak-ui test",
@@ -31,6 +31,7 @@
     "playwright": "^1.57.0",
     "prettier": "^3.6.2",
     "svelte": "^5.56.9",
+    "svelte-check": "^4.7.6",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vitest": "^3.2.4"

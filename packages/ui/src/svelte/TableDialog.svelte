@@ -92,9 +92,15 @@
       editor?.eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position })
     })
 
-  const emit = (name: string) => () =>
+  /* 쏘는 이벤트를 실제로 있는 셋으로 좁힙니다 — `as never` 를 안 쓰려고 */
+  type DeleteEvent =
+    | typeof ContentEvents.TABLE_DELETE_ROW
+    | typeof ContentEvents.TABLE_DELETE_COLUMN
+    | typeof ContentEvents.TABLE_DELETE
+
+  const emit = (name: DeleteEvent) => () =>
     restoreThen(() => {
-      editor?.eventBus.emit(name as never)
+      editor?.eventBus.emit(name)
     })
 </script>
 

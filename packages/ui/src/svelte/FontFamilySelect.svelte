@@ -59,7 +59,7 @@
     value: string
   }
 
-  let families = $state(familiesStore.get())
+  let families = $state<readonly string[]>(familiesStore.get())
   let status = $state(statusStore.get())
   let value = $state(FALLBACK_FONTS[0].value)
 

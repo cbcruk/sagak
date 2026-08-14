@@ -74,7 +74,20 @@
     return el.outerHTML
   }
 
-  const emit = (name: string) => () => editor?.eventBus.emit(name as never)
+  /*
+   * 쏘는 이벤트를 **실제로 있는 넷으로 좁혀** 둡니다.
+   *
+   * `string` 으로 두면 발행할 때 `as never` 캐스팅이 필요해지는데, 그건
+   * 이벤트 맵의 타입 검사를 스스로 꺼 버리는 셈입니다. `svelte-check` 를
+   * 붙이고서야 드러났습니다 — `tsc` 는 `.svelte` 를 안 봅니다.
+   */
+  type ToggleEvent =
+    | typeof TextStyleEvents.BOLD_CLICKED
+    | typeof TextStyleEvents.ITALIC_CLICKED
+    | typeof TextStyleEvents.UNDERLINE_CLICKED
+    | typeof TextStyleEvents.STRIKE_CLICKED
+
+  const emit = (name: ToggleEvent) => () => editor?.eventBus.emit(name)
 </script>
 
 <div k="toggle-group" role="group" aria-label="Text style">

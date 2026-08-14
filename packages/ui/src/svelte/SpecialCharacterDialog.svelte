@@ -23,6 +23,10 @@
    * 즉 `aria-selected` 만 제대로 달면 생김새가 그대로 옵니다. `Dialog` 때와
    * 같은 결론입니다 — kinu 가 얹은 것은 마크업과 CSS 지 동작이 아니었습니다.
    *
+   * `role="tab"`/`role="tablist"` 은 `svelte-check` 가 알려 줬습니다 —
+   * `aria-selected` 는 버튼의 암묵 역할에서는 안 통하는 속성입니다. 검사가
+   * 없던 층을 켜자마자 나온 것이라, 옮길 때부터 틀려 있었습니다.
+   *
    * ## 목록은 밖에 있습니다
    *
    * `special-character-dialog.shared.ts` 에서 가져옵니다. 문자 목록이 두 판에
@@ -71,11 +75,12 @@
 <dialog bind:this={dialogEl} k="dialog-content" aria-label="Insert Special Character">
   <h2>Insert Special Character</h2>
 
-  <div k="tablist">
+  <div k="tablist" role="tablist">
     {#each categories as category, index (category.name)}
       <button
         type="button"
         k="tab"
+        role="tab"
         aria-selected={activeCategory === index}
         onclick={() => (activeCategory = index)}
       >

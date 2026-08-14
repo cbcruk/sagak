@@ -20,6 +20,9 @@
       "sagak-ui": [
         "../../packages/ui/src/index.ts"
       ],
+      "sagak-ui/svelte/*": [
+        "../../packages/ui/src/svelte/*"
+      ],
       "sagak-core": [
         "../../packages/core/src/index.ts"
       ],
