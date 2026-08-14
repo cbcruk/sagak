@@ -21,6 +21,10 @@ packages/*/test/**/*.js
 packages/*/test/**/*.d.ts
 packages/*/test/**/*.d.ts.map
 
+# 위 규칙은 *산출물* 을 막으려는 것인데, 손으로 쓴 앰비언트 선언까지 함께
+# 걸립니다. 손으로 쓴 것은 여기에 이름을 적어 되살립니다.
+!packages/ui/src/svelte-html.d.ts
+
 # Test artifacts
 packages/*/test/**/__screenshots__/
 spike/*/test/**/__screenshots__/
