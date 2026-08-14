@@ -17,6 +17,7 @@ import { List, ListOrdered } from 'lucide'
 import type { IconNode } from 'lucide'
 import { icon } from '../src/elements/icon'
 import { ExportEvents } from 'sagak-core'
+import { FALLBACK_FONTS } from '../src/components/font-family-select/font-family-select.shared'
 
 /**
  * kinu 이전(#13·#14) 때 브라우저를 직접 몰아 확인했던 것들입니다.
@@ -202,6 +203,42 @@ describe('툴바', () => {
       )!
       expect(size.value, '고른 글자의 크기를 안 따라갑니다').toBe('5')
       expect(size.selectedOptions[0]?.textContent).toBe('18')
+    })
+
+    /**
+     * ## 대조군에서 안 물던 것 — 글꼴 메뉴가 지금 글꼴을 가리키는지
+     *
+     * 폰트 메뉴를 Svelte 로 옮기며 `subscribeToSelection` 구독을 통째로 지워도
+     * 182개가 그대로 통과했습니다. 고른 뒤에 메뉴가 그 값을 가리키는 것은
+     * `bind:value` 라 저절로 되고, **글에 이미 걸린 글꼴을 읽어 오는 쪽**은
+     * 아무도 안 보고 있었습니다.
+     *
+     * 명조 글자에 커서를 두면 메뉴가 `Serif` 를 가리켜야 합니다.
+     *
+     * 내용에 글꼴 스택을 직접 적을 때는 **작은따옴표로 감싸야** 합니다 —
+     * 스택 안에 큰따옴표가 들어 있어서, 큰따옴표로 감싸면 속성이 중간에
+     * 끊기고 소독기가 빈 `font-family:` 만 남깁니다. 처음에 그렇게 재 보고
+     * 컴포넌트를 의심했었습니다.
+     */
+    it('글에 걸린 글꼴을 메뉴가 가리켜야 함', async () => {
+      const serif = FALLBACK_FONTS[1]
+      ed = await mountEditor(
+        `<p><span style='font-family: ${serif.value}'>명조 글자</span></p>`
+      )
+      await settle(8)
+
+      const menu = ed.root.querySelector<HTMLSelectElement>(
+        'select[title="Font Family"]'
+      )!
+
+      selectAll(ed.editable)
+      await settle(10)
+      expect(menu.value, '전체 선택에서 글꼴을 안 따라갑니다').toBe(serif.value)
+      expect(menu.selectedOptions[0]?.textContent).toBe('Serif')
+
+      placeCaretInText(ed.editable, 1)
+      await settle(10)
+      expect(menu.value, '캐럿에서 글꼴을 안 따라갑니다').toBe(serif.value)
     })
 
     it('제목을 반영해야 함', async () => {

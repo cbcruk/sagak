@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
   import type { EditorProviderElement } from '../elements/editor-context'
-  import '../elements/font-family-select'
   import '../elements/color-picker'
   import '../elements/auto-save-indicator'
   import '../elements/more-menu'
   import '../elements/link-dialog'
+  import FontFamilySelect from './FontFamilySelect.svelte'
   import ToolbarSelect from './ToolbarSelect.svelte'
   import {
     FONT_SIZE,
@@ -91,7 +91,7 @@
 
     <div data-part="separator"></div>
 
-    <sagak-font-family-select></sagak-font-family-select>
+    <FontFamilySelect {editor} />
     <ToolbarSelect {editor} spec={FONT_SIZE} />
 
     <div data-part="mobile-hidden" style="display: contents">
