@@ -48,26 +48,25 @@ export interface ToolbarSelectSpec {
  * 없어서인데, 그래서 9 를 골라도 메뉴는 10 을 가리킵니다. 옮기면서 고치지
  * 않았습니다 — 이주는 동작을 같게 두는 것이 먼저입니다.
  *
- * ## 다만 지금은 **안 따라갑니다** (이주와 무관한 문제)
+ * ## 전에는 ⌘A 에서 안 따라갔습니다 (지금은 고쳤습니다)
  *
  * Svelte 로 옮기며 사보타주를 돌렸더니 `subscribeToSelection` 구독을 통째로
- * 지워도 검사가 하나도 안 걸렸습니다. 재 보니 구독이 안 도는 것이 아니라
- * **질의가 늘 같은 값을 돌려줍니다.**
+ * 지워도 검사가 하나도 안 걸렸습니다. 구독이 안 도는 것이 아니라 **질의가
+ * 틀린 값을 주고 있었습니다.**
  *
  * ```
- * <p><font size="5">큰 글자</font></p> 를 전부 선택한 상태
- *   commandRegistry.queryValue('fontSize') → "3"   ← 이 값을 씁니다
- *   document.queryCommandValue('fontSize') → "5"   ← 실제
+ * <p><font size="5">큰 글자</font></p>
+ *   캐럿·드래그로 고르면  → "5"  (맞음)
+ *   ⌘A 로 전부 고르면     → "3"  (틀림, 네이티브는 "5")
  * ```
  *
- * `??` 는 `null`·`undefined` 일 때만 넘어가는데 레지스트리가 `"3"` 을 주므로
- * 네이티브 값까지 못 갑니다. 그래서 글자 크기 메뉴는 무엇을 골라 두든 늘
- * `12` 를 가리킵니다.
+ * 원인은 `sagak-core` 의 `native-query` 였습니다 — 조회가 `startContainer`
+ * 를 기준으로 하는데 `selectNodeContents(편집영역)` 은 그것이 편집 영역
+ * `<div>` 라, 조상 탐색이 내용을 건너뛰고 위로 올라갔습니다. 굵게 같은 서식
+ * 상태도 같이 틀렸습니다.
  *
- * **이주가 만든 것이 아닙니다** — nanotags 판으로 되돌려 같은 것을 재 봤고
- * 값이 똑같았습니다. 고칠 자리는 `sagak-core` 의 `commandRegistry` 라 여기가
- * 아닙니다. `query`/`fallbackValue` 갈래를 쓰는 것이 이 하나뿐이므로, 그
- * 갈래는 지금 **사실상 죽어 있습니다.**
+ * 거기서 고쳤고, 검사는 코어(경계에서 시작하는 범위 다섯)와 툴바(⌘A 에서
+ * 굵게·크기가 보이는지 둘) 양쪽에 있습니다.
  */
 export const FONT_SIZE: ToolbarSelectSpec = {
   title: 'Font Size',

@@ -109,6 +109,36 @@ describe('툴바', () => {
       expect(stroke('Italic')).toBe('2')
     })
 
+    /**
+     * ## 전체 선택(⌘A)에서 툴바가 지금 서식을 못 읽고 있었습니다
+     *
+     * 있던 검사는 **누른 뒤**를 봤습니다 — 전부 고르고 굵게를 누르면
+     * `aria-pressed` 가 `true` 가 되는지. 이미 굵은 글을 **골랐을 때** 눌린
+     * 것으로 보이는지는 아무도 안 봤습니다.
+     *
+     * 재 보니 툴바가 꺼져 보였습니다. 조회가 `startContainer` 를 기준으로
+     * 하는데, `selectNodeContents(편집영역)` 은 그것이 편집 영역 `<div>` 라
+     * 조상 탐색이 내용을 건너뛰고 위로 올라갑니다. 캐럿·드래그는 텍스트
+     * 노드라 원래부터 맞았고 **⌘A 만** 틀렸습니다.
+     *
+     * 고친 자리는 `sagak-core` 의 `native-query` 입니다. 여기서는 그 결과가
+     * **사용자 눈에 닿는지**를 봅니다.
+     */
+    it('이미 굵은 글을 전부 고르면 굵게가 눌린 것으로 보여야 함', async () => {
+      ed = await mountEditor('<p><strong>굵은 글자만</strong></p>')
+      await settle(6)
+      selectAll(ed.editable)
+      await settle(8)
+
+      const bold = ed.root.querySelector<HTMLButtonElement>(
+        'button[aria-label="Bold"]'
+      )!
+      expect(
+        bold.getAttribute('aria-pressed'),
+        '전부 굵은데 굵게가 꺼져 보입니다'
+      ).toBe('true')
+    })
+
     it('세그먼트 모서리를 이어붙여야 함', async () => {
       ed = await mountEditor()
       const toggles = ed.root.querySelectorAll<HTMLElement>(
@@ -151,6 +181,27 @@ describe('툴바', () => {
       )
 
       expect(ed.editable.innerHTML).toMatch(/line-height:\s*2/i)
+    })
+
+    /**
+     * 글자 크기 메뉴는 **따라가는** 드롭다운입니다 — 고른 글자의 크기를
+     * 보여줘야 합니다. `native-query` 를 고치기 전에는 전체 선택에서 늘
+     * `12`(스케일 `3`)를 가리켰습니다.
+     *
+     * `<font size="5">` 는 24px 이고 메뉴에서는 `18` 로 보입니다 — 라벨과
+     * 값이 다른 것은 `execCommand` 의 1~7 스케일을 그대로 쓰기 때문입니다.
+     */
+    it('고른 글자의 크기를 가리켜야 함', async () => {
+      ed = await mountEditor('<p><font size="5">큰 글자</font></p>')
+      await settle(6)
+      selectAll(ed.editable)
+      await settle(8)
+
+      const size = ed.root.querySelector<HTMLSelectElement>(
+        'select[title="Font Size"]'
+      )!
+      expect(size.value, '고른 글자의 크기를 안 따라갑니다').toBe('5')
+      expect(size.selectedOptions[0]?.textContent).toBe('18')
     })
 
     it('제목을 반영해야 함', async () => {

@@ -181,4 +181,85 @@ describe('native queries & fontSize', () => {
       expect(registry.queryValue('fontSize')).toBe('5')
     })
   })
+
+  /**
+   * ## 요소 경계에서 시작하는 범위 (⌘A)
+   *
+   * 위의 검사들은 전부 **텍스트 노드**를 골라 놓고 묻습니다. 그러면
+   * `startContainer` 가 곧 내용이라 조상 탐색이 바로 먹습니다.
+   *
+   * 전체 선택은 다릅니다. `selectNodeContents(편집영역)` 이라
+   * `startContainer` 가 편집 영역 `<div>` 이고, 첫 글자는
+   * `childNodes[startOffset]` **안**에 있습니다. 그걸 그대로 기준으로 삼으면
+   * 탐색이 내용을 건너뛰고 위로 올라갑니다.
+   *
+   * 재 봤던 값입니다 — 네이티브 API 는 맞히는데 우리 것만 틀렸습니다.
+   *
+   * | 선택 | `queryState('bold')` | `queryCommandState` |
+   * | --- | --- | --- |
+   * | 캐럿·드래그 | `true` | `true` |
+   * | ⌘A | **`false`** | `true` |
+   *
+   * 툴바에서는 굵은 글을 전부 고른 채로 굵게 버튼이 꺼져 보이고, 글자 크기가
+   * 실제와 다르게 나옵니다.
+   */
+  describe('요소 경계에서 시작하는 범위', () => {
+    /** `selectNodeContents` — 전체 선택과 같은 모양입니다 */
+    const selectAllContents = (target: Node): void => {
+      const range = document.createRange()
+      range.selectNodeContents(target)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+    }
+
+    it('전체 선택에서도 서식 상태를 알아야 함', () => {
+      element.innerHTML = '<p><strong>Hello</strong></p>'
+      selectAllContents(element)
+
+      expect(registry.queryState('bold'), '⌘A 에서 굵게를 놓칩니다').toBe(true)
+    })
+
+    it('전체 선택에서도 글자 크기를 알아야 함', () => {
+      element.innerHTML = '<p><span style="font-size: 24px">Hi</span></p>'
+      selectAllContents(element)
+
+      expect(registry.queryValue('fontSize'), '⌘A 에서 크기를 놓칩니다').toBe(
+        '5'
+      )
+    })
+
+    it('전체 선택에서도 글꼴을 알아야 함', () => {
+      element.innerHTML = '<p><span style="font-family: Georgia">Hi</span></p>'
+      selectAllContents(element)
+
+      expect(registry.queryValue('fontName')).toContain('Georgia')
+    })
+
+    /*
+     * 서식이 없으면 없다고 해야 합니다 — 내려가는 것이 아무 요소나 집어
+     * 오는 것이 아니라 **첫 글자 자리**를 찾는 일임을 고정합니다.
+     */
+    it('서식 없는 글은 전체 선택에서도 비활성이어야 함', () => {
+      element.innerHTML = '<p>Hello</p>'
+      selectAllContents(element)
+
+      expect(registry.queryState('bold')).toBe(false)
+    })
+
+    /* 빈 문단에 접힌 캐럿 — 내려갈 자식이 없습니다 */
+    it('빈 곳에 접힌 커서에서도 터지지 않아야 함', () => {
+      element.innerHTML = '<p></p>'
+      const paragraph = element.querySelector('p')!
+      const range = document.createRange()
+      range.setStart(paragraph, 0)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      expect(registry.queryState('bold')).toBe(false)
+      expect(() => registry.queryValue('fontSize')).not.toThrow()
+    })
+  })
 })
