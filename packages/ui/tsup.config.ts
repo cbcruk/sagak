@@ -8,9 +8,5 @@ export default defineConfig({
   treeshake: true,
   splitting: false,
   minify: false,
-  external: ['preact', 'preact/hooks', 'lucide-preact', 'sagak-core', 'kinu'],
-  esbuildOptions(options) {
-    options.jsx = 'automatic'
-    options.jsxImportSource = 'preact'
-  },
+  external: ['sagak-core'],
 })

@@ -8,8 +8,6 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -21,6 +19,9 @@
     "paths": {
       "sagak-ui": [
         "../../packages/ui/src/index.ts"
+      ],
+      "sagak-ui/svelte/*": [
+        "../../packages/ui/src/svelte/*"
       ],
       "sagak-core": [
         "../../packages/core/src/index.ts"

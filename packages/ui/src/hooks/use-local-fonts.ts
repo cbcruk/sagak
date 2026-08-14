@@ -1,5 +1,4 @@
 import { atom } from 'nanostores'
-import { useSyncExternalStore } from 'preact/compat'
 import { supportsKorean } from './use-local-fonts.utils'
 
 /**
@@ -280,16 +279,3 @@ export function watchLocalFontPermission(): void {
     })
 }
 
-export function useLocalFonts(): UseLocalFontsReturn {
-  watchLocalFontPermission()
-
-  /*
-   * `.value` 를 읽는 것만으로 이 컴포넌트가 구독됩니다. 훅은 모듈 상태를
-   * 비추기만 하고 자기 상태를 갖지 않습니다.
-   */
-  return {
-    status: useSyncExternalStore($status.subscribe, $status.get),
-    families: useSyncExternalStore($families.subscribe, $families.get),
-    load,
-  }
-}

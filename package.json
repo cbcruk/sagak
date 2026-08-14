@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter sagak-app dev",
     "build": "pnpm --filter sagak-app build",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && svelte-check --threshold error",
     "test": "pnpm -r --sequential test",
     "test:run": "pnpm --filter sagak-core test:run",
     "test:ui": "pnpm --filter sagak-ui test",
@@ -18,8 +18,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
-    "@preact/preset-vite": "^2.10.2",
-    "@preact/signals": "^2.5.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
@@ -30,15 +29,15 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
     "playwright": "^1.57.0",
-    "preact": "^10.27.2",
     "prettier": "^3.6.2",
+    "svelte": "^5.56.9",
+    "svelte-check": "^4.7.6",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vitest": "^3.2.4"
   },
   "dependencies": {
     "lucide": "^1.31.0",
-    "nanostores": "^1.4.2",
-    "nanotags": "^0.15.2"
+    "nanostores": "^1.4.2"
   }
 }

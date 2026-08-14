@@ -6,6 +6,69 @@ import { getPendingFormat } from './stored-marks'
 import { cssToLegacyFontSize } from './native-font-size'
 
 /**
+ * 범위가 실제로 시작하는 노드를 찾습니다
+ *
+ * `startContainer` 가 늘 내용은 아닙니다. 범위가 **요소 경계에서** 시작하면
+ * 컨테이너는 그 요소 자신이고, 첫 글자는 `childNodes[startOffset]` 안에
+ * 있습니다. 전체 선택(⌘A)이 그런 모양입니다 —
+ * `selectNodeContents(편집영역)` 이라 `startContainer` 가 편집 영역 `<div>`
+ * 입니다.
+ *
+ * 그걸 그대로 기준으로 삼으면 조상 탐색이 **내용을 건너뛰고** 위로 올라가고,
+ * 계산된 스타일도 편집 영역의 기본값을 읽습니다. 재 보면 이렇습니다.
+ *
+ * ```
+ * <p><strong>굵은 글자만</strong></p> 를 ⌘A
+ *   queryState('bold')      → false   ← 틀림
+ *   queryCommandState('bold') → true
+ *
+ * <p><font size="5">큰 글자</font></p> 를 ⌘A
+ *   queryValue('fontSize')      → "3"  ← 틀림
+ *   queryCommandValue('fontSize') → "5"
+ * ```
+ *
+ * 캐럿이나 드래그로 고른 범위는 `startContainer` 가 텍스트 노드라 원래부터
+ * 맞았습니다. **경계에서 시작하는 범위만** 틀렸습니다.
+ */
+function descend(node: Node, edge: 'first' | 'last'): Node {
+  let current = node
+  while (current.nodeType === Node.ELEMENT_NODE) {
+    const next = edge === 'first' ? current.firstChild : current.lastChild
+    if (!next) break
+    current = next
+  }
+  return current
+}
+
+function rangeStartNode(range: Range): Node {
+  const container = range.startContainer
+  if (container.nodeType !== Node.ELEMENT_NODE) return container
+
+  const after = container.childNodes[range.startOffset]
+  if (after) return descend(after, 'first')
+
+  /*
+   * 뒤에 아무것도 없으면 **앞의 것**이 기준입니다.
+   *
+   * `<p><strong>글자</strong></p>` 의 끝(`(p, 1)`)에 커서를 두면 화면에서는
+   * 굵은 글 바로 뒤이고, 거기서 치면 굵게 이어집니다. 그런데 컨테이너를
+   * 기준으로 삼으면 `<strong>` 을 못 보고 "굵지 않음" 이라고 답했습니다 —
+   * 툴바는 꺼져 보이는데 치면 굵게 나오는 어긋남입니다.
+   *
+   * ```
+   * <p><strong>글자</strong></p> 의 (p, 1)
+   *   queryState('bold')        → false  ← 틀림
+   *   queryCommandState('bold') → true
+   * ```
+   */
+  const before = container.childNodes[range.startOffset - 1]
+  if (before) return descend(before, 'last')
+
+  /* 자식이 아예 없는 빈 요소 — 컨테이너가 기준입니다 */
+  return container
+}
+
+/**
  * 현재 선택의 기준 노드를 가져옵니다
  *
  * 상태·값 조회는 선택 시작 지점의 서식을 기준으로 판단합니다.
@@ -15,7 +78,7 @@ function anchorNode(): { node: Node; host: HTMLElement } | null {
   if (!selection || selection.rangeCount === 0) return null
 
   const range = selection.getRangeAt(0)
-  const node = range.startContainer
+  const node = rangeStartNode(range)
   const host = closestEditableHost(node)
   if (!host) return null
 
