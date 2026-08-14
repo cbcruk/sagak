@@ -30,19 +30,42 @@ import { cssToLegacyFontSize } from './native-font-size'
  * 캐럿이나 드래그로 고른 범위는 `startContainer` 가 텍스트 노드라 원래부터
  * 맞았습니다. **경계에서 시작하는 범위만** 틀렸습니다.
  */
+function descend(node: Node, edge: 'first' | 'last'): Node {
+  let current = node
+  while (current.nodeType === Node.ELEMENT_NODE) {
+    const next = edge === 'first' ? current.firstChild : current.lastChild
+    if (!next) break
+    current = next
+  }
+  return current
+}
+
 function rangeStartNode(range: Range): Node {
   const container = range.startContainer
   if (container.nodeType !== Node.ELEMENT_NODE) return container
 
-  /* 끝에 붙어 접힌 경우 — 내려갈 자식이 없으므로 컨테이너가 기준입니다 */
-  let node: Node | null = container.childNodes[range.startOffset] ?? null
-  if (!node) return container
+  const after = container.childNodes[range.startOffset]
+  if (after) return descend(after, 'first')
 
-  /* 첫 글자가 있는 데까지 내려갑니다 */
-  while (node.nodeType === Node.ELEMENT_NODE && node.firstChild) {
-    node = node.firstChild
-  }
-  return node
+  /*
+   * 뒤에 아무것도 없으면 **앞의 것**이 기준입니다.
+   *
+   * `<p><strong>글자</strong></p>` 의 끝(`(p, 1)`)에 커서를 두면 화면에서는
+   * 굵은 글 바로 뒤이고, 거기서 치면 굵게 이어집니다. 그런데 컨테이너를
+   * 기준으로 삼으면 `<strong>` 을 못 보고 "굵지 않음" 이라고 답했습니다 —
+   * 툴바는 꺼져 보이는데 치면 굵게 나오는 어긋남입니다.
+   *
+   * ```
+   * <p><strong>글자</strong></p> 의 (p, 1)
+   *   queryState('bold')        → false  ← 틀림
+   *   queryCommandState('bold') → true
+   * ```
+   */
+  const before = container.childNodes[range.startOffset - 1]
+  if (before) return descend(before, 'last')
+
+  /* 자식이 아예 없는 빈 요소 — 컨테이너가 기준입니다 */
+  return container
 }
 
 /**

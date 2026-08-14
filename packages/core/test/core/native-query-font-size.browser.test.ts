@@ -247,6 +247,72 @@ describe('native queries & fontSize', () => {
       expect(registry.queryState('bold')).toBe(false)
     })
 
+    /**
+     * ## 끝 경계 — 뒤에 아무것도 없으면 앞의 것을 봅니다
+     *
+     * `<p><strong>글자</strong></p>` 의 `(p, 1)` 은 화면에서 굵은 글 바로
+     * 뒤이고, 거기서 치면 굵게 이어집니다. 그런데 `childNodes[1]` 이 없어
+     * 컨테이너로 떨어지면 `<strong>` 을 못 보고 "굵지 않음" 이 됩니다 —
+     * 툴바는 꺼져 보이는데 치면 굵게 나옵니다.
+     *
+     * | `(p, 1)` | 우리 조회 | 네이티브 |
+     * | --- | --- | --- |
+     * | 고치기 전 | **false** | true |
+     * | 지금 | true | true |
+     */
+    it('굵은 글 바로 뒤에 커서를 두면 굵게로 봐야 함', () => {
+      element.innerHTML = '<p><strong>Hello</strong></p>'
+      const paragraph = element.querySelector('p')!
+      const range = document.createRange()
+      range.setStart(paragraph, 1)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      expect(
+        registry.queryState('bold'),
+        '굵은 글 뒤인데 굵게를 놓칩니다'
+      ).toBe(true)
+    })
+
+    it('굵은 글 바로 앞에 커서를 두어도 굵게로 봐야 함', () => {
+      element.innerHTML = '<p><strong>Hello</strong></p>'
+      const paragraph = element.querySelector('p')!
+      const range = document.createRange()
+      range.setStart(paragraph, 0)
+      range.collapse(true)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      expect(registry.queryState('bold')).toBe(true)
+    })
+
+    /**
+     * ## 섞인 선택은 **시작 지점**을 따릅니다
+     *
+     * 이 파일 첫머리에 적힌 규약이 그것입니다 — "선택 시작 지점의 서식을
+     * 기준으로 판단합니다". 네이티브는 선택 전체를 보므로 섞이면 `false`
+     * 인데, 우리는 시작이 굵으면 `true` 입니다.
+     *
+     * 경계 고침 전에는 ⌘A 가 늘 편집 영역 `<div>` 로 떨어져 **어느 쪽이든
+     * `false`** 였습니다. 규약이 실제로 지켜지는지 여기서 고정합니다.
+     */
+    it('섞인 선택은 시작이 굵으면 굵게로 봐야 함', () => {
+      element.innerHTML = '<p><strong>굵은</strong> 보통</p>'
+      selectAllContents(element)
+
+      expect(registry.queryState('bold')).toBe(true)
+    })
+
+    it('섞인 선택은 시작이 보통이면 아니어야 함', () => {
+      element.innerHTML = '<p>보통 <strong>굵은</strong></p>'
+      selectAllContents(element)
+
+      expect(registry.queryState('bold')).toBe(false)
+    })
+
     /* 빈 문단에 접힌 캐럿 — 내려갈 자식이 없습니다 */
     it('빈 곳에 접힌 커서에서도 터지지 않아야 함', () => {
       element.innerHTML = '<p></p>'
