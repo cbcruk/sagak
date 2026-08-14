@@ -97,6 +97,35 @@ describe('색 고르개', () => {
     )
   })
 
+  /**
+   * ## 대조군에서 안 물던 것 — 툴바 버튼의 견본
+   *
+   * Svelte 로 옮기며 사보타주를 돌렸더니 **고른 색을 견본에 칠하는 일**만
+   * 지워도 184개가 그대로 통과했습니다. 색은 글에 먹는데 툴바 버튼은 계속
+   * 검정을 보여주는 상태입니다 — 다음에 무엇이 칠해질지 알려 주는 유일한
+   * 표시라 눈에 잘 띕니다.
+   *
+   * 견본은 버튼 안의 `<span>` 이고 배경색으로 보여줍니다.
+   */
+  it('고른 색이 툴바 견본에 보여야 함', async () => {
+    ed = await mountEditor('<p>hello world</p>')
+    await settle()
+
+    const swatchOf = (el: HTMLElement): string =>
+      getComputedStyle(el.querySelector('span')!).backgroundColor
+
+    expect(swatchOf(textButton())).toBe('rgb(0, 0, 0)')
+
+    selectAll(ed.editable)
+    await click(textButton())
+    await click(swatches(ed.root, '#ff0000')[0])
+    await settle(4)
+
+    expect(swatchOf(textButton()), '견본이 고른 색을 안 보여줍니다').toBe(
+      'rgb(255, 0, 0)'
+    )
+  })
+
   it('고르고 나면 닫힙니다', async () => {
     ed = await mountEditor('<p>hello world</p>')
     await settle()

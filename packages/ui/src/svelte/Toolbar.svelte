@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
   import type { EditorProviderElement } from '../elements/editor-context'
-  import '../elements/color-picker'
   import '../elements/auto-save-indicator'
+  import ColorPicker from './ColorPicker.svelte'
   import FontFamilySelect from './FontFamilySelect.svelte'
   import ToolbarSelect from './ToolbarSelect.svelte'
   import {
@@ -86,8 +86,8 @@
 
     <FormatToggles {editor} />
 
-    <sagak-color-picker type="text"></sagak-color-picker>
-    <sagak-color-picker type="background"></sagak-color-picker>
+    <ColorPicker {editor} type="text" />
+    <ColorPicker {editor} type="background" />
 
     <div data-part="separator"></div>
 
