@@ -26,9 +26,11 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
   }
 
-  const { editor }: Props = $props()
+  const { editor, hideTrigger = false }: Props = $props()
 
   let dialogEl: HTMLDialogElement
   let rows = $state('3')
@@ -54,7 +56,7 @@
     return subscribeToSelection(editor, sync)
   })
 
-  function open(): void {
+  export function open(): void {
     editor?.selectionManager?.saveSelection()
     rows = '3'
     cols = '3'
@@ -99,6 +101,7 @@
 <button
   type="button"
   data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
   data-state={hasTable ? 'on' : undefined}
   title="Insert Table"
   aria-label="Insert Table"

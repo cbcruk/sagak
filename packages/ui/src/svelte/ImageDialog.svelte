@@ -35,9 +35,11 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
   }
 
-  const { editor }: Props = $props()
+  const { editor, hideTrigger = false }: Props = $props()
 
   type UploadMode = 'url' | 'file'
 
@@ -70,7 +72,7 @@
     uploadError = null
   }
 
-  function open(): void {
+  export function open(): void {
     editor?.selectionManager?.saveSelection()
 
     const img = getSelectedImage()
@@ -179,6 +181,7 @@
 <button
   type="button"
   data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
   title="Insert Image"
   aria-label="Insert Image"
   onclick={open}

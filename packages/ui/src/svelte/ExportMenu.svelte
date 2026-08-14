@@ -25,10 +25,13 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
     filename?: string
   }
 
-  const { editor, filename = 'document' }: Props = $props()
+  const { editor, filename = 'document', hideTrigger = false }: Props =
+    $props()
 
   const menuId = $props.id()
 
@@ -73,6 +76,7 @@
     type="button"
     commandfor={menuId}
     data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
     title="Export"
     aria-label="Export"
     onclick={() => menuEl.show()}

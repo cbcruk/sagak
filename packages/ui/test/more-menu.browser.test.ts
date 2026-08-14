@@ -5,6 +5,8 @@ import {
   selectAll,
   settle,
   click,
+  dialog,
+  isOpen,
   type MountedEditor,
 } from './harness'
 
@@ -26,10 +28,12 @@ import {
  * 기능들에 닿는 **유일한 길**인데(툴바에서 `mobile-hidden` 으로 감춰집니다),
  * 눌러도 아무 일이 없습니다.
  *
- * **여기서는 고치지 않습니다.** 이주는 동작을 같게 두는 것이 먼저이고, 죽은
- * 버튼 일곱을 살리는 것은 별개의 일입니다. 다만 **죽은 것을 검사로 못 박지도
- * 않습니다** — 아래는 실제로 동작하는 셋과 열고 닫기만 봅니다. 나중에 이으면
- * 이 테스트는 그대로 두고 새 검사를 더하면 됩니다.
+ * 이주 중에는 고치지 않고 두었습니다 — 동작을 같게 두는 것이 먼저였고,
+ * 다이얼로그들이 전부 kinu `Dialog` 라 열 수단이 없었습니다.
+ *
+ * **지금은 다섯을 이었습니다.** 링크·이미지·표·특수문자·찾기가 실제로
+ * 다이얼로그를 엽니다 (아래 `다섯 항목이 다이얼로그를 엽니다`). 줄 간격·자간
+ * 둘은 `<select>` 라 여는 수단이 마땅치 않아 아직 빈 항목입니다.
  */
 
 let ed: MountedEditor | null = null
@@ -122,5 +126,86 @@ describe('더보기 메뉴', () => {
     await click(trigger())
     await click(item('Superscript'))
     expect(ed.editable.querySelector('sup'), '위첨자가 안 먹었습니다').not.toBeNull()
+  })
+
+  /**
+   * ## 좁은 화면에서는 이 메뉴가 유일한 길입니다
+   *
+   * 툴바에서 이 다이얼로그들의 트리거는 좁은 화면에서 감춰집니다. 그래서
+   * 메뉴 항목이 실제로 다이얼로그를 열어야 합니다.
+   *
+   * ### 감추는 자리를 옮겨야 했습니다
+   *
+   * 예전에는 툴바가 컴포넌트를 통째로 `[data-part="mobile-hidden"]` 안에
+   * 넣었고 그 규칙이 `display: none` 입니다. 그러면 안의 `<dialog>` 까지
+   * 안 그려집니다 — 재 보면 `showModal()` 은 성공하고 `open` 도 붙는데
+   * 크기가 **0×0** 입니다. 이으려면 감추는 표시를 **버튼에** 옮겨야 했습니다.
+   */
+  it.each([
+    ['Link', 'Insert Link'],
+    ['Image', 'Insert Image'],
+    ['Table', 'Insert Table'],
+    ['Special Character', 'Insert Special Character'],
+    ['Find & Replace', 'Find & Replace'],
+  ])('%s 항목이 다이얼로그를 엽니다', async (label, dialogName) => {
+    ed = await mountEditor('<p>hello</p>')
+    placeCaretInText(ed.editable, 1)
+    await settle(6)
+
+    await click(trigger())
+    await click(item(label))
+    await settle(6)
+
+    const dlg = dialog(dialogName)
+    expect(isOpen(dlg), `${label} 이 다이얼로그를 안 엽니다`).toBe(true)
+
+    /* 다이얼로그가 실제로 **보여야** 합니다 — 0×0 이면 연 것이 아닙니다 */
+    const box = dlg.getBoundingClientRect()
+    expect(box.width, '다이얼로그가 안 보입니다').toBeGreaterThan(0)
+    expect(box.height).toBeGreaterThan(0)
+
+    expect(menu(), '다이얼로그를 열었는데 메뉴가 남았습니다').toBeNull()
+    dlg.close()
+  })
+
+  /**
+   * ## 좁은 화면에서 트리거가 정말 감춰져야 합니다
+   *
+   * 이 메뉴가 "유일한 길" 인 것은 툴바의 트리거들이 감춰지기 때문입니다.
+   * 감추기가 풀리면 메뉴를 이은 의미도 절반이 없어지므로 같이 봅니다.
+   *
+   * 감추는 표시를 컨테이너에서 **버튼으로** 옮겼기 때문에, 감춘 뒤에도
+   * 다이얼로그는 열려야 합니다 — 그 둘을 한 검사에서 확인합니다.
+   */
+  it('좁은 화면에서 트리거는 감춰지고 메뉴로는 열려야 합니다', async () => {
+    ed = await mountEditor('<p>hello</p>')
+    ed.root.style.width = '380px'
+    placeCaretInText(ed.editable, 1)
+    await settle(8)
+
+    const linkButton = ed.root.querySelector<HTMLElement>(
+      'button[aria-label="Insert Link"]'
+    )!
+    expect(linkButton, '링크 버튼이 아예 없습니다').not.toBeNull()
+    expect(
+      getComputedStyle(linkButton).display,
+      '좁은 화면인데 트리거가 그대로 보입니다'
+    ).toBe('none')
+
+    /* 더보기 트리거는 반대로 보여야 합니다 */
+    expect(getComputedStyle(trigger()).display).not.toBe('none')
+
+    await click(trigger())
+    await click(item('Link'))
+    await settle(6)
+
+    const dlg = dialog('Insert Link')
+    expect(isOpen(dlg)).toBe(true)
+    /* 감춘 컨테이너 안이면 여기서 0 이 됩니다 */
+    expect(
+      dlg.getBoundingClientRect().width,
+      '감춘 자리에 갇혀 안 보입니다'
+    ).toBeGreaterThan(0)
+    dlg.close()
   })
 })

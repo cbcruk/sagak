@@ -30,9 +30,11 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
   }
 
-  const { editor }: Props = $props()
+  const { editor, hideTrigger = false }: Props = $props()
 
   const ICON_SIZE = 16
 
@@ -44,6 +46,7 @@
 <button
   type="button"
   data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
   title="Insert Horizontal Rule"
   aria-label="Insert Horizontal Rule"
   onclick={insert}

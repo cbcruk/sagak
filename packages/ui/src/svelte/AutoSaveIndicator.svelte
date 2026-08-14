@@ -166,15 +166,31 @@
     <span style={LAYER}>{view.text}</span>
   </span>
 
-  <!-- 버튼은 행의 마지막이라 나타나고 사라져도 아무것도 안 밀립니다 -->
-  {#if lastSaved}
-    <button
-      type="button"
-      title="Deletes the saved draft so it won't be restored next time. Your current text stays as it is, and editing saves again."
-      style="background: none; border: none; padding: 0 2px; font: inherit; font-size: 12px; color: var(--sagak-chrome-muted-fg); cursor: pointer; text-decoration: underline"
-      onclick={discard}
+  <!--
+    버튼 자리도 **늘 잡아 둡니다.**
+
+    버튼은 저장된 초안이 있을 때만 나옵니다(없으면 지울 것도 없으니까요).
+    그런데 나타나고 사라지면 표시 전체의 폭이 바뀌고, 툴바가 `flex-wrap`
+    이라 그 폭이 줄바꿈 자리를 건드릴 수 있습니다 — 좁은 화면에서 저장이
+    끝나는 순간 툴바가 한 줄 늘어납니다.
+
+    문구 칸과 같은 수를 씁니다. 같은 격자 칸에 감춘 사본을 겹쳐 두어 폭을
+    잡아 두고, 진짜 버튼은 있을 때만 그 위에 올립니다. 버튼 자체는 없을 때
+    **정말 없습니다** — `auto-save.browser.test.ts` 가 그것을 봅니다.
+  -->
+  <span style="display: grid; justify-items: start">
+    <span aria-hidden="true" style="{LAYER}; visibility: hidden; font-size: 12px"
+      >Delete saved draft</span
     >
-      Delete saved draft
-    </button>
-  {/if}
+    {#if lastSaved}
+      <button
+        type="button"
+        title="Deletes the saved draft so it won't be restored next time. Your current text stays as it is, and editing saves again."
+        style="{LAYER}; background: none; border: none; padding: 0 2px; font: inherit; font-size: 12px; color: var(--sagak-chrome-muted-fg); cursor: pointer; text-decoration: underline"
+        onclick={discard}
+      >
+        Delete saved draft
+      </button>
+    {/if}
+  </span>
 </div>

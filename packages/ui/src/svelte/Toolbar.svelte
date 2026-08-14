@@ -65,6 +65,19 @@
   }
 
   const { editor, showAutoSaveIndicator = false }: Props = $props()
+
+  /*
+   * 더보기 메뉴가 열어 줄 다이얼로그들입니다.
+   *
+   * 좁은 화면에서는 이 트리거들이 감춰지고, 그 기능에 닿는 길이 더보기 메뉴
+   * 하나뿐입니다. 그래서 메뉴가 다이얼로그를 직접 열 수 있어야 합니다 —
+   * 각 컴포넌트가 `open()` 을 내보내고 여기서 붙듭니다.
+   */
+  let link: LinkDialog
+  let image: ImageDialog
+  let table: TableDialog
+  let special: SpecialCharacterDialog
+  let find: FindReplaceDialog
 </script>
 
 <div data-scope="toolbar" data-part="root" role="toolbar" aria-label="Text formatting">
@@ -99,25 +112,41 @@
 
   <ListButtons {editor} />
 
+  <!--
+    구분선만 통째로 감춥니다. 다이얼로그를 품은 것들은 **트리거만** 감추고
+    (`hideTrigger`), 그래야 더보기 메뉴에서 열었을 때 실제로 보입니다.
+  -->
   <div data-part="mobile-hidden" style="display: contents">
     <div data-part="separator"></div>
-    <div style="display: flex; gap: 4px">
-      <LinkDialog {editor} />
-      <ImageDialog {editor} />
-      <TableDialog {editor} />
-      <HorizontalRuleButton {editor} />
-      <SpecialCharacterDialog {editor} />
-    </div>
-
-    <div data-part="separator"></div>
-
-    <div style="display: flex; gap: 4px">
-      <FindReplaceDialog {editor} />
-      <ExportMenu {editor} />
-    </div>
   </div>
 
-  <MoreMenu {editor} />
+  <div data-mobile="flatten" style="display: flex; gap: 4px">
+    <LinkDialog bind:this={link} {editor} hideTrigger />
+    <ImageDialog bind:this={image} {editor} hideTrigger />
+    <TableDialog bind:this={table} {editor} hideTrigger />
+    <HorizontalRuleButton {editor} hideTrigger />
+    <SpecialCharacterDialog bind:this={special} {editor} hideTrigger />
+  </div>
+
+  <div data-part="mobile-hidden" style="display: contents">
+    <div data-part="separator"></div>
+  </div>
+
+  <div data-mobile="flatten" style="display: flex; gap: 4px">
+    <FindReplaceDialog bind:this={find} {editor} hideTrigger />
+    <ExportMenu {editor} hideTrigger />
+  </div>
+
+  <MoreMenu
+    {editor}
+    onOpenDialog={(which) => {
+      if (which === 'link') link.open()
+      else if (which === 'image') image.open()
+      else if (which === 'table') table.open()
+      else if (which === 'special-character') special.open()
+      else find.open()
+    }}
+  />
 
   <!--
     자동 저장 표시는 **툴바 안**에 있습니다. 예전에는 툴바와 편집 영역

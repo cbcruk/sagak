@@ -29,9 +29,11 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
   }
 
-  const { editor }: Props = $props()
+  const { editor, hideTrigger = false }: Props = $props()
 
   let dialogEl: HTMLDialogElement
   let url = $state('')
@@ -46,7 +48,7 @@
     return subscribeToSelection(editor, sync)
   })
 
-  function open(): void {
+  export function open(): void {
     editor?.selectionManager?.saveSelection()
     url = getSelectedLink()?.href ?? ''
     dialogEl.showModal()
@@ -91,6 +93,7 @@
 <button
   type="button"
   data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
   data-state={onLink ? 'on' : undefined}
   title="Insert Link"
   aria-label="Insert Link"

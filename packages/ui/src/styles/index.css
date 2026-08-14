@@ -442,6 +442,31 @@
     display: none;
   }
 
+  /*
+   * 좁은 화면에서 감추는 **트리거** 표시입니다.
+   *
+   * 위의 `mobile-hidden` 은 컨테이너를 통째로 `display: none` 합니다. 그
+   * 안에 `<dialog>` 가 들어 있으면 다이얼로그까지 안 그려집니다 — 재 보면
+   * `showModal()` 은 성공하고 `open` 도 붙는데 크기가 **0×0** 입니다.
+   *
+   * 더보기 메뉴에서 그 다이얼로그들을 열 수 있어야 하므로, 감추는 것을
+   * 버튼 자신에게 옮겼습니다. 다이얼로그는 형제라 안 숨습니다.
+   */
+  [data-scope='toolbar'] [data-mobile='hidden'] {
+    display: none;
+  }
+
+  /*
+   * 트리거가 다 감춰진 줄은 **자리도 없어야** 합니다.
+   *
+   * `display: flex` 인 채로 두면 자식이 전부 감춰져도 툴바의 `flex-wrap`
+   * 계산에서 한 자리를 차지합니다. 재 보면 380px 에서 툴바가 101 → 126px
+   * 로 커졌습니다. `contents` 로 두면 줄 자체가 layout 에서 빠집니다.
+   */
+  [data-scope='toolbar'] [data-mobile='flatten'] {
+    display: contents;
+  }
+
   [data-scope='toolbar'] [data-part='mobile-visible'] {
     display: flex;
   }

@@ -30,9 +30,11 @@
 
   interface Props {
     editor: EditorContext | null
+    /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
+    hideTrigger?: boolean
   }
 
-  const { editor }: Props = $props()
+  const { editor, hideTrigger = false }: Props = $props()
 
   let dialogEl: HTMLDialogElement
   let findText = $state('')
@@ -96,6 +98,10 @@
     currentMatch = 0
   }
 
+  export function open(): void {
+    dialogEl.showModal()
+  }
+
   function onFindKeydown(e: KeyboardEvent): void {
     if (e.key !== 'Enter') return
     e.preventDefault()
@@ -107,9 +113,10 @@
 <button
   type="button"
   data-part="icon-button"
+  data-mobile={hideTrigger ? 'hidden' : undefined}
   title="Find &amp; Replace"
   aria-label="Find &amp; Replace"
-  onclick={() => dialogEl.showModal()}
+  onclick={open}
 >
   {@html icon(Search, 18).outerHTML}
 </button>
