@@ -1,5 +1,5 @@
 import { atom } from 'nanostores'
-import { supportsKorean } from './use-local-fonts.utils'
+import { supportsKorean } from './local-fonts.utils'
 
 /**
  * 이 기계에 설치된 **한글을 그릴 수 있는** 폰트를 읽어옵니다.
@@ -12,7 +12,7 @@ import { supportsKorean } from './use-local-fonts.utils'
  * 쓰는 에디터에서 고를 수 없는 것만 늘어놓고 있었던 셈입니다.
  *
  * `queryLocalFonts()` 로 실제 목록을 받고, 한글을 그릴 수 있는 것만 남깁니다.
- * 판별 방법과 왜 쉬운 길이 안 되는지는 [`use-local-fonts.utils`] 참고.
+ * 판별 방법과 왜 쉬운 길이 안 되는지는 [`local-fonts.utils`] 참고.
  *
  * ## 실측한 제약
  *
@@ -23,7 +23,7 @@ import { supportsKorean } from './use-local-fonts.utils'
  * | 권한 `granted` | 제스처 **없이도** 됩니다 (클릭 6초 뒤에도 성공) |
  * | 권한 `denied` | **거절해도 예외가 아닙니다 — 빈 배열이 옵니다** |
  *
- * 셋째 줄이 이 훅의 모양을 정합니다 — **처음 한 번만** 사용자 제스처가
+ * 셋째 줄이 이 저장소의 모양을 정합니다 — **처음 한 번만** 사용자 제스처가
  * 필요하고, 허용한 뒤로는 물어보지 않고 불러올 수 있습니다.
  *
  * 넷째 줄 때문에 `denied` 라는 상태를 **두지 않습니다.** 거절과 "정말 폰트가
@@ -39,7 +39,10 @@ import { supportsKorean } from './use-local-fonts.utils'
  *
  * `useState` + `useEffect` 로 쓰면 컴포넌트마다 자기 사본을 갖습니다. 재 봤더니
  * 같은 훅을 쓰는 컴포넌트 **3개를 띄우면 `queryLocalFonts()` 가 3번, 권한
- * 조회도 3번** 나갔습니다. 모듈 수준 시그널로 올리니 둘 다 1번입니다.
+ * 조회도 3번** 나갔습니다. 모듈 수준 저장소로 올리니 둘 다 1번입니다.
+ *
+ * 그때는 Preact 훅이 부르는 쪽이었고 지금은 Svelte 컴포넌트지만, 이 판단은
+ * 그대로입니다 — **저장소는 렌더러를 안 봅니다.**
  *
  * | 없어진 것 | 왜 없어도 되는가 |
  * | --- | --- |
@@ -54,26 +57,6 @@ import { supportsKorean } from './use-local-fonts.utils'
  */
 
 export type LocalFontsStatus = 'unsupported' | 'idle' | 'loading' | 'ready'
-
-export interface UseLocalFontsReturn {
-  status: LocalFontsStatus
-  /**
-   * 한글을 그릴 수 있는 family 이름들 — 중복을 없애고 정렬했습니다.
-   *
-   * `status === 'ready'` 여도 **빌 수 있습니다** — 거절당했거나 한국어 폰트가
-   * 하나도 없는 기계입니다.
-   */
-  families: string[]
-  /**
-   * 목록을 읽어옵니다.
-   *
-   * 아직 허용 전이라면 **사용자 제스처 안에서** 불러야 합니다 — 클릭 핸들러나
-   * `<select>` 의 `change` 핸들러 안이면 됩니다 (둘 다 실측했습니다).
-   *
-   * 겹쳐 불러도 한 번만 나갑니다.
-   */
-  load: () => void
-}
 
 interface FontData {
   family: string
@@ -100,9 +83,25 @@ const CONCURRENCY = 8
 
 /*
  * 기계 하나에 목록도 하나입니다. 컴포넌트가 몇 개든 여기를 같이 봅니다.
+ *
+ * nanostores 관례는 `$status` 처럼 `$` 를 붙이는 것인데, **Svelte 가 `$` 로
+ * 시작하는 이름을 스토어 자동 구독용으로 예약해 두어 그대로는 못 씁니다.**
+ * 그래서 부르는 쪽 두 곳이 전부 가져오면서 이름을 바꾸고 있었습니다. 관례를
+ * 지키는 값이 별칭 두 개보다 크지 않아 여기서 이름을 맞춥니다.
  */
-export const $status = atom<LocalFontsStatus>(queryFn() ? 'idle' : 'unsupported')
-export const $families = atom<string[]>([])
+
+/** 지금 어느 단계인가 — 아래 `loadLocalFonts` 가 옮깁니다 */
+export const statusStore = atom<LocalFontsStatus>(
+  queryFn() ? 'idle' : 'unsupported'
+)
+
+/**
+ * 한글을 그릴 수 있는 family 이름들 — 중복을 없애고 정렬했습니다.
+ *
+ * `statusStore` 가 `'ready'` 여도 **빌 수 있습니다** — 거절당했거나 한국어
+ * 폰트가 하나도 없는 기계입니다.
+ */
+export const familiesStore = atom<string[]>([])
 
 /** 진행 중인 호출 — 같은 요청이 겹쳐 나가지 않게 합니다 */
 let inFlight: Promise<void> | null = null
@@ -204,7 +203,7 @@ function load(): void {
     return
   }
 
-  $status.set('loading')
+  statusStore.set('loading')
   inFlight = query()
     .then(async (fonts) => {
       const all = [...new Set(fonts.map((font) => font.family))].sort()
@@ -216,15 +215,15 @@ function load(): void {
        */
       const cached = readCache(signature)
       if (cached) {
-        $families.set(cached)
-        $status.set('ready')
+        familiesStore.set(cached)
+        statusStore.set('ready')
         return
       }
 
       const korean = await filterKorean(fonts)
       writeCache(signature, korean)
-      $families.set(korean)
-      $status.set('ready')
+      familiesStore.set(korean)
+      statusStore.set('ready')
     })
     .catch((error: Error) => {
       /*
@@ -234,7 +233,7 @@ function load(): void {
        * 나머지는 한 번 해 봤다는 사실만 남깁니다 — 목록이 비어 있으므로
        * 보여줄 것이 없고, 다시 조르지도 않습니다.
        */
-      $status.set(error.name === 'SecurityError' ? 'idle' : 'ready')
+      statusStore.set(error.name === 'SecurityError' ? 'idle' : 'ready')
     })
     .finally(() => {
       inFlight = null
@@ -247,8 +246,8 @@ function load(): void {
 
 /** 권한이 사라졌으면 들고 있던 목록도 버립니다 */
 function forget(): void {
-  $families.set([])
-  $status.set('idle')
+  familiesStore.set([])
+  statusStore.set('idle')
 }
 
 let watching = false
@@ -256,8 +255,8 @@ let watching = false
 /**
  * 권한을 한 번만 구독합니다.
  *
- * 훅이 처음 불릴 때 시작합니다 — 모듈을 읽는 것만으로 `navigator` 를 건드리지
- * 않도록, 그리고 폰트 메뉴가 화면에 없으면 아무것도 안 하도록.
+ * 폰트 메뉴가 처음 붙을 때 시작합니다 — 모듈을 읽는 것만으로 `navigator` 를
+ * 건드리지 않도록, 그리고 폰트 메뉴가 화면에 없으면 아무것도 안 하도록.
  */
 export function watchLocalFontPermission(): void {
   if (watching || !queryFn()) return

@@ -253,8 +253,7 @@ Preact 렌더 횟수로는 영영 안 보이는 종류였습니다.
 ```
 packages/ui/src/
   svelte/      컴포넌트 21개 + 셀렉트 명세
-  state/       document-store.ts
-  hooks/       subscribeToSelection · 폰트 목록 (이름만 훅입니다)
+  state/       document-store · selection · local-fonts
   elements/    icon.ts 하나
   components/  *.shared.ts · *.utils.ts 만 (컴포넌트는 없습니다)
   styles/      index.css + kinu.css (가져온 17 kB)
@@ -262,11 +261,13 @@ packages/ui/src/
 
 검사: core **1119** · ui **186**.
 
+`hooks/` 는 이주가 끝난 뒤에 `state/` 로 접었습니다. 실제 훅은 Preact 를
+걷어낼 때 이미 다 없어졌고 구독과 저장소만 남아 있었는데, 이름 바꾸기를
+이주와 같은 커밋에 섞으면 무엇이 무엇을 깨뜨렸는지 못 가립니다. 옮기는 일이
+다 끝나고 검사가 초록인 자리에서 따로 했습니다.
+
 ### 남은 것
 
-- **`hooks/` 는 이름만 훅입니다.** 실제 훅은 전부 사라졌고 구독과 저장소만
-  남았습니다. 이름을 바꾸는 것과 이주가 섞이면 어느 쪽이 무엇을 깨뜨렸는지
-  알기 어려워 그대로 뒀습니다
 - **더보기 메뉴는 다섯을 이었고 둘이 남았습니다.** 링크·이미지·표·특수문자·
   찾기는 이제 실제로 다이얼로그를 엽니다. 줄 간격·자간 둘은 다이얼로그가
   아니라 `<select>` 라 여는 수단이 마땅치 않아 아직 빈 항목입니다

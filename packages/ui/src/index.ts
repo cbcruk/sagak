@@ -22,4 +22,4 @@ export {
 } from './state/document-store'
 export type { DocumentSnapshot } from './state/document-store'
 
-export { subscribeToSelection } from './hooks'
+export { subscribeToSelection } from './state/selection'

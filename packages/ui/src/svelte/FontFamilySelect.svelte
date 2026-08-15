@@ -1,13 +1,13 @@
 <script lang="ts">
   import { FontEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
-  import { subscribeToSelection } from '../hooks/use-selection-derived'
+  import { subscribeToSelection } from '../state/selection'
   import {
-    $families as familiesStore,
-    $status as statusStore,
+    familiesStore,
+    statusStore,
     loadLocalFonts,
     watchLocalFontPermission,
-  } from '../hooks/use-local-fonts'
+  } from '../state/local-fonts'
   import { sameFontFamily } from '../components/font-family-select/font-family-select.utils'
   import {
     FALLBACK_FONTS,
