@@ -27,8 +27,17 @@ export interface ToolbarSelectOption {
 export interface ToolbarSelectSpec {
   title: string
   options: ToolbarSelectOption[]
-  /** 안 따라가는 드롭다운의 처음 값 */
-  defaultValue?: string
+  /**
+   * 안 따라가는 드롭다운의 **처음 값**.
+   *
+   * 이 값이 있으면 "안 따라가는 쪽" 이라는 뜻이고, 고른 값은
+   * `state/toolbar-choice` 의 칸에 에디터마다 따로 담깁니다 — 툴바
+   * 드롭다운과 더보기 메뉴가 같은 목록을 그리므로, 값을 든 자리가 둘이면
+   * 서로 어긋납니다.
+   *
+   * 따라가는 쪽(글자 크기)에는 없습니다 — 그쪽 값의 출처는 문서입니다.
+   */
+  initialValue?: string
   /**
    * 따라가는 드롭다운이 현재 값을 읽는 방법.
    *
@@ -99,7 +108,7 @@ export const LINE_HEIGHT: ToolbarSelectSpec = {
     { label: '2.5', value: '2.5' },
     { label: '3.0', value: '3' },
   ],
-  defaultValue: '1.5',
+  initialValue: '1.5',
   apply: (editor, lineHeight) => {
     editor.eventBus.emit(FontEvents.LINE_HEIGHT_CHANGED, { lineHeight })
   },
@@ -115,7 +124,7 @@ export const LETTER_SPACING: ToolbarSelectSpec = {
     { label: '0.2', value: '0.2' },
     { label: '0.3', value: '0.3' },
   ],
-  defaultValue: '0',
+  initialValue: '0',
   apply: (editor, letterSpacing) => {
     editor.eventBus.emit(FontEvents.LETTER_SPACING_CHANGED, { letterSpacing })
   },
@@ -136,7 +145,7 @@ export const HEADING: ToolbarSelectSpec = {
     { label: 'Heading 5', value: '5' },
     { label: 'Heading 6', value: '6' },
   ],
-  defaultValue: 'p',
+  initialValue: 'p',
   apply: (editor, value) => {
     if (value === 'p') {
       editor.eventBus.emit(ParagraphEvents.FORMAT_PARAGRAPH)

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
   import { subscribeToSelection } from '../state/selection'
+  import { choiceStore } from '../state/toolbar-choice'
   import type { ToolbarSelectSpec } from './toolbar-select.specs'
 
   /**
@@ -15,11 +16,18 @@
    * | | 예 | 값의 출처 |
    * | --- | --- | --- |
    * | 따라가는 것 | 글자 크기 | 선택 영역에서 매번 읽습니다 |
-   * | 안 따라가는 것 | 줄 간격·자간·문단 | 처음 값만 두고 그대로 둡니다 |
+   * | 안 따라가는 것 | 줄 간격·자간·문단 | `spec.chosen` 저장소 |
    *
    * 따라가는 쪽만 `subscribeToSelection` 을 씁니다. IME 조합 중 무시 같은
    * 가드가 거기 들어 있고, 이 구독은 렌더러를 네 번 갈아타는 동안 한 번도
    * 안 바뀌었습니다.
+   *
+   * ## 안 따라가는 값은 이 컴포넌트 것이 아닙니다
+   *
+   * 예전에는 `defaultValue` 로 시작해 여기서만 들고 있었습니다. 더보기
+   * 메뉴가 줄 간격·자간을 같은 목록으로 그리게 되면서 값을 든 자리가 둘이
+   * 됐고, 그러면 메뉴에서 고른 것이 여기 안 비칩니다. `choiceStore` 를 같이
+   * 보게 해서 **어긋날 수가 없게** 했습니다 — 칸은 에디터마다 따로입니다.
    *
    * ## 선택 영역 저장은 빼먹으면 안 됩니다
    *
@@ -37,7 +45,20 @@
 
   const { editor, spec }: Props = $props()
 
-  let value = $state(spec.defaultValue ?? spec.options[0].value)
+  /** 안 따라가는 쪽만 칸을 갖습니다 — 따라가는 쪽 값의 출처는 문서입니다 */
+  const store = $derived(
+    spec.initialValue === undefined
+      ? null
+      : choiceStore(editor, spec.title, spec.initialValue)
+  )
+
+  let value = $state(spec.initialValue ?? spec.options[0].value)
+
+  /* 칸이 바뀌면 따라옵니다 — 더보기 메뉴가 같은 칸에 씁니다 */
+  $effect(() => {
+    if (!store) return
+    return store.subscribe((next) => (value = next))
+  })
 
   $effect(() => {
     if (!editor || !spec.query) return
@@ -68,6 +89,7 @@
   onfocus={save}
   onchange={() => {
     if (!editor) return
+    store?.set(value)
     editor.selectionManager?.restoreSelection()
     spec.apply(editor, value)
   }}

@@ -31,9 +31,9 @@ import {
  * 이주 중에는 고치지 않고 두었습니다 — 동작을 같게 두는 것이 먼저였고,
  * 다이얼로그들이 전부 kinu `Dialog` 라 열 수단이 없었습니다.
  *
- * **지금은 다섯을 이었습니다.** 링크·이미지·표·특수문자·찾기가 실제로
- * 다이얼로그를 엽니다 (아래 `다섯 항목이 다이얼로그를 엽니다`). 줄 간격·자간
- * 둘은 `<select>` 라 여는 수단이 마땅치 않아 아직 빈 항목입니다.
+ * **지금은 열 개가 다 삽니다.** 링크·이미지·표·특수문자·찾기는 다이얼로그를
+ * 열고, 줄 간격·자간은 하위 목록으로 들어가 값을 먹입니다. 뒤의 둘은
+ * `<select>` 라 "여는" 길이 없어서, 여는 대신 같은 명세로 목록을 그립니다.
  */
 
 let ed: MountedEditor | null = null
@@ -207,5 +207,130 @@ describe('더보기 메뉴', () => {
       '감춘 자리에 갇혀 안 보입니다'
     ).toBeGreaterThan(0)
     dlg.close()
+  })
+
+  /**
+   * ## 줄 간격·자간 — 여는 대신 안으로 들였습니다
+   *
+   * 이 둘은 다이얼로그가 아니라 `<select>` 라 열 수단이 없습니다. 그래서
+   * 같은 명세(`toolbar-select.specs`)로 하위 목록을 그리고, 고르면 바로
+   * 먹입니다.
+   */
+  describe('줄 간격·자간은 하위 목록으로 들어갑니다', () => {
+    it.each([
+      ['Line Height', 'Line Height', '2.0', 'lineHeight', '2'],
+      ['Letter Spacing', 'Letter Spacing', '0.2', 'letterSpacing', '0.2em'],
+    ])(
+      '%s 를 누르면 목록이 나오고, 고르면 먹습니다',
+      async (label, title, optionLabel, styleProp, expected) => {
+        ed = await mountEditor('<p>hello</p>')
+        await settle()
+        selectAll(ed.editable)
+        await settle()
+
+        await click(trigger())
+        await click(item(label))
+
+        /* 목록으로 바뀌었을 뿐 메뉴는 열려 있어야 합니다 */
+        expect(menu(), '하위 목록을 여는데 메뉴가 닫혔습니다').not.toBeNull()
+        expect(
+          [...ed.root.querySelectorAll('[data-part="section-title"]')].length,
+          '하위 목록인데 바깥 묶음 제목이 그대로 있습니다'
+        ).toBe(0)
+
+        /* 돌아가는 길이 있어야 합니다 */
+        const back = ed.root.querySelector<HTMLElement>('[data-role="back"]')
+        expect(back, '돌아가는 항목이 없습니다').not.toBeNull()
+        expect(back!.textContent).toContain(title)
+
+        await click(item(optionLabel))
+
+        const block = ed.editable.querySelector('p') as HTMLElement
+        expect(
+          block.style[styleProp as 'lineHeight' | 'letterSpacing'],
+          `${label} 이 안 먹었습니다`
+        ).toBe(expected)
+        expect(menu(), '고른 뒤에도 메뉴가 열려 있습니다').toBeNull()
+      }
+    )
+
+    it('돌아가면 원래 목록이 다시 나옵니다', async () => {
+      ed = await mountEditor('<p>hello</p>')
+      await settle()
+
+      await click(trigger())
+      await click(item('Line Height'))
+      await click(
+        ed.root.querySelector<HTMLElement>('[data-role="back"]') as HTMLElement
+      )
+
+      const titles = [
+        ...ed.root.querySelectorAll('[data-part="section-title"]'),
+      ].map((el) => el.textContent)
+      expect(titles, '돌아왔는데 원래 목록이 아닙니다').toEqual([
+        'Insert',
+        'Text Style',
+        'Format',
+        'Tools',
+      ])
+    })
+
+    it('닫았다 열면 하위 목록에 갇혀 있지 않습니다', async () => {
+      ed = await mountEditor('<p>hello</p>')
+      await settle()
+
+      await click(trigger())
+      await click(item('Line Height'))
+      await click(trigger())
+      await click(trigger())
+
+      expect(
+        ed.root.querySelectorAll('[data-part="section-title"]').length,
+        '다시 열었더니 하위 목록입니다'
+      ).toBe(4)
+    })
+
+    /**
+     * ## 지금 값은 툴바와 같은 자리에서 옵니다
+     *
+     * 값을 든 자리가 둘이면 메뉴에서 고른 2.0 과 툴바가 가리키는 1.5 가
+     * 어긋납니다. 명세의 `chosen` 저장소를 같이 보게 해서 막았습니다 —
+     * 여기서는 **메뉴에서 고른 것이 툴바 드롭다운에 비치는지**로 봅니다.
+     */
+    it('메뉴에서 고른 값이 툴바 드롭다운에도 비칩니다', async () => {
+      ed = await mountEditor('<p>hello</p>')
+      await settle()
+      selectAll(ed.editable)
+      await settle()
+
+      const select = ed.root.querySelector<HTMLSelectElement>(
+        'select[aria-label="Line Height"]'
+      )!
+      expect(select.value, '처음 값이 다릅니다').toBe('1.5')
+
+      await click(trigger())
+      await click(item('Line Height'))
+      await click(item('3.0'))
+      await settle()
+
+      expect(select.value, '메뉴에서 골랐는데 툴바가 안 따라옵니다').toBe('3')
+    })
+
+    it('지금 값에 체크가 붙습니다', async () => {
+      ed = await mountEditor('<p>hello</p>')
+      await settle()
+
+      await click(trigger())
+      await click(item('Letter Spacing'))
+
+      const checked = [
+        ...ed.root.querySelectorAll<HTMLElement>('[data-part="item"]'),
+      ].filter((el) => el.getAttribute('aria-checked') === 'true')
+
+      expect(checked.length, '체크가 하나가 아닙니다').toBe(1)
+      expect(checked[0].textContent, '처음 값에 체크가 없습니다').toContain(
+        'Normal'
+      )
+    })
   })
 })
