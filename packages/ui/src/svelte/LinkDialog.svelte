@@ -3,7 +3,7 @@
   import { ContentEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../hooks/use-selection-derived'
+  import { subscribeToSelection } from '../state/selection'
   import { getSelectedLink } from '../components/link-dialog/link-dialog.shared'
 
   /**

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
-  import { subscribeToSelection } from '../hooks/use-selection-derived'
+  import { subscribeToSelection } from '../state/selection'
   import type { ToolbarSelectSpec } from './toolbar-select.specs'
 
   /**

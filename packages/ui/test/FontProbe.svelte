@@ -1,12 +1,5 @@
 <script lang="ts">
-  /*
-   * `$` 로 시작하는 이름은 Svelte 가 스토어 자동 구독용으로 예약해 둬서
-   * 그대로는 못 씁니다. 가져오면서 이름을 바꿉니다.
-   */
-  import {
-    $families as familiesStore,
-    $status as statusStore,
-  } from '../src/hooks/use-local-fonts'
+  import { familiesStore, statusStore } from '../src/state/local-fonts'
 
   /**
    * 폰트 목록 저장소를 **바깥에서 들여다보는 창**입니다.
@@ -22,9 +15,7 @@
 
   $effect(() => {
     const offStatus = statusStore.subscribe((value) => (status = value))
-    const offFamilies = familiesStore.subscribe(
-        (value) => (families = value)
-      )
+    const offFamilies = familiesStore.subscribe((value) => (families = value))
     return () => {
       offStatus()
       offFamilies()

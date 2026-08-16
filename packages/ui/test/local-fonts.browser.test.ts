@@ -5,7 +5,7 @@ import FontProbe from './FontProbe.svelte'
 import { mountEditor, placeCaretInText, selectAll, settle } from './harness'
 import type { MountedEditor } from './harness'
 import { LOAD_SYSTEM_FONTS_VALUE } from '../src/components/font-family-select/font-family-select.shared'
-import { supportsKorean } from '../src/hooks/use-local-fonts.utils'
+import { supportsKorean } from '../src/state/local-fonts.utils'
 
 /**
  * 폰트 메뉴가 **그 기계에 진짜 있는 폰트**를 보여줍니다 (Local Font Access API).

@@ -8,7 +8,7 @@
   import { ParagraphEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../hooks/use-selection-derived'
+  import { subscribeToSelection } from '../state/selection'
   import { getCurrentAlignment } from '../components/alignment-buttons/alignment-buttons.shared'
 
   /**
