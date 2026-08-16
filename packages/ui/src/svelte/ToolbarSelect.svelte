@@ -60,16 +60,35 @@
     return store.subscribe((next) => (value = next))
   })
 
+  /** 목록에 없는 지금 값 — 있으면 맨 앞에 임시 항목으로 답니다 */
+  let unlisted = $state<string | null>(null)
+
   $effect(() => {
     if (!editor || !spec.query) return
     const sync = (): void => {
       const current = spec.query?.(editor)
-      const known =
-        current !== undefined &&
-        spec.options.some((option) => option.value === current)
-      value = known
-        ? (current as string)
-        : (spec.fallbackValue ?? spec.options[0].value)
+
+      if (current === undefined || current === '') {
+        unlisted = null
+        value = spec.fallbackValue ?? spec.options[0].value
+        return
+      }
+
+      if (spec.options.some((option) => option.value === current)) {
+        unlisted = null
+        value = current
+        return
+      }
+
+      /* 목록 밖 — 실제 값을 보여줄 수 있으면 그렇게 합니다 */
+      if (spec.unlisted) {
+        unlisted = current
+        value = current
+        return
+      }
+
+      unlisted = null
+      value = spec.fallbackValue ?? spec.options[0].value
     }
     sync()
     return subscribeToSelection(editor, sync)
@@ -94,6 +113,9 @@
     spec.apply(editor, value)
   }}
 >
+  {#if unlisted !== null && spec.unlisted}
+    <option value={unlisted}>{spec.unlisted(unlisted)}</option>
+  {/if}
   {#each spec.options as option, index (index)}
     <option value={option.value}>{option.label}</option>
   {/each}

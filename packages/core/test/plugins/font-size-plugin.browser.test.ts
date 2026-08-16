@@ -104,6 +104,53 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       expect(span.textContent).toBe('Hello')
     })
 
+    /**
+     * ## CSS 길이도 받습니다
+     *
+     * 커맨드 층(`native-font-size`)은 처음부터 `'24px'` 를 받고 있었는데,
+     * 이 플러그인이 `Number()` 로 눌러 `NaN` 으로 막고 있었습니다. 그 탓에
+     * 툴바가 1–7 스케일에 묶였고, 라벨(9·10·11…)과 실제 크기(10·13·16…)가
+     * 어긋난 채였습니다.
+     */
+    it.each([['9px'], ['15px'], ['36px'], ['1.5rem'], ['120%']])(
+      'CSS 길이 %s 를 그대로 먹여야 함',
+      (value) => {
+        const textNode = element.firstChild!.firstChild as Text
+        const range = document.createRange()
+        range.setStart(textNode, 0)
+        range.setEnd(textNode, 5)
+
+        const selection = window.getSelection()!
+        selection.removeAllRanges()
+        selection.addRange(range)
+
+        const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: value })
+
+        expect(result, `${value} 가 막혔습니다`).toBe(true)
+        const span = element.querySelector('span') as HTMLElement
+        expect(span.style.fontSize).toBe(value)
+      }
+    )
+
+    /**
+     * `minSize`/`maxSize` 는 1–7 스케일에만 걸어야 합니다. CSS 길이에
+     * 1~7 을 들이대면 `24px` 이 "범위 밖" 으로 막힙니다.
+     */
+    it('CSS 길이에는 1–7 범위 검사를 걸지 않아야 함', () => {
+      const textNode = element.firstChild!.firstChild as Text
+      const range = document.createRange()
+      range.setStart(textNode, 0)
+      range.setEnd(textNode, 5)
+
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+
+      const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: '48px' })
+
+      expect(result, '범위 검사에 걸렸습니다').toBe(true)
+    })
+
     it('크기 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하는 상태
       vi.spyOn(document, 'execCommand').mockReturnValue(true)

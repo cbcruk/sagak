@@ -164,6 +164,28 @@ export function registerNativeQueries(registry: CommandRegistry): () => void {
     )
   )
 
+  /*
+   * 같은 것을 **CSS 그대로** 주는 질의입니다.
+   *
+   * 위의 `fontSize` 는 1–7 스케일로 눌러 답합니다. 일곱 칸뿐이라 되읽기가
+   * 손실입니다 — 15px 도 16px 도 `'3'` 이 되고, UI 는 그걸 다시 라벨로
+   * 펴면서 없는 숫자를 보여주게 됩니다.
+   *
+   * 레거시 반환값은 밖으로 나가 있는 계약이라 안 건드리고, 손실 없는 쪽을
+   * 따로 답니다. 툴바가 보는 것은 이쪽입니다.
+   */
+  unsubs.push(
+    registry.registerValueQuery(
+      'fontSizeCss',
+      () => {
+        const found = anchorNode()
+        if (!found) return undefined
+        return computedValue(found.node, 'fontSize')
+      },
+      NATIVE_PRECEDENCE
+    )
+  )
+
   return () => {
     for (const unsub of unsubs) unsub()
   }
