@@ -180,6 +180,37 @@ describe('native queries & fontSize', () => {
 
       expect(registry.queryValue('fontSize')).toBe('5')
     })
+
+    /**
+     * ## 1–7 로 누르면 되읽기가 손실입니다
+     *
+     * 칸이 일곱뿐이라 15px 도 16px 도 `'3'` 이 됩니다. UI 가 그걸 다시
+     * 라벨로 펴면 실제로 없는 숫자를 보여주게 됩니다 — 15px 짜리 기본
+     * 글에 `12` 를 띄우고 있었습니다.
+     *
+     * `fontSizeCss` 는 계산된 값을 그대로 줍니다.
+     */
+    it('fontSizeCss는 계산된 CSS 크기를 그대로 반환해야 함', () => {
+      element.innerHTML = '<p><span style="font-size: 15px">Hi</span></p>'
+      const text = element.querySelector('span')!.firstChild as Text
+      select(text, 0, 2)
+
+      expect(registry.queryValue('fontSizeCss')).toBe('15px')
+      /* 같은 자리에서 레거시 쪽은 눌려 나옵니다 */
+      expect(registry.queryValue('fontSize')).toBe('3')
+    })
+
+    it('fontSizeCss는 1-7 로 눌리면 겹치던 둘을 구분해야 함', () => {
+      const read = (css: string): string | undefined => {
+        element.innerHTML = `<p><span style="font-size: ${css}">Hi</span></p>`
+        const text = element.querySelector('span')!.firstChild as Text
+        select(text, 0, 2)
+        return registry.queryValue('fontSizeCss')
+      }
+
+      expect(read('9px')).toBe('9px')
+      expect(read('10px')).toBe('10px')
+    })
   })
 
   /**

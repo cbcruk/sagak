@@ -190,8 +190,14 @@ describe('툴바', () => {
      * 보여줘야 합니다. `native-query` 를 고치기 전에는 전체 선택에서 늘
      * `12`(스케일 `3`)를 가리켰습니다.
      *
-     * `<font size="5">` 는 24px 이고 메뉴에서는 `18` 로 보입니다 — 라벨과
-     * 값이 다른 것은 `execCommand` 의 1~7 스케일을 그대로 쓰기 때문입니다.
+     * ## 이 검사는 한동안 거짓말을 못 박고 있었습니다
+     *
+     * `<font size="5">` 는 24px 인데 메뉴는 `18` 을 보여줬고, 검사가 그
+     * `18` 을 맞다고 적어 두었습니다. 값이 `execCommand` 의 1~7 스케일이라
+     * 라벨과 실제 크기가 어긋나 있었기 때문입니다 — 여덟 라벨 중 일곱이
+     * 틀렸습니다.
+     *
+     * 지금은 라벨이 곧 값(`'24px'`)이라 24px 짜리 글은 `24` 로 보입니다.
      */
     it('고른 글자의 크기를 가리켜야 함', async () => {
       ed = await mountEditor('<p><font size="5">큰 글자</font></p>')
@@ -202,8 +208,88 @@ describe('툴바', () => {
       const size = ed.root.querySelector<HTMLSelectElement>(
         'select[title="Font Size"]'
       )!
-      expect(size.value, '고른 글자의 크기를 안 따라갑니다').toBe('5')
-      expect(size.selectedOptions[0]?.textContent).toBe('18')
+      expect(size.value, '고른 글자의 크기를 안 따라갑니다').toBe('24px')
+      expect(
+        size.selectedOptions[0]?.textContent,
+        '24px 인데 다른 숫자를 보여줍니다'
+      ).toBe('24')
+    })
+
+    /**
+     * ## 고른 숫자가 곧 크기여야 합니다
+     *
+     * 예전에는 `36` 을 고르면 48px 이 됐습니다. 라벨은 px 인데 값은 1~7
+     * 스케일이라, 실제 크기(10·13·16·18·24·32·48)와 라벨(9·10·11·12·14·
+     * 18·24·36)이 아예 다른 줄이었습니다.
+     */
+    it.each([
+      ['9', '9px'],
+      ['10', '10px'],
+      ['12', '12px'],
+      ['36', '36px'],
+    ])('%s 를 고르면 %s 가 됩니다', async (label, expected) => {
+      ed = await mountEditor('<p>크기</p>')
+      await settle(6)
+      selectAll(ed.editable)
+      await settle()
+
+      await selectOption(
+        ed.root.querySelector<HTMLSelectElement>('select[title="Font Size"]')!,
+        expected
+      )
+      await settle(3)
+
+      const styled = ed.editable.querySelector('span, font') as HTMLElement
+      expect(
+        getComputedStyle(styled).fontSize,
+        `${label} 을 골랐는데 다른 크기입니다`
+      ).toBe(expected)
+    })
+
+    /**
+     * ## 9 와 10 이 같은 값이었습니다
+     *
+     * 1~7 스케일에 그 사이가 없어서 둘 다 `'1'` 이었고, 9 를 골라도 메뉴는
+     * 10 을 가리켰습니다. 라벨이 곧 값이 되면서 없어진 문제입니다.
+     */
+    it('9 와 10 이 서로 다른 값입니다', async () => {
+      ed = await mountEditor('<p>크기</p>')
+      await settle(6)
+
+      const options = [
+        ...ed.root.querySelectorAll<HTMLOptionElement>(
+          'select[title="Font Size"] option'
+        ),
+      ]
+      const values = options.map((option) => option.value)
+
+      expect(new Set(values).size, '값이 겹치는 항목이 있습니다').toBe(
+        values.length
+      )
+    })
+
+    /**
+     * ## 목록에 없는 크기는 그대로 보여줍니다
+     *
+     * 서식 없는 글은 15px 이라 목록(9·10·11·12·14·18·24·36)에 없습니다.
+     * 예전에는 1~7 중 가까운 칸으로 눌러 답해서 `12` 를 가리켰습니다 —
+     * **가장 흔한 경우가 가장 크게 틀렸습니다.**
+     */
+    it('목록에 없는 크기도 실제 값을 보여줍니다', async () => {
+      ed = await mountEditor('<p>기본 글</p>')
+      await settle(6)
+      selectAll(ed.editable)
+      await settle(8)
+
+      const size = ed.root.querySelector<HTMLSelectElement>(
+        'select[title="Font Size"]'
+      )!
+      const px = getComputedStyle(ed.editable).fontSize
+
+      expect(size.value, '실제 크기를 안 가리킵니다').toBe(px)
+      expect(size.selectedOptions[0]?.textContent).toBe(
+        String(Math.round(parseFloat(px)))
+      )
     })
 
     /**

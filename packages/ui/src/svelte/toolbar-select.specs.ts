@@ -41,21 +41,53 @@ export interface ToolbarSelectSpec {
   /**
    * 따라가는 드롭다운이 현재 값을 읽는 방법.
    *
-   * 목록에 없는 값이 나오면 `fallbackValue` 로 떨어집니다.
+   * 읽은 값이 목록에 없으면 `unlisted` → `fallbackValue` 순으로 처리합니다.
    */
   query?: (editor: EditorContext) => string | undefined
-  /** 읽은 값이 목록에 없을 때 가리킬 항목 */
+  /**
+   * 목록에 없는 값을 **그대로 보여줍니다** — 읽은 값을 라벨로 바꿔 줍니다.
+   *
+   * 없으면 `fallbackValue` 로 떨어지는데, 그건 실제와 다른 항목을 가리키는
+   * 것이라 크기처럼 값이 연속적인 경우에는 거짓말이 됩니다. 글자 크기가
+   * 정확히 그랬습니다 — 15px 짜리 기본 글에 `12` 를 띄우고 있었습니다.
+   */
+  unlisted?: (value: string) => string
+  /** 읽은 값이 목록에 없고 `unlisted` 도 없을 때 가리킬 항목 */
   fallbackValue?: string
   apply: (editor: EditorContext, value: string) => void
 }
 
 /**
  * 글자 크기는 **따라가는** 드롭다운입니다 — 캐럿이 있는 글자의 크기를 보여줘야
- * 합니다. 값은 `execCommand` 의 1~7 스케일이라 라벨(9·10·11…)과 다릅니다.
+ * 합니다.
  *
- * 9 와 10 이 둘 다 `'1'` 인 것은 Preact 판 그대로입니다. 스케일에 그 사이가
- * 없어서인데, 그래서 9 를 골라도 메뉴는 10 을 가리킵니다. 옮기면서 고치지
- * 않았습니다 — 이주는 동작을 같게 두는 것이 먼저입니다.
+ * ## 라벨이 거짓말을 하고 있었습니다
+ *
+ * 값이 `execCommand` 의 1~7 스케일이었고, 그 일곱 칸의 실제 크기는
+ * 10·13·16·18·24·32·48px 입니다. 라벨은 9·10·11·12·14·18·24·36 이었으니
+ * **여덟 중 일곱이 틀렸습니다.**
+ *
+ * ```
+ * 라벨  9 → 값 1 → 10px      라벨 14 → 값 4 → 18px
+ * 라벨 10 → 값 1 → 10px  ✓   라벨 18 → 값 5 → 24px
+ * 라벨 11 → 값 2 → 13px      라벨 24 → 값 6 → 32px
+ * 라벨 12 → 값 3 → 16px      라벨 36 → 값 7 → 48px
+ * ```
+ *
+ * 9 와 10 이 같은 값인 것은 그중 눈에 띄는 증상이었을 뿐입니다.
+ *
+ * 커맨드 층(`native-font-size`)은 처음부터 `'24px'` 같은 CSS 길이를 받고
+ * 있었습니다. 막고 있던 것은 플러그인의 `Number()` 였고, 거기를 열자 **라벨을
+ * 그대로 값으로 쓸 수 있게** 됐습니다. 이제 `24` 를 고르면 24px 입니다.
+ *
+ * ## 목록에 없는 크기
+ *
+ * 서식 없는 글은 15px 이고 제목은 더 큽니다 — 목록에 없습니다. 예전에는
+ * 그런 것도 1~7 중 가까운 칸으로 눌러 답해서, 15px 짜리 기본 글에 커서를
+ * 두면 메뉴가 `12` 를 가리켰습니다. **가장 흔한 경우가 가장 크게 틀렸던
+ * 셈입니다.**
+ *
+ * 지금은 `unlisted` 로 실제 크기를 그대로 보여줍니다.
  *
  * ## 전에는 ⌘A 에서 안 따라갔습니다 (지금은 고쳤습니다)
  *
@@ -79,20 +111,16 @@ export interface ToolbarSelectSpec {
  */
 export const FONT_SIZE: ToolbarSelectSpec = {
   title: 'Font Size',
-  options: [
-    { label: '9', value: '1' },
-    { label: '10', value: '1' },
-    { label: '11', value: '2' },
-    { label: '12', value: '3' },
-    { label: '14', value: '4' },
-    { label: '18', value: '5' },
-    { label: '24', value: '6' },
-    { label: '36', value: '7' },
-  ],
-  fallbackValue: '3',
-  query: (editor) =>
-    editor.commandRegistry?.queryValue('fontSize') ??
-    document.queryCommandValue('fontSize'),
+  options: [9, 10, 11, 12, 14, 18, 24, 36].map((px) => ({
+    label: String(px),
+    value: `${px}px`,
+  })),
+  /*
+   * `queryValue('fontSize')` 가 아니라 이쪽입니다 — 그쪽은 1~7 스케일로
+   * 눌러 답해서 15px 과 16px 을 구분하지 못합니다.
+   */
+  query: (editor) => editor.commandRegistry?.queryValue('fontSizeCss'),
+  unlisted: (css) => String(Math.round(parseFloat(css))),
   apply: (editor, fontSize) => {
     editor.eventBus.emit(FontEvents.FONT_SIZE_CHANGED, { fontSize })
   },
