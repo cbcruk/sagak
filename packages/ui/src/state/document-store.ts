@@ -2,11 +2,16 @@ import { writable } from 'svelte/store'
 import type { Readable } from 'svelte/store'
 import {
   createDocumentStore,
+  sagakSchema,
+  toJSON,
+  fromJSON,
+  toHtml,
   isDocumentStorageAvailable,
   CoreEvents,
   WysiwygEvents,
   type DocumentMeta,
   type EditorContext,
+  type DocumentJSON,
 } from 'sagak-core'
 
 /**
@@ -100,13 +105,29 @@ export const documentStore: Readable<DocumentSnapshot> = {
 }
 
 /**
- * 편집 영역의 내용을 **그 자리에서** 읽습니다.
+ * 편집 영역의 내용을 **HTML 로** 그 자리에서 읽습니다.
  *
- * 내보내기처럼 저장을 거치지 않고 내용만 필요한 쪽이 씁니다. 담아 둔 값은
- * 비동기로 채워지므로 치자마자 부르면 예전 값입니다.
+ * 내보내기가 씁니다 — 사용자의 진짜 파일로 나가는 길이라 HTML 이 맞습니다.
+ * 저장에는 `readJSON` 을 쓰십시오 (`docs/prosemirror-migration.md` §8).
+ *
+ * 담아 둔 값은 비동기로 채워지므로 치자마자 부르면 예전 값입니다.
  */
 export async function readNow(context: EditorContext): Promise<string> {
-  return (await context.editingAreaManager?.getContent()) ?? ''
+  const doc = await context.editingAreaManager?.getContent()
+
+  return doc ? toHtml(doc, sagakSchema, document) : ''
+}
+
+/**
+ * 저장할 꼴로 읽습니다 — **모델 JSON** 입니다.
+ *
+ * HTML 로 저장하면 문서를 열 때마다 스키마를 통과해 목록 항목이 문단으로
+ * 감싸지는 것 같은 정규화를 매번 겪습니다. JSON 은 저장한 것이 곧 모델입니다.
+ */
+export async function readJSON(context: EditorContext): Promise<string> {
+  const doc = await context.editingAreaManager?.getContent()
+
+  return doc ? JSON.stringify(toJSON(doc)) : ''
 }
 
 const attached = new WeakSet<EditorContext>()
@@ -130,7 +151,7 @@ export function attachDocument(context: EditorContext): void {
    * (열기·되돌리기). 셋 다 같은 자리로 모읍니다.
    */
   const sync = (): void => {
-    void readNow(context).then((content) => set({ content }))
+    void readJSON(context).then((content) => set({ content }))
   }
 
   context.eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', sync)
@@ -143,13 +164,23 @@ export async function refresh(): Promise<void> {
   set({ list: await store.list() })
 }
 
-/** 편집 영역에 넣고, 그것을 저장된 상태로 삼습니다 */
+/**
+ * 편집 영역에 넣고, 그것을 저장된 상태로 삼습니다.
+ *
+ * @throws 저장물이 스키마 밖이면. `Node.fromJSON` 은 HTML 파싱과 달리 조용히
+ * 버리지 않습니다 — 반쪽 문서로 여는 것보다 낫지만 **부르는 쪽이 이 오류를
+ * 받아 화면에 알려야** 합니다.
+ */
 async function load(
   context: EditorContext,
   name: string | null,
   content: string
 ): Promise<void> {
-  await context.editingAreaManager?.setContent(content)
+  const doc = content
+    ? fromJSON(JSON.parse(content) as DocumentJSON, sagakSchema)
+    : sagakSchema.topNodeType.createAndFill()!
+
+  await context.editingAreaManager?.setContent(doc)
   set({ name, saved: content, content })
 }
 
@@ -173,7 +204,7 @@ export async function saveAs(
    * 저장 직전의 내용을 **그 자리에서 읽습니다.** 담아 둔 값을 쓰면 마지막
    * 이벤트 이후의 타이핑이 빠질 수 있습니다.
    */
-  const content = await readNow(context)
+  const content = await readJSON(context)
   await store.write(name, content)
   set({ name, saved: content, content })
   await refresh()
