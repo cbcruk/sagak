@@ -128,3 +128,44 @@ describe('HTML → PM 모델 → HTML 왕복', () => {
     }
   })
 })
+
+/**
+ * 위험한 주소는 **모델에 담기지 않습니다.**
+ *
+ * 지금은 DOMPurify 가 DOM 문턱에서 막아 줍니다. 그런데 그 문은 곧 없어지고
+ * (`EditorView` 가 DOM 을 소유합니다), **JSON 저장 경로는 애초에 HTML 을 안
+ * 지납니다.** 그래서 스키마에서 막습니다.
+ */
+describe('위험한 주소', () => {
+  const parse = (html: string): string =>
+    roundTrip(html, sagakSchema, document).output
+
+  it('javascript: 링크는 링크가 안 됩니다 — 글자는 남습니다', () => {
+    const out = parse('<p><a href="javascript:alert(1)">눌러보세요</a></p>')
+
+    expect(out).not.toContain('javascript:')
+    expect(out).not.toContain('<a ')
+    expect(out).toContain('눌러보세요')
+  })
+
+  it('엔티티로 감춘 것도 막습니다', () => {
+    const out = parse('<p><a href="&#106;avascript:alert(1)">글</a></p>')
+
+    expect(out).not.toContain('<a ')
+  })
+
+  it('javascript: 이미지는 안 들어옵니다', () => {
+    expect(parse('<p><img src="javascript:alert(1)"></p>')).not.toContain('<img')
+  })
+
+  it('멀쩡한 주소는 그대로입니다', () => {
+    expect(parse('<p><a href="https://example.com">글</a></p>')).toContain(
+      'https://example.com'
+    )
+  })
+
+  /* 이미지 업로드가 이 꼴로 들어옵니다 — 실행되지 않으므로 막지 않습니다 */
+  it('data: 이미지는 통과합니다', () => {
+    expect(parse('<p><img src="data:,"></p>')).toContain('data:,')
+  })
+})
