@@ -41,6 +41,33 @@ function blockStyle(attrs: Record<string, unknown>): string | undefined {
   return parts.length ? parts.join('; ') : undefined
 }
 
+/**
+ * 위험한 주소를 **모델 문턱에서** 막습니다.
+ *
+ * 지금은 DOMPurify 가 DOM 에 넣기 직전에 걸러 줍니다. 그런데 그 문은 두 가지를
+ * 못 지킵니다.
+ *
+ * 1. `EditorView` 가 DOM 을 소유하면 `innerHTML` 을 거치는 자리가 없어집니다
+ * 2. **JSON 저장 경로는 HTML 을 아예 안 지납니다** (`setJSON`)
+ *
+ * 그래서 스키마에서 막습니다. 여기서 막으면 어느 길로 들어오든 — 붙여넣기,
+ * HTML, 저장물 — 모델에 위험한 주소가 **담기지 않습니다.**
+ *
+ * `data:` 는 막지 않습니다. 이미지 업로드가 그 꼴로 들어오고, 그건 실행되지
+ * 않습니다.
+ */
+const UNSAFE_URL = /^\s*(?:javascript|vbscript)\s*:/i
+
+function safeUrl(value: string | null): string | null {
+  if (!value) return null
+
+  /* `&#106;avascript:` 같은 우회를 막으려면 엔티티를 먼저 풀어야 합니다 */
+  const probe = document.createElement('textarea')
+  probe.innerHTML = value
+
+  return UNSAFE_URL.test(probe.value) ? null : value
+}
+
 const doc: NodeSpec = { content: 'block+' }
 
 const paragraph: NodeSpec = {
@@ -93,8 +120,12 @@ const image: NodeSpec = {
       tag: 'img[src]',
       getAttrs: (dom) => {
         const el = dom as HTMLImageElement
+        const src = safeUrl(el.getAttribute('src'))
+
+        if (!src) return false
+
         return {
-          src: el.getAttribute('src'),
+          src,
           alt: el.getAttribute('alt'),
           width: el.getAttribute('width') ?? (el.style.width || null),
           height: el.getAttribute('height') ?? (el.style.height || null),
@@ -226,10 +257,14 @@ const baseMarks: Record<string, MarkSpec> = {
     parseDOM: [
       {
         tag: 'a[href]',
-        getAttrs: (dom) => ({
-          href: (dom as HTMLElement).getAttribute('href'),
-          title: (dom as HTMLElement).getAttribute('title'),
-        }),
+        getAttrs: (dom) => {
+          const href = safeUrl((dom as HTMLElement).getAttribute('href'))
+
+          /* 주소가 위험하면 링크를 안 답니다 — 글자는 그대로 남습니다 */
+          if (!href) return false
+
+          return { href, title: (dom as HTMLElement).getAttribute('title') }
+        },
       },
     ],
     toDOM: (mark) => ['a', mark.attrs, 0],

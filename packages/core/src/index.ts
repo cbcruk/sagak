@@ -13,6 +13,8 @@ export {
   setBlockAttr,
 } from './model/commands'
 export type { Command } from './model/commands'
+export { registerModelCommands, MODEL_PRECEDENCE } from './model/register'
+export type { StateHandle } from './model/register'
 export type { DocumentJSON } from './model/storage'
 export type { CreateEditorOptions, Editor } from './create-editor'
 
