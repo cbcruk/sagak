@@ -5,6 +5,8 @@
   "scripts": {
     "test": "vitest run",
     "report": "vitest run --reporter=basic",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "vitest run -c vitest.browser.config.ts",
+    "capture": "vite tools"
   }
 }

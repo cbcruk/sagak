@@ -363,7 +363,7 @@ export interface SchemaOptions {
 export function createSagakSchema(options: SchemaOptions = {}): Schema {
   const marks = marksFor(options.textStyle ?? false)
 
-  const nodes = options.richBlocks
+  const nodes: Record<string, NodeSpec> = options.richBlocks
     ? { ...baseNodes, blockquote, code_block: codeBlock }
     : baseNodes
 
