@@ -1,0 +1,10 @@
+{
+  "name": "spike-pm-schema",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "report": "vitest run --reporter=basic",
+    "typecheck": "tsc --noEmit"
+  }
+}
