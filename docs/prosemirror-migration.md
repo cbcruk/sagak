@@ -180,7 +180,43 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 **손실 없음**이 아닌 클립보드가 나오면 그게 곧 고칠 거리이고, 픽스처로 복사해
 `paste.test.ts` 에 붙이면 회귀 검사가 됩니다.
 
-### 2단계 — 편집 표면 교체 (스파이크 착수)
+### 2단계 — 편집 표면 교체 (진행 중: 2a·2b-1 끝, 2b-2 남음)
+
+셋으로 나눴습니다.
+
+| | | |
+| --- | --- | --- |
+| **2a** | 툴바 커맨드를 `EditorState` 위로 | ✔ `src/model/commands.ts` |
+| **2b-1** | 그 커맨드를 레지스트리에 얹기 | ✔ `src/model/register.ts` |
+| **2b-2** | `EditorView` 교체 | **남음** |
+| **2c** | 선택 영역 정리 | 남음 (4단계와 한 덩어리) |
+
+**왜 커맨드가 뷰보다 먼저인가.** `EditorView` 를 얹는 순간 PM 이 DOM 을 소유합니다.
+그때까지 커맨드가 `execCommand` 로 DOM 을 직접 고치고 있으면 모델과 DOM 이 어긋납니다.
+커맨드를 먼저 지으면 그 구간이 없습니다 — 뷰 없이 `EditorState` 만으로 돌고 검사되므로
+**아무도 안 쓰는 채로 완성**될 수 있습니다.
+
+`registerModelCommands` 는 상태가 `null` 이면 `undefined` 를 돌려줍니다(= 처리하지 않음).
+그래서 등록해 둬도 아무것도 안 바뀌고, **뷰가 상태를 내주는 순간 갈아탑니다.**
+
+#### 2b-2 착수 조건과 할 일
+
+1. `WysiwygArea` 재작성 — `EditorView` 소유, `dispatchTransaction` 에서
+   `WYSIWYG_CONTENT_CHANGED`·`WYSIWYG_SELECTION_CHANGED` 발행,
+   `installStoredMarks`(PM 의 `storedMarks` 가 대신)와 채움용 `<br>` 처리 제거
+2. `EditorCore` 가 그 뷰의 `StateHandle` 로 `registerModelCommands` 호출
+3. **wysiwyg 검사 41개 이관** — `getRawContent()` 로 DOM 마크업을 직접 보는 것들입니다.
+   PM 의 DOM 은 클래스·속성·trailing break 가 붙어 모양이 다르므로 상당수를
+   "DOM 이 이렇다" → **"모델이 이렇다"** 로 다시 써야 합니다
+4. `selectionManager` 위임 여섯(`insertHTML`·`insertText`·`getSelectedHTML`·
+   `getSelectedText`·`execCommand`·`focus` 의 `restoreSelection`)의 거취 — 2c 와 한
+   덩어리라 여기서 경계를 정해야 합니다
+
+**중간에 초록이 안 되는 구간이 깁니다.** 지금까지 조각은 전부 각각 초록으로 끝났는데
+2b-2 는 처음부터 끝까지 한 번에 가는 편이 낫습니다 — 끊기면 무엇이 깨진 것인지 판별하기
+어려워집니다.
+
+### 2단계 준비 — 스파이크 (완료)
 
 `prosemirror-view` 가 편집 영역을 가져갑니다. 제일 큰 덩어리이고 IME 가 여기 있습니다.
 이 단계가 끝나면 `editing-area`·`wysiwyg-area`·`stored-marks` 의 `beforeinput` 처리가
