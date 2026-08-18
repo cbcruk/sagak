@@ -34,7 +34,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -73,7 +73,7 @@
   }
 
   export function open(): void {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
 
     const img = getSelectedImage()
     src = img?.src ?? ''
@@ -91,7 +91,7 @@
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor?.selectionManager?.restoreSelection()
+      editor.selectionManager?.restoreSelection()
       action()
     })
   }
@@ -101,7 +101,7 @@
       const preview = previewUrl
       const name = selectedFile?.name
       restoreThen(() => {
-        editor?.eventBus.emit(ContentEvents.IMAGE_INSERT, {
+        editor.eventBus.emit(ContentEvents.IMAGE_INSERT, {
           src: preview,
           alt: alt.trim() || name,
           width: width.trim() || undefined,
@@ -127,11 +127,11 @@
       height: height.trim() || undefined,
     }
     const target = event
-    restoreThen(() => editor?.eventBus.emit(target, payload))
+    restoreThen(() => editor.eventBus.emit(target, payload))
   }
 
   function remove(): void {
-    restoreThen(() => editor?.eventBus.emit(ContentEvents.IMAGE_DELETE))
+    restoreThen(() => editor.eventBus.emit(ContentEvents.IMAGE_DELETE))
   }
 
   /**

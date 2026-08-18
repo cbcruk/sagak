@@ -38,7 +38,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 저장 시각을 문구에 넣습니다 */
     showTime?: boolean
   }
@@ -106,7 +106,6 @@
   const hidden = $derived(status === 'idle' && !lastSaved && !showDeleted)
 
   $effect(() => {
-    if (!editor) return
     return editor.eventBus.on(
       AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED,
       'on',
@@ -126,7 +125,7 @@
   })
 
   function discard(): void {
-    editor?.eventBus.emit(AutoSaveEvents.AUTO_SAVE_CLEAR)
+    editor.eventBus.emit(AutoSaveEvents.AUTO_SAVE_CLEAR)
     lastSaved = null
     justDeleted = true
 

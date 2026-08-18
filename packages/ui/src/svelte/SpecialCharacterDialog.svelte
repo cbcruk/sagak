@@ -34,7 +34,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -45,7 +45,7 @@
   let activeCategory = $state(0)
 
   export function open(): void {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
     dialogEl.showModal()
   }
 
@@ -53,8 +53,8 @@
   function insert(character: string): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor?.selectionManager?.restoreSelection()
-      editor?.eventBus.emit(ContentEvents.SPECIAL_CHARACTER_INSERT, {
+      editor.selectionManager?.restoreSelection()
+      editor.eventBus.emit(ContentEvents.SPECIAL_CHARACTER_INSERT, {
         character,
       })
     })

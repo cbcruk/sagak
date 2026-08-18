@@ -23,7 +23,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
   }
 
   const { editor }: Props = $props()
@@ -35,7 +35,6 @@
   let selectedIndex = $state(0)
 
   $effect(() => {
-    if (!editor) return
     const bus = editor.eventBus
 
     const offShow = bus.on(
@@ -102,7 +101,7 @@
   })
 
   function apply(word: string): void {
-    editor?.eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY, { word })
+    editor.eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY, { word })
   }
 </script>
 

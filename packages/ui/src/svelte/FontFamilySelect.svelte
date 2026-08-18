@@ -49,7 +49,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
   }
 
   const { editor }: Props = $props()
@@ -100,7 +100,6 @@
   const all: Option[] = $derived([...FALLBACK_FONTS, ...system, ...loader])
 
   function sync(): void {
-    if (!editor) return
     const current =
       editor.commandRegistry?.queryValue('fontName') ??
       document.queryCommandValue('fontName')
@@ -109,7 +108,6 @@
   }
 
   $effect(() => {
-    if (!editor) return
     /* 목록이 바뀌면 고른 값도 다시 맞춥니다 */
     void all
     sync()
@@ -117,7 +115,7 @@
   })
 
   const save = (): void => {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
   }
 </script>
 
@@ -130,7 +128,6 @@
   onmousedown={save}
   onfocus={save}
   onchange={() => {
-    if (!editor) return
     if (value === LOAD_SYSTEM_FONTS_VALUE) {
       /* 사용자 제스처 안이라야 권한 요청이 통합니다 */
       loadLocalFonts()

@@ -42,18 +42,7 @@ type Bucket = Map<string, WritableAtom<string>>
 
 const buckets = new WeakMap<EditorContext, Bucket>()
 
-/**
- * 에디터가 아직 없을 때 쓰는 칸.
- *
- * 툴바는 `editor` 가 `null` 인 채로 한 번 그려집니다. 그때마다 새 `atom` 을
- * 만들면 구독이 매번 갈려 값이 안 붙으므로, 이 경우도 한 칸에 모읍니다.
- * 어차피 에디터가 없으면 적용되는 것도 없습니다.
- */
-const orphan: Bucket = new Map()
-
-function bucketFor(editor: EditorContext | null): Bucket {
-  if (!editor) return orphan
-
+function bucketFor(editor: EditorContext): Bucket {
   let bucket = buckets.get(editor)
   if (!bucket) {
     bucket = new Map()
@@ -69,7 +58,7 @@ function bucketFor(editor: EditorContext | null): Bucket {
  * 툴바와 더보기 메뉴가 한 자리를 봅니다.
  */
 export function choiceStore(
-  editor: EditorContext | null,
+  editor: EditorContext,
   key: string,
   initial: string
 ): WritableAtom<string> {

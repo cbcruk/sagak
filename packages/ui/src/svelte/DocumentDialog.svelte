@@ -29,7 +29,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 이름을 받아 옵니다 — 기본은 브라우저 프롬프트입니다 */
     requestName?: (current: string) => string | null
   }
@@ -45,7 +45,6 @@
   let confirming = $state<string | null>(null)
 
   $effect(() => {
-    if (!editor) return
     attachDocument(editor)
     const sync = (): void => {
       doc = readDocument()

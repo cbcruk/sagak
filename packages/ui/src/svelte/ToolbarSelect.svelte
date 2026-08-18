@@ -39,7 +39,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     spec: ToolbarSelectSpec
   }
 
@@ -64,7 +64,7 @@
   let unlisted = $state<string | null>(null)
 
   $effect(() => {
-    if (!editor || !spec.query) return
+    if (!spec.query) return
     const sync = (): void => {
       const current = spec.query?.(editor)
 
@@ -95,7 +95,7 @@
   })
 
   const save = (): void => {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
   }
 </script>
 
@@ -107,7 +107,6 @@
   onmousedown={save}
   onfocus={save}
   onchange={() => {
-    if (!editor) return
     store?.set(value)
     editor.selectionManager?.restoreSelection()
     spec.apply(editor, value)

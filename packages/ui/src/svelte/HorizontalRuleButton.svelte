@@ -29,7 +29,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -39,7 +39,7 @@
   const ICON_SIZE = 16
 
   function insert(): void {
-    editor?.eventBus.emit(ContentEvents.HORIZONTAL_RULE_INSERT)
+    editor.eventBus.emit(ContentEvents.HORIZONTAL_RULE_INSERT)
   }
 </script>
 

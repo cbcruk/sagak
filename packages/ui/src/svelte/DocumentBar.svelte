@@ -52,7 +52,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /**
      * 이름을 받아 옵니다 — 기본은 브라우저 프롬프트입니다.
      *
@@ -70,7 +70,6 @@
   let doc = $state(readDocument())
 
   $effect(() => {
-    if (!editor) return
     attachDocument(editor)
     const sync = (): void => {
       doc = readDocument()
@@ -81,7 +80,6 @@
 
   /** 이름이 없으면 물어보고 저장합니다 — 레거시 에디터의 ⌘S 그대로입니다 */
   async function saveOrAsk(): Promise<void> {
-    if (!editor) return
     if (!doc.untitled) {
       await save(editor)
       return
@@ -92,7 +90,6 @@
   }
 
   async function askAndSaveAs(): Promise<void> {
-    if (!editor) return
     const next = requestName(doc.name)
     if (!next) return
     await saveAs(editor, next)
@@ -105,10 +102,8 @@
    * 제스처를 잃어 대화상자가 안 뜹니다 (`document-bar.utils`).
    */
   function exportToComputer(): void {
-    if (!editor) return
-    const context = editor
     void saveToComputer(doc.untitled ? 'Untitled.html' : doc.name, () =>
-      readNow(context)
+      readNow(editor)
     )
   }
 

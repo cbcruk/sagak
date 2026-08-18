@@ -29,7 +29,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -47,7 +47,6 @@
   const hasQuery = $derived(!!findText.trim())
 
   $effect(() => {
-    if (!editor) return
     return editor.eventBus.on(
       CoreEvents.STYLE_CHANGED,
       'after',
@@ -76,7 +75,7 @@
     wholeWord?: boolean
   }): void {
     if (!findText.trim()) return
-    editor?.eventBus.emit(FindReplaceEvents.FIND, {
+    editor.eventBus.emit(FindReplaceEvents.FIND, {
       query: findText,
       caseSensitive,
       wholeWord,
@@ -86,14 +85,14 @@
 
   function replace(all: boolean): void {
     if (!findText.trim()) return
-    editor?.eventBus.emit(
+    editor.eventBus.emit(
       all ? FindReplaceEvents.REPLACE_ALL : FindReplaceEvents.REPLACE,
       { query: findText, replacement: replaceText, caseSensitive, wholeWord }
     )
   }
 
   function onClose(): void {
-    editor?.eventBus.emit(FindReplaceEvents.CLEAR_FIND)
+    editor.eventBus.emit(FindReplaceEvents.CLEAR_FIND)
     matchCount = 0
     currentMatch = 0
   }
@@ -105,7 +104,7 @@
   function onFindKeydown(e: KeyboardEvent): void {
     if (e.key !== 'Enter') return
     e.preventDefault()
-    if (matchCount > 0) editor?.eventBus.emit(FindReplaceEvents.FIND_NEXT)
+    if (matchCount > 0) editor.eventBus.emit(FindReplaceEvents.FIND_NEXT)
     else runFind()
   }
 </script>
@@ -184,7 +183,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => editor?.eventBus.emit(FindReplaceEvents.FIND_PREVIOUS)}
+      onclick={() => editor.eventBus.emit(FindReplaceEvents.FIND_PREVIOUS)}
       disabled={matchCount === 0}
     >
       ↑ Prev
@@ -193,7 +192,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => editor?.eventBus.emit(FindReplaceEvents.FIND_NEXT)}
+      onclick={() => editor.eventBus.emit(FindReplaceEvents.FIND_NEXT)}
       disabled={matchCount === 0}
     >
       ↓ Next

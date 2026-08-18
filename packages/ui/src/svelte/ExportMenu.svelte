@@ -24,7 +24,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
     filename?: string
@@ -67,7 +67,7 @@
 
   function exportAs(format: ExportFormat): void {
     menuEl.close()
-    editor?.eventBus.emit(ExportEvents.EXPORT_DOWNLOAD, { format, filename })
+    editor.eventBus.emit(ExportEvents.EXPORT_DOWNLOAD, { format, filename })
   }
 </script>
 
