@@ -97,6 +97,21 @@ export function readDocument(): DocumentSnapshot {
   }
 }
 
+const errors = writable<string | null>(null)
+
+/**
+ * 문서를 열지 못한 이유 — 없으면 `null`.
+ *
+ * `Node.fromJSON` 은 스키마 밖을 만나면 **던집니다.** HTML 파싱이 조용히 버리는
+ * 것과 반대이고, 그 편이 낫습니다 — 반쪽 문서로 여는 것보다 안 여는 것이
+ * 낫습니다. 다만 **누군가는 그 사실을 화면에 알려야** 합니다.
+ *
+ * 그래서 `open()` 은 던지는 대신 여기에 담고 열던 문서를 그대로 둡니다.
+ */
+export const documentError: Readable<string | null> = {
+  subscribe: errors.subscribe,
+}
+
 const snapshot = writable<DocumentSnapshot>(readDocument())
 
 /** 열려 있는 문서 — 컴포넌트는 `$documentStore` 로 봅니다 */
@@ -192,8 +207,21 @@ export async function create(context: EditorContext): Promise<void> {
 export async function open(
   context: EditorContext,
   name: string
-): Promise<void> {
-  await load(context, name, await store.read(name))
+): Promise<boolean> {
+  try {
+    await load(context, name, await store.read(name))
+    errors.set(null)
+
+    return true
+  } catch {
+    /*
+     * 열던 문서는 그대로 둡니다. 여는 데 실패했다고 보고 있던 글을 잃으면
+     * 안 됩니다.
+     */
+    errors.set(`'${name}' 을(를) 열지 못했습니다 — 저장물이 이 에디터가 아는 꼴이 아닙니다.`)
+
+    return false
+  }
 }
 
 export async function saveAs(

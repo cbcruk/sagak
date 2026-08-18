@@ -5,6 +5,7 @@
     attachDocument,
     create,
     documentStore,
+    documentError,
     readNow,
     save,
     saveAs,
@@ -70,13 +71,25 @@
     attachDocument(editor)
   })
 
+  /**
+   * 이름에 붙는 확장자는 **내보낼 때만** 답니다.
+   *
+   * 저장물은 JSON 인데 예전 기본 이름은 `Untitled.html` 이었습니다 — 안에 든
+   * 것과 이름이 어긋났습니다. 이름은 문서 이름일 뿐이고, `.html` 은 진짜 파일로
+   * 나갈 때 그 파일의 형식을 가리키는 자리입니다.
+   */
+  const UNTITLED_NAME = 'Untitled'
+
+  const asHtmlFile = (name: string): string =>
+    /\.html?$/i.test(name) ? name : `${name}.html`
+
   /** 이름이 없으면 물어보고 저장합니다 — 레거시 에디터의 ⌘S 그대로입니다 */
   async function saveOrAsk(): Promise<void> {
     if (!$documentStore.untitled) {
       await save(editor)
       return
     }
-    const next = requestName('Untitled.html')
+    const next = requestName(UNTITLED_NAME)
     if (!next) return
     await saveAs(editor, next)
   }
@@ -94,7 +107,7 @@
    * 제스처를 잃어 대화상자가 안 뜹니다 (`document-bar.utils`).
    */
   function exportToComputer(): void {
-    void saveToComputer($documentStore.untitled ? 'Untitled.html' : $documentStore.name, () =>
+    void saveToComputer(asHtmlFile($documentStore.name), () =>
       readNow(editor)
     )
   }
@@ -207,4 +220,17 @@
       {/if}
     </div>
   </div>
+
+  <!--
+    문서를 못 연 이유가 여기 섭니다.
+
+    `Node.fromJSON` 은 스키마 밖을 만나면 던지고, `open()` 은 그것을 삼켜
+    `documentError` 에 담습니다. 담기만 하고 보여 주지 않으면 사용자에게는
+    **아무 일도 안 일어난 것**으로 보입니다 — 눌렀는데 문서가 안 바뀝니다.
+  -->
+  {#if $documentError}
+    <p role="alert" data-part="error" style="margin: 4px 0 0; font-size: 12px">
+      {$documentError}
+    </p>
+  {/if}
 {/if}

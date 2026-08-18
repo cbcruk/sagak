@@ -12,6 +12,7 @@ export {
   create,
   open,
   documentStore,
+  documentError,
   readDocument,
   readNow,
   refresh,
