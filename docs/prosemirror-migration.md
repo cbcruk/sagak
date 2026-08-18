@@ -245,13 +245,30 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 | 세 겹 | 3 → 1 | 3/3 / **1/3** |
 | 겹친 것 + 굵게 | 2 → 1 | 2/2 / **1/2** |
 
+**여기서 근거를 한 번 고쳤습니다.** 처음에는 "겹친 `<span>` 은 툴바가 만드는 꼴" 이라고
+적었는데, 그건 재지 않고 가정한 것이었습니다. 브라우저에서 제품 커맨드를 실제로 돌려
+보니 **같은 범위에 셋을 걸면 한 `<span>` 에 몰아넣습니다.**
+
 ```
-<span style="font-family: Georgia"><span style="color: red">글
-합침 → <span style="color: red">글        ← 글꼴이 없어졌습니다
+제품(같은 범위):  <span style="font-family: Georgia; color: rgb(255, 0, 0)">가나다라</span>
 ```
 
-그리고 저 꼴은 남의 것이 아니라 **툴바가 만드는 꼴**입니다. 겹치는 `<span>` 은 보기
-싫을 뿐이고, 잃는 것은 서식입니다. ([`style-marks.test.ts`](../spike/pm-schema/test/style-marks.test.ts))
+이 꼴이면 합쳐도 잃을 것이 없습니다. 겹치는 것은 **범위가 다를 때**입니다 — 전체에
+글꼴을 주고 앞 두 글자에만 색을 주면 그때 겹칩니다.
+
+```
+제품(범위 다름):  <span style="font-family: Georgia"><span style="color: red">가나</span>다라</span>
+
+겹친 글자('가나')에 걸린 스타일
+  나눔: color: rgb(255, 0, 0); font-family: Georgia;
+  합침: color: rgb(255, 0, 0);          ← 겹친 구간에서만 글꼴이 사라집니다
+```
+
+결론은 그대로지만 **이유가 좁아졌습니다.** 합치면 문서가 통째로 망가지는 게 아니라
+**겹치는 구간에서 바깥 속성을 잃습니다.** 그 대신 얻는 것은 겹 하나 줄이는 것뿐이라
+여전히 안 합치는 쪽입니다.
+([`style-marks.test.ts`](../spike/pm-schema/test/style-marks.test.ts) ·
+[`produced.browser.test.ts`](../spike/pm-schema/test/produced.browser.test.ts))
 
 ### 7-2. 인용·코드블록은 **넣습니다**
 

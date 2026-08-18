@@ -5,7 +5,7 @@ import {
   createDocumentStore,
   type CommandRegistry,
 } from 'sagak-core'
-import { sagakSchema } from '../src/schema'
+import { sagakSchema, createSagakSchema } from '../src/schema'
 import { roundTrip } from '../src/roundtrip'
 
 /**
@@ -116,6 +116,102 @@ describe('제품이 만든 마크업이 스키마를 통과하는가', () => {
       ).toBe(true)
     })
   }
+
+  /**
+   * **§7-1 의 근거를 되재는 자리입니다.**
+   *
+   * 값 붙는 마크를 안 합치기로 한 근거는 "겹친 `<span>` 은 툴바가 만드는 꼴"
+   * 이었는데, 그건 **재지 않고 가정한 것**이었습니다. 같은 범위에 셋을 걸면
+   * 제품은 한 `<span>` 에 몰아넣습니다 — 합쳐도 잃을 것이 없는 꼴입니다.
+   *
+   * 그러면 겹친 `<span>` 은 언제 생기는가. **범위가 다를 때**입니다. 전체에
+   * 글꼴을 주고 일부에 색을 주면 그때는 겹칩니다. 그것을 여기서 잽니다.
+   */
+  it('범위가 다르면 span 이 겹칩니다', () => {
+    selectAll()
+    registry.run('fontName', 'Georgia')
+
+    /* 앞 두 글자에만 색 — 범위가 다릅니다 */
+    const text = element.querySelector('span')?.firstChild ?? element.querySelector('p')!.firstChild!
+    const range = document.createRange()
+    range.setStart(text, 0)
+    range.setEnd(text, 2)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    registry.run('foreColor', '#ff0000')
+
+    const html = element.innerHTML
+    produced.push({ name: '범위가 다른 겹침', html, after: roundTrip(html, sagakSchema, document).output })
+
+    const depth = (() => {
+      const probe = document.createElement('div')
+      probe.innerHTML = html
+      let deepest = 0
+      for (const span of probe.querySelectorAll('span')) {
+        let d = 0
+        for (let n: HTMLElement | null = span; n; n = n.parentElement) {
+          if (n.tagName === 'SPAN') d += 1
+        }
+        deepest = Math.max(deepest, d)
+      }
+      return deepest
+    })()
+
+    console.log(`\n  범위가 다른 겹침 — span 최대 겹: ${depth}\n  ${html}\n`)
+
+    expect(depth, '범위가 다른데도 안 겹치면 §7-1 을 다시 봐야 합니다').toBe(2)
+
+    /*
+     * 그리고 이 꼴에서 합친 마크가 무엇을 잃는지 — 손으로 쓴 픽스처가 아니라
+     * **제품이 만든 마크업**으로 확인합니다.
+     *
+     * 잃는 자리는 **겹치는 구간뿐**입니다. `다라` 는 글꼴만 걸려 있어 멀쩡하고,
+     * `가나` 만 안쪽 색이 바깥 글꼴을 밀어냅니다. 그래서 문서 전체가 아니라
+     * 글자를 집어서 봐야 합니다.
+     */
+    const stylesOn = (source: string, needle: string): string => {
+      const probe = document.createElement('div')
+      probe.innerHTML = source
+
+      const walker = document.createTreeWalker(probe, NodeFilter.SHOW_TEXT)
+      let node: Node | null = walker.nextNode()
+      while (node && node.textContent !== needle) node = walker.nextNode()
+      if (!node) return ''
+
+      const parts: string[] = []
+      for (
+        let el = node.parentElement;
+        el && el !== probe;
+        el = el.parentElement
+      ) {
+        if (el.style.cssText) parts.push(el.style.cssText)
+      }
+      return parts.join(' ')
+    }
+
+    const split = roundTrip(html, sagakSchema, document).output
+    const merged = roundTrip(
+      html,
+      createSagakSchema({ textStyle: true }),
+      document
+    ).output
+
+    console.log(`\n  겹친 글자('가나')에 걸린 스타일`)
+    console.log(`    나눔: ${stylesOn(split, '가나')}`)
+    console.log(`    합침: ${stylesOn(merged, '가나')}\n`)
+
+    /* 나눈 쪽은 둘 다 살아 있습니다 */
+    expect(stylesOn(split, '가나')).toContain('font-family')
+    expect(stylesOn(split, '가나')).toContain('color')
+
+    /* 합친 쪽은 겹친 구간에서 바깥 것을 잃습니다 */
+    expect(
+      stylesOn(merged, '가나'),
+      '합치면 겹친 구간의 글꼴이 사라집니다'
+    ).not.toContain('font-family')
+  })
 
   afterAll(() => {
     console.log('\n제품이 만든 마크업 → 스키마 왕복\n')
