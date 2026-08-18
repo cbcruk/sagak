@@ -100,15 +100,15 @@ describe('Editing Area 통합', () => {
       await manager.setContent(doc(''))
 
       await manager.switchMode('html')
-      expect(asHtml(await manager.getContent())).toBe('')
+      /* 모델을 그대로 보여 줍니다 — 빈 문서는 빈 문단입니다 */
+      expect(asHtml(await manager.getContent())).toBe('<p></p>')
 
       await manager.switchMode('text')
-      expect(asHtml(await manager.getContent())).toBe('<p><br></p>')
+      expect(asHtml(await manager.getContent())).toBe('<p></p>')
 
-      // Then: WYSIWYG으로 돌아와서 빈 콘텐츠 확인
+      // Then: 세 모드를 돌아도 빈 문서는 빈 문단 그대로입니다
       await manager.switchMode('wysiwyg')
-      const content = asHtml(await manager.getContent())
-      expect(content).toBe('<p><br></p>')
+      expect(asHtml(await manager.getContent())).toBe('<p></p>')
     })
 
     it('모드 전환을 통해 포맷을 보존해야 함', async () => {
@@ -395,7 +395,14 @@ describe('Editing Area 통합', () => {
     it('순수 텍스트를 HTML로 변환해야 함', async () => {
       // Given: 텍스트 모드에서 여러 줄 텍스트 입력
       await manager.switchMode('text')
-      await manager.setContent(doc('Line 1\nLine 2\nLine 3'))
+
+      /*
+       * 평문은 **텍스트 영역에 직접** 넣습니다. 매니저가 받는 것은 이제 모델이라
+       * 평문을 그리로 보내면 HTML 로 파싱돼 한 문단이 됩니다 — 재려는 것은
+       * "텍스트 모드가 줄을 문단으로 바꾸는가" 이므로 입력도 그 모드로 넣습니다.
+       */
+      const area = manager.getCurrentArea() as { setRawContent(text: string): void }
+      area.setRawContent('Line 1\nLine 2\nLine 3')
 
       // When: WYSIWYG 모드로 전환
       await manager.switchMode('wysiwyg')

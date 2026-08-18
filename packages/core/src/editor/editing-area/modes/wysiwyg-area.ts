@@ -101,7 +101,17 @@ export class WysiwygArea implements EditingArea {
       return
     }
 
-    this.element.innerHTML = this.sanitize(html)
+    /*
+     * **빈 블록에는 캐럿이 설 자리가 필요합니다.**
+     *
+     * 모델의 빈 문단은 `<p></p>` 로 직렬화되는데, 그대로 넣으면 브라우저가
+     * 캐럿을 놓지 못해 그 줄에 글을 쓸 수 없습니다. 그래서 표시할 때만 채움용
+     * `<br>` 을 넣습니다 — 모델에는 없는 것이고, 다시 읽을 때 스키마가 걷어내므로
+     * 저장물에도 안 남습니다.
+     */
+    this.element.innerHTML = this.sanitize(
+      html.replace(/<(p|h[1-6])([^>]*)><\/\1>/g, '<$1$2><br></$1>')
+    )
 
     if (!this.element.firstChild) {
       this.element.innerHTML = '<p><br></p>'

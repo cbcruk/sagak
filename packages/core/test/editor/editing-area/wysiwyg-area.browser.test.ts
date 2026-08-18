@@ -175,9 +175,12 @@ describe('WysiwygArea', () => {
       // When: setContent로 빈 콘텐츠 설정
       await wysiwygArea.setContent(doc(''))
 
-      // Then: 기본 빈 p 태그로 정규화됨
-      const content = wysiwygArea.getRawContent()
-      expect(content).toBe('<p><br></p>')
+      /*
+       * DOM 에는 `<br>` 이 남습니다 — 캐럿이 설 자리가 필요해서입니다. 모델을
+       * 거쳐 나온 값은 `<p></p>` 이고, 그 둘이 다른 것이 정상입니다.
+       */
+      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
     it('<br>을 빈 콘텐츠로 처리해야 함', async () => {
@@ -186,9 +189,9 @@ describe('WysiwygArea', () => {
       // When: setContent로 설정
       await wysiwygArea.setContent(doc('<br>'))
 
-      // Then: 기본 빈 p 태그로 정규화됨
-      const content = wysiwygArea.getRawContent()
-      expect(content).toBe('<p><br></p>')
+      /* 채움용 `<br>` 이라 모델에는 안 들어갑니다 — 표시에만 있습니다 */
+      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
     it('<p></p>를 빈 콘텐츠로 처리해야 함', async () => {
@@ -197,9 +200,9 @@ describe('WysiwygArea', () => {
       // When: setContent로 설정
       await wysiwygArea.setContent(doc('<p></p>'))
 
-      // Then: br이 포함된 p 태그로 정규화됨
-      const content = wysiwygArea.getRawContent()
-      expect(content).toBe('<p><br></p>')
+      /* DOM 은 캐럿 자리로 `<br>` 을 채우고, 모델은 빈 문단 그대로입니다 */
+      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
     it('리치 콘텐츠를 보존해야 함', async () => {

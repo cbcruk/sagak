@@ -107,11 +107,31 @@ const image: NodeSpec = {
 
 const text: NodeSpec = { group: 'inline' }
 
+/**
+ * 줄바꿈 — 다만 **채움용 `<br>` 은 줄바꿈이 아닙니다.**
+ *
+ * contentEditable 은 빈 블록에 캐럿을 놓지 못해서 브라우저와 우리 둘 다 빈
+ * 문단에 `<br>` 을 채워 넣습니다. 그것까지 줄바꿈으로 읽으면 **빈 문단이
+ * 저장될 때마다 없던 줄바꿈이 하나씩 생깁니다.**
+ *
+ * 그래서 블록의 **유일한 자식**인 `<br>` 은 무시합니다. `a<br>b` 처럼 옆에
+ * 무엇이 있는 것만 진짜 줄바꿈입니다.
+ */
 const hardBreak: NodeSpec = {
   group: 'inline',
   inline: true,
   selectable: false,
-  parseDOM: [{ tag: 'br' }],
+  parseDOM: [
+    {
+      tag: 'br',
+      getAttrs: (dom) => {
+        const parent = (dom as HTMLElement).parentElement
+        const filler = !!parent && parent.childNodes.length === 1
+
+        return filler ? false : null
+      },
+    },
+  ],
   toDOM: () => ['br'],
 }
 

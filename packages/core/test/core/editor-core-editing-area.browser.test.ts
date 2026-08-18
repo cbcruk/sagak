@@ -277,10 +277,13 @@ describe('EditorCore - EditingArea Integration', () => {
       // When: 빈 컨텐츠 설정
       await core.setContent('')
 
-      // Then: 기본 단락(<p><br></p>)이 생성되어야 함
+      /*
+       * 빈 문서는 **빈 문단**으로 나옵니다. DOM 에는 캐럿 자리로 `<br>` 이
+       * 들어가지만 그건 표시의 사정이고, 밖으로 나가는 값은 모델을 따릅니다.
+       */
       const content = await core.getContent()
 
-      expect(content).toBe('<p><br></p>')
+      expect(content).toBe('<p></p>')
     })
 
     it('편집 영역 없이 컨텐츠 가져오기 시 에러가 발생해야 함', async () => {

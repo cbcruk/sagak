@@ -338,7 +338,8 @@ describe('EditingAreaManager', () => {
       const content = asHtml(await manager.getContent())
 
       // Then: 빈 콘텐츠가 유지됨
-      expect(content).toBe('')
+      /* 모델을 그대로 보여 줍니다 — 빈 문서는 빈 문단입니다 */
+      expect(content).toBe('<p></p>')
     })
   })
 
