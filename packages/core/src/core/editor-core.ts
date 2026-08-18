@@ -1,3 +1,7 @@
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { toHtml, parseHtml, toJSON, fromJSON } from '@/model/storage'
+import type { DocumentJSON } from '@/model/storage'
 import { EventBus } from './event-bus'
 import { PluginManager } from './plugin-manager'
 import { SelectionManager } from './selection-manager'
@@ -453,9 +457,47 @@ export class EditorCore {
   }
 
   /**
-   * 현재 편집 영역의 콘텐츠를 가져옵니다
+   * 지금 문서를 **HTML 로** 가져옵니다.
+   *
+   * 안쪽 진실은 모델이고 이건 밖으로 내보내는 형식입니다 — 내보내기·소스
+   * 보기·붙여넣기가 씁니다. 저장에는 `getJSON()` 을 쓰십시오
+   * (`docs/prosemirror-migration.md` §8).
    */
   async getContent(): Promise<string> {
+    return toHtml(await this.getDocument(), sagakSchema, document)
+  }
+
+  /**
+   * HTML 을 넣습니다 — **스키마를 통과합니다.**
+   *
+   * 스키마 밖의 것은 조용히 정규화되거나 사라집니다. 붙여넣기·초기 콘텐츠처럼
+   * 바깥에서 들어오는 HTML 이 지나는 문입니다.
+   */
+  async setContent(content: string): Promise<void> {
+    await this.setDocument(parseHtml(content, sagakSchema, document))
+  }
+
+  /**
+   * 저장용 — 문서를 **JSON 으로** 가져옵니다.
+   *
+   * 모델이 곧 저장물이라 왕복 손실이 없습니다. HTML 로 저장하던 때는 문서를
+   * 열 때마다 스키마를 통과했습니다.
+   */
+  async getJSON(): Promise<DocumentJSON> {
+    return toJSON(await this.getDocument())
+  }
+
+  /**
+   * 저장물을 되돌립니다.
+   *
+   * @throws 스키마에 없는 노드·마크가 들어 있으면. HTML 파싱과 달리 조용히
+   * 버리지 않습니다 — **부르는 쪽이 이 오류를 받아 알려야** 합니다.
+   */
+  async setJSON(json: DocumentJSON): Promise<void> {
+    await this.setDocument(fromJSON(json, sagakSchema))
+  }
+
+  private async getDocument(): Promise<PMNode> {
     if (!this.editingAreaManager) {
       throw new Error('EditingAreaManager not initialized')
     }
@@ -463,17 +505,12 @@ export class EditorCore {
     return await this.editingAreaManager.getContent()
   }
 
-  /**
-   * 현재 편집 영역에 콘텐츠를 설정합니다
-   *
-   * @param content `IR` 형식의 콘텐츠 (`HTML`)
-   */
-  async setContent(content: string): Promise<void> {
+  private async setDocument(doc: PMNode): Promise<void> {
     if (!this.editingAreaManager) {
       throw new Error('EditingAreaManager not initialized')
     }
 
-    await this.editingAreaManager.setContent(content)
+    await this.editingAreaManager.setContent(doc)
   }
 
   /**

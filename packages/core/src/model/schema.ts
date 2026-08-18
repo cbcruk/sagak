@@ -4,12 +4,11 @@ import { addListNodes } from 'prosemirror-schema-list'
 import { tableNodes } from 'prosemirror-tables'
 
 /**
- * sagak 툴바가 **만들 수 있는 것 전부**를 ProseMirror 스키마로 적습니다.
+ * sagak 문서 모델의 스키마 — **툴바가 만들 수 있는 것 전부**입니다.
  *
- * 이 파일의 목적은 스키마 설계가 아니라 **왕복 검증의 재료**입니다. 지금
- * 문서(OPFS 에 `innerHTML` 로 들어 있는 HTML)를 `DOMParser` 로 읽고
- * `DOMSerializer` 로 다시 쓸 때 무엇이 남고 무엇이 사라지는지를 봅니다.
- * 사라지는 것이 곧 스키마 작업 목록입니다.
+ * `spike/pm-schema` 에서 재고 옮겨 왔습니다. 결정과 근거는
+ * `docs/prosemirror-migration.md` §7·§8 에 있고, 스파이크에는 그 측정
+ * (합친 마크와 나눈 마크 비교, 인용·코드블록 유무 비교)이 남아 있습니다.
  *
  * 파싱 규칙은 **코어가 실제로 만드는 마크업**에서 뽑았습니다 (테스트 기대값
  * 기준):
@@ -108,11 +107,31 @@ const image: NodeSpec = {
 
 const text: NodeSpec = { group: 'inline' }
 
+/**
+ * 줄바꿈 — 다만 **채움용 `<br>` 은 줄바꿈이 아닙니다.**
+ *
+ * contentEditable 은 빈 블록에 캐럿을 놓지 못해서 브라우저와 우리 둘 다 빈
+ * 문단에 `<br>` 을 채워 넣습니다. 그것까지 줄바꿈으로 읽으면 **빈 문단이
+ * 저장될 때마다 없던 줄바꿈이 하나씩 생깁니다.**
+ *
+ * 그래서 블록의 **유일한 자식**인 `<br>` 은 무시합니다. `a<br>b` 처럼 옆에
+ * 무엇이 있는 것만 진짜 줄바꿈입니다.
+ */
 const hardBreak: NodeSpec = {
   group: 'inline',
   inline: true,
   selectable: false,
-  parseDOM: [{ tag: 'br' }],
+  parseDOM: [
+    {
+      tag: 'br',
+      getAttrs: (dom) => {
+        const parent = (dom as HTMLElement).parentElement
+        const filler = !!parent && parent.childNodes.length === 1
+
+        return filler ? false : null
+      },
+    },
+  ],
   toDOM: () => ['br'],
 }
 

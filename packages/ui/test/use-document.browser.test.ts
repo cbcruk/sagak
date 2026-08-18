@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import type { EditorContext } from 'sagak-core'
+import { get } from 'svelte/store'
+import { createDocumentStore } from 'sagak-core'
 import {
   UNTITLED,
+  documentError,
   attachDocument,
   create,
   open,
@@ -49,7 +52,8 @@ interface Bound {
   readonly documents: ReturnType<typeof readDocument>['documents']
   refresh: () => Promise<void>
   create: () => Promise<void>
-  open: (name: string) => Promise<void>
+  /** 못 열면 `false` — 던지지 않고 `documentError` 에 이유가 담깁니다 */
+  open: (name: string) => Promise<boolean>
   save: () => Promise<void>
   saveAs: (name: string) => Promise<void>
   rename: (from: string, to: string) => Promise<void>
@@ -78,6 +82,7 @@ function bind(context: EditorContext): Bound {
     rename,
     remove,
     create: () => create(context),
+    /* 못 연 경우를 알 수 있게 그대로 흘립니다 — `open` 은 던지지 않습니다 */
     open: (name: string) => open(context, name),
     save: () => save(context),
     saveAs: (name: string) => saveAs(context, name),
@@ -227,6 +232,44 @@ describe('열려 있는 문서', () => {
     await type('<p>원래대로</p>')
 
     expect(doc!.dirty, '내용이 같은데 더럽다고 합니다').toBe(false)
+  })
+
+  /**
+   * 저장물이 깨졌을 때.
+   *
+   * `Node.fromJSON` 은 스키마 밖을 만나면 **던집니다** — HTML 파싱이 조용히
+   * 버리는 것과 반대이고, 반쪽 문서로 여는 것보다 안 여는 편이 낫습니다.
+   *
+   * 다만 던지기만 하면 사용자에게는 **아무 일도 안 일어난 것**으로 보입니다.
+   * 눌렀는데 문서가 안 바뀝니다. 그래서 세 가지를 같이 지킵니다.
+   */
+  it('깨진 저장물을 열면 보고 있던 글을 지키고 이유를 남깁니다', async () => {
+    await mount()
+    await type('<p>보고 있던 글</p>')
+    await doc!.saveAs('멀쩡.html')
+    await settle(3)
+
+    /* 저장소에 직접 쓰레기를 넣습니다 — 예전 형식이거나 손상된 파일입니다 */
+    const store = createDocumentStore()
+    await store.write('깨진.html', '<p>JSON 이 아닙니다</p>')
+    await doc!.refresh()
+
+    const opened = await doc!.open('깨진.html')
+    await settle(3)
+
+    expect(opened, '못 열었으면 false 여야 합니다').toBe(false)
+    expect(
+      ed!.editable.innerHTML,
+      '못 열었다고 보고 있던 글을 잃으면 안 됩니다'
+    ).toContain('보고 있던 글')
+    expect(get(documentError), '이유가 남아야 합니다').toContain('깨진.html')
+
+    /* 멀쩡한 문서를 열면 이유는 지워집니다 */
+    await doc!.open('멀쩡.html')
+    await settle(3)
+    expect(get(documentError)).toBeNull()
+
+    await store.remove('깨진.html')
   })
 
   it('연 문서가 화면에 들어오고 깨끗한 상태입니다', async () => {

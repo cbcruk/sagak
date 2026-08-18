@@ -2,7 +2,7 @@ import { DOMParser, DOMSerializer } from 'prosemirror-model'
 import type { Schema } from 'prosemirror-model'
 
 /**
- * HTML → 모델 → HTML.
+ * HTML → 모델 → HTML. **검사 도구입니다** (제품 코드가 아닙니다).
  *
  * 재려는 것은 "마크업이 그대로인가" 가 **아닙니다.** 스키마를 통과시키면
  * 마크업은 당연히 바뀝니다 — `<font color>` 는 `<span style>` 이 되고 목록

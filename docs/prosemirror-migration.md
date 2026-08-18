@@ -148,7 +148,11 @@ precedence 뒤로 격리됐습니다. 반면 선택 영역은 19개 파일이 `w
 브라우저 테스트 전부(core 1,088 · ui 66)가 초록인 지점에 태그를 박습니다. **이걸
 안 하면 이주가 깨뜨린 것과 이미 깨져 있던 것을 구별할 수 없습니다.**
 
-### 1단계 — 스키마 확정 ✔ (스파이크 완료, 본체 미적용)
+### 1단계 — 스키마 확정 ✔ (본체 적용됨)
+
+스키마와 저장 변환은 `packages/core/src/model/` 에 있습니다. 스파이크에서 재고 옮겼고,
+그때의 측정(합친 마크 vs 나눈 마크, 인용·코드블록 유무)도 검사로 같이 왔습니다 — 결정을
+뒤집고 싶으면 `createSagakSchema` 의 옵션을 바꿔 다시 재면 됩니다.
 
 §2 가 이 단계이고, 스키마 결정 둘은 §7 에서 재서 정했습니다 — **마크는 안 합치고,
 인용·코드블록은 넣습니다.**
@@ -162,7 +166,7 @@ precedence 뒤로 격리됐습니다. 반면 선택 영역은 19개 파일이 `w
 커맨드 → contentEditable → innerHTML → OPFS → 읽기 → 스키마 왕복
 ```
 
-`produced.browser.test.ts` 가 코어의 커맨드 16종을 실제로 돌려 **제품이 만든 마크업**을
+`test/model/produced.browser.test.ts` 가 코어의 커맨드 16종을 실제로 돌려 **제품이 만든 마크업**을
 읽습니다. 제가 손으로 쓴 픽스처가 아니라는 점이 요지입니다 — `execCommand` 와 네이티브
 선택 영역을 거치므로 브라우저마다 결과가 다를 수 있고, 그 차이 자체가 재는 대상입니다.
 
@@ -267,8 +271,8 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 결론은 그대로지만 **이유가 좁아졌습니다.** 합치면 문서가 통째로 망가지는 게 아니라
 **겹치는 구간에서 바깥 속성을 잃습니다.** 그 대신 얻는 것은 겹 하나 줄이는 것뿐이라
 여전히 안 합치는 쪽입니다.
-([`style-marks.test.ts`](../spike/pm-schema/test/style-marks.test.ts) ·
-[`produced.browser.test.ts`](../spike/pm-schema/test/produced.browser.test.ts))
+([`style-marks.test.ts`](../packages/core/test/model/style-marks.browser.test.ts) ·
+[`produced.browser.test.ts`](../packages/core/test/model/produced.browser.test.ts))
 
 ### 7-2. 인용·코드블록은 **넣습니다**
 
@@ -287,7 +291,7 @@ function f() {        안 넣음 → function f() {   return 1 }
 같은 함정이 또 나올 수 있습니다.
 
 인용은 그만큼 세지 않습니다 — 글자는 남고 구조만 풀립니다. 코드블록을 넣는 김에 같이
-넣습니다. ([`rich-blocks.test.ts`](../spike/pm-schema/test/rich-blocks.test.ts))
+넣습니다. ([`rich-blocks.test.ts`](../packages/core/test/model/rich-blocks.browser.test.ts))
 
 **딸려 오는 일**: `blockquote`·`pre` CSS, 내보내기 경로 확인, 그리고 툴바가 만들 수 없는
 것을 문서가 갖게 된다는 것 — 커맨드를 붙일지는 따로 정합니다.
@@ -306,7 +310,7 @@ HTML 로 저장하면 **문서를 열 때마다 스키마를 통과합니다.** 
 JSON 은 저장한 것이 곧 모델이라 그 왕복이 아예 없습니다.
 
 측정: 무손실 6/6 (`Node.eq`), 안정 6/6 (두 번 돌려도 같은 JSON), HTML 로 되돌리기 6/6.
-([`json-storage.test.ts`](../spike/pm-schema/test/json-storage.test.ts))
+([`json-storage.test.ts`](../packages/core/test/model/storage.browser.test.ts))
 
 ### 8-2. 무엇을 치르는가
 
@@ -335,11 +339,27 @@ HTML 은 **바깥 형식**입니다. 그래서 §5 2단계에서 소스 보기 �
 지금은 저장 형식을 직접 보는 창이지만, 앞으로는 **모델에서 뽑아낸 표현**이고 손으로 고친
 HTML 은 다시 스키마를 통과합니다. 스키마 밖의 손질은 반영되지 않습니다.
 
-## 9. 미결
+## 9. 정한 것 — 저장물이 깨졌을 때와 이름의 확장자
 
-- **저장물 오류를 어디서 받을 것인가** — `Node.fromJSON` 이 던집니다 (§8-2)
+**깨진 저장물은 던지지 않고 담습니다.** `open()` 이 `false` 를 돌려주고 이유를
+`documentError` 에 넣습니다. 열던 문서는 그대로 둡니다 — 여는 데 실패했다고 보고 있던
+글을 잃으면 안 됩니다. 문서 줄이 그 이유를 `role="alert"` 로 보여 줍니다.
+
+던지기만 하면 사용자에게는 **아무 일도 안 일어난 것**으로 보입니다. 눌렀는데 문서가 안
+바뀝니다.
+
+**확장자는 내보낼 때만 답니다.** 저장물은 JSON 인데 기본 이름이 `Untitled.html` 이라
+안에 든 것과 이름이 어긋나 있었습니다. 이름은 문서 이름일 뿐이고, `.html` 은 진짜 파일로
+나갈 때 그 파일의 형식을 가리키는 자리입니다.
+
+## 10. 미결
+
 - **`li > p` 여백 CSS**
-- **번들 크기** — 아직 안 쟀습니다. 지금 앱은 233KB (gzip 73KB)
+- **번들 크기** — 스키마를 코어에 넣자 **233KB → 306KB (gzip 73 → 95KB)** 로 늘었습니다.
+  `prosemirror-model`·`schema-list`·`tables` 값이고 `prosemirror-view` 는 아직 안 들어갔습니다.
+  지금은 **제품이 안 쓰는데도 실려 있습니다** — `index.ts` 가 내보내니 앱이 끌고 옵니다.
+  2단계에서 실제로 쓰기 시작하면 값을 하지만, 안 쓰는 동안 매다는 게 맞는지는 별개입니다.
+  급하면 하위 경로(`sagak-core/model`)로 갈라 놓을 수 있습니다
 - **학습 목표와의 관계.** 이 저장소는 "배움의 도구" 라는 합의가 있습니다
   ([`session-doc-model-spike.md`](./session-doc-model-spike.md)). 남의 모델을 사는 것은
   그 배움을 없애는 게 아니라 **바꿉니다** — 짓는 배움에서 읽고 얹는 배움으로. 이건

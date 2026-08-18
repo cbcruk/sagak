@@ -1,3 +1,4 @@
+import type { Node as PMNode } from 'prosemirror-model'
 import type { EventBus } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { CommandRegistry } from './command-registry'
@@ -22,11 +23,11 @@ export interface EditingArea {
   /** 편집 가능 여부를 설정합니다 */
   setEditable(enabled: boolean): void
 
-  /** 콘텐츠를 가져옵니다 (`IR` 형식) */
-  getContent(): Promise<string>
+  /** 지금 이 모드가 보고 있는 문서를 **모델로** 돌려줍니다 */
+  getContent(): Promise<PMNode>
 
-  /** 콘텐츠를 설정합니다 (`IR` 형식) */
-  setContent(content: string): Promise<void>
+  /** 모델을 이 모드가 보여 줄 꼴로 옮깁니다 */
+  setContent(content: PMNode): Promise<void>
 
   /** 편집 영역을 표시합니다 */
   show(): Promise<void>
@@ -59,11 +60,11 @@ export interface EditingAreaManager {
   /** 현재 활성화된 편집 영역을 가져옵니다 */
   getCurrentArea(): EditingArea | undefined
 
-  /** 현재 콘텐츠를 가져옵니다 (`IR` 형식) */
-  getContent(): Promise<string>
+  /** 지금 문서를 **모델로** 돌려줍니다 */
+  getContent(): Promise<PMNode>
 
-  /** 콘텐츠를 설정합니다 (`IR` 형식) */
-  setContent(content: string): Promise<void>
+  /** 문서를 모델로 넣습니다 */
+  setContent(content: PMNode): Promise<void>
 
   /** 편집 영역에 포커스를 설정합니다 */
   focus(): void

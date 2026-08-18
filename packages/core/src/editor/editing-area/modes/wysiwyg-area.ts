@@ -2,6 +2,8 @@ import { logger } from '@/core/logger'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 import { resolveSanitizer, type Sanitizer } from '../sanitizer'
 import {
@@ -80,19 +82,36 @@ export class WysiwygArea implements EditingArea {
    * IR 형식(HTML)으로 콘텐츠를 가져옵니다
    */
   async getContent(): Promise<IRContent> {
-    return this.element.innerHTML
+    return parseHtml(this.element.innerHTML, sagakSchema, document)
   }
 
   /**
    * IR 형식(HTML)에서 콘텐츠를 설정합니다
    */
   async setContent(content: IRContent): Promise<void> {
-    if (!content || content === '<br>' || content === '<p></p>') {
+    /*
+     * 소독은 **HTML 경계에서** 합니다. 모델은 스키마를 통과한 것이라 위험한
+     * 것이 이미 없지만, 직렬화한 문자열을 DOM 에 넣는 것은 여전히 경계라
+     * 지나온 길을 그대로 지킵니다.
+     */
+    const html = toHtml(content, sagakSchema, document)
+
+    if (!html) {
       this.element.innerHTML = '<p><br></p>'
       return
     }
 
-    this.element.innerHTML = this.sanitize(content)
+    /*
+     * **빈 블록에는 캐럿이 설 자리가 필요합니다.**
+     *
+     * 모델의 빈 문단은 `<p></p>` 로 직렬화되는데, 그대로 넣으면 브라우저가
+     * 캐럿을 놓지 못해 그 줄에 글을 쓸 수 없습니다. 그래서 표시할 때만 채움용
+     * `<br>` 을 넣습니다 — 모델에는 없는 것이고, 다시 읽을 때 스키마가 걷어내므로
+     * 저장물에도 안 남습니다.
+     */
+    this.element.innerHTML = this.sanitize(
+      html.replace(/<(p|h[1-6])([^>]*)><\/\1>/g, '<$1$2><br></$1>')
+    )
 
     if (!this.element.firstChild) {
       this.element.innerHTML = '<p><br></p>'

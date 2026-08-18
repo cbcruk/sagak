@@ -1,3 +1,4 @@
+import type { DocumentJSON } from '@/model/storage'
 import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
 import type { SanitizeOption } from './editor/editing-area/sanitizer'
@@ -173,6 +174,12 @@ export interface Editor {
    */
   getContent: () => Promise<string>
 
+  /** 저장용 — 문서를 JSON 으로 (`docs/prosemirror-migration.md` §8) */
+  getJSON: () => Promise<DocumentJSON>
+
+  /** 저장물을 되돌립니다. 스키마 밖이면 던집니다 */
+  setJSON: (json: DocumentJSON) => Promise<void>
+
   /**
    * Set content
    */
@@ -276,6 +283,8 @@ export function createEditor(options: CreateEditorOptions): Editor {
     },
 
     getContent: () => core.getContent(),
+    getJSON: () => core.getJSON(),
+    setJSON: (json) => core.setJSON(json),
     setContent: (content) => core.setContent(content),
     switchMode: (mode) => core.switchMode(mode),
     getCurrentMode: () => core.getCurrentMode(),

@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest'
 import { Node } from 'prosemirror-model'
-import { sagakSchema } from '../src/schema'
-import { toJSON, fromJSON, toHtml, parseHtml } from '../src/storage'
+import { sagakSchema } from '@/model/schema'
+import { toJSON, fromJSON, toHtml, parseHtml } from '@/model/storage'
 
 /**
  * **저장 형식을 JSON 으로 바꾸면 무엇이 달라지는가.**

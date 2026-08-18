@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest'
-import {
-  EventBus,
-  createDefaultCommandRegistry,
-  createDocumentStore,
-  type CommandRegistry,
-} from 'sagak-core'
-import { sagakSchema, createSagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { EventBus } from '@/core/event-bus'
+import { createDefaultCommandRegistry } from '@/core/default-commands'
+import { createDocumentStore } from '@/core/document-store'
+import type { CommandRegistry } from '@/core/command-registry'
+import { sagakSchema, createSagakSchema } from '@/model/schema'
+import { roundTrip } from './round-trip'
 
 /**
  * **제품이 실제로 만든 마크업**을 스키마에 통과시킵니다.

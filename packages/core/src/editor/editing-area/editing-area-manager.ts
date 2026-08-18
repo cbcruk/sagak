@@ -1,3 +1,4 @@
+import { sagakSchema } from '@/model/schema'
 import type { EditingArea, EditingMode, IRContent } from './types'
 import type { WysiwygArea } from './modes/wysiwyg-area'
 import type { HtmlSourceArea } from './modes/html-source-area'
@@ -63,7 +64,13 @@ export class EditingAreaManager {
 
   private areas: Map<EditingMode, EditingArea> = new Map()
   private currentMode: EditingMode
-  private currentContent: IRContent = ''
+  /**
+   * 모드 사이를 건너는 문서입니다.
+   *
+   * 빈 문서로 시작합니다 — 예전에는 빈 문자열이었고, 그때는 "아직 아무것도
+   * 없음" 과 "빈 문서" 가 같은 값이었습니다. 모델에는 그 구분이 있습니다.
+   */
+  private currentContent: IRContent = sagakSchema.topNodeType.createAndFill()!
 
   private WysiwygAreaClass?: typeof WysiwygArea
   private HtmlSourceAreaClass?: typeof HtmlSourceArea

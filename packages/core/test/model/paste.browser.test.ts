@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest'
-import { sagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { sagakSchema } from '@/model/schema'
+import { roundTrip } from './round-trip'
 
 /**
  * **붙여넣기** — 우리가 만들지 않은 HTML 이 들어옵니다.

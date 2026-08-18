@@ -1,5 +1,4 @@
-import { sagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { sagakSchema, parseHtml, toHtml } from 'sagak-core'
 
 /**
  * **진짜 클립보드를 받아 보는 자리**입니다.
@@ -55,7 +54,21 @@ document.addEventListener('paste', (event: ClipboardEvent) => {
     return
   }
 
-  const result = roundTrip(html, sagakSchema, document)
+  const output = toHtml(parseHtml(html, sagakSchema, document), sagakSchema, document)
+  const probe = document.createElement('div')
+  probe.innerHTML = html
+  const source = document.createElement('div')
+  source.innerHTML = output
+  const strip = (text: string | null) => (text ?? '').replace(/\s+/g, '')
+
+  const result = {
+    output,
+    lost: strip(probe.textContent) !== strip(source.textContent),
+    stable:
+      toHtml(parseHtml(output, sagakSchema, document), sagakSchema, document) ===
+      output,
+    changed: true,
+  }
 
   lastFixture = [
     '  {',

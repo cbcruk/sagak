@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest'
-import { createSagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { createSagakSchema } from '@/model/schema'
+import { roundTrip } from './round-trip'
 
 /**
  * 값 붙는 마크 다섯을 **하나로 합칠 것인가.**

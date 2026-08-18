@@ -38,6 +38,7 @@ export default defineConfig({
       ),
       '@/editor': fileURLToPath(new URL('../core/src/editor', import.meta.url)),
       '@/core': fileURLToPath(new URL('../core/src/core', import.meta.url)),
+      '@/model': fileURLToPath(new URL('../core/src/model', import.meta.url)),
       '@/plugins': fileURLToPath(
         new URL('../core/src/plugins', import.meta.url)
       ),

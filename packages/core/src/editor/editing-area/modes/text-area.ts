@@ -1,3 +1,5 @@
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 import { HTMLConverter } from '../converters/html-converter'
 
@@ -41,10 +43,9 @@ export class TextArea implements EditingArea {
    * 순수 텍스트를 HTML로 변환합니다
    */
   async getContent(): Promise<IRContent> {
-    const text = this.textarea.value
-    const html = this.converter.textToHTML(text)
+    const html = this.converter.textToHTML(this.textarea.value)
 
-    return html
+    return parseHtml(html, sagakSchema, document)
   }
 
   /**
@@ -52,9 +53,9 @@ export class TextArea implements EditingArea {
    * HTML을 순수 텍스트로 변환합니다
    */
   async setContent(content: IRContent): Promise<void> {
-    const text = this.converter.htmlToText(content)
+    const html = toHtml(content, sagakSchema, document)
 
-    this.textarea.value = text
+    this.textarea.value = this.converter.htmlToText(html)
   }
 
   /**

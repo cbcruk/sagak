@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest'
-import { sagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { sagakSchema } from '@/model/schema'
+import { roundTrip } from './round-trip'
 
 /**
  * 툴바가 만들 수 있는 것을 **하나씩** 왕복시킵니다.

@@ -1,6 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { HtmlSourceArea } from '@/editor/editing-area/modes/html-source-area'
 import type { EditingAreaConfig } from '@/editor/editing-area/types'
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
+
+/*
+ * 이 검사들은 계속 **HTML 로 말합니다.**
+ *
+ * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
+ * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
+ * 옮기고 검사 본문은 읽던 대로 둡니다.
+ */
+const doc = (html: string) => parseHtml(html, sagakSchema, document)
+const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
+
 
 /**
  * HtmlSourceArea 테스트
@@ -126,7 +140,7 @@ describe('HtmlSourceArea', () => {
       htmlSourceArea.setRawContent(html)
 
       // When: getContent 호출
-      const content = await htmlSourceArea.getContent()
+      const content = asHtml(await htmlSourceArea.getContent())
 
       // Then: 설정한 HTML이 반환됨
       expect(content).toBe(html)
@@ -137,7 +151,7 @@ describe('HtmlSourceArea', () => {
       const html = '<p>Hello World</p>'
 
       // When: setContent로 설정
-      await htmlSourceArea.setContent(html)
+      await htmlSourceArea.setContent(doc(html))
 
       // Then: 포맷팅될 수 있지만 구조는 보존됨
       const rawContent = htmlSourceArea.getRawContent()
@@ -151,38 +165,39 @@ describe('HtmlSourceArea', () => {
       const html = '<div><p>Hello</p></div>'
 
       // When: setContent로 설정
-      await htmlSourceArea.setContent(html)
+      await htmlSourceArea.setContent(doc(html))
 
       // Then: 줄 바꿈과 들여쓰기가 추가됨
       const rawContent = htmlSourceArea.getRawContent()
       expect(rawContent).toContain('\n')
     })
 
-    it('빈 콘텐츠를 처리해야 함', async () => {
-      // Given: 빈 문자열
+    it('빈 문서는 빈 문단으로 보입니다', async () => {
+      // Given: 빈 문서
+      // When: setContent 로 넣으면
+      await htmlSourceArea.setContent(doc(''))
 
-      // When: setContent로 빈 콘텐츠 설정
-      await htmlSourceArea.setContent('')
-
-      // Then: 빈 문자열이 저장됨
-      expect(htmlSourceArea.getRawContent()).toBe('')
+      // Then: 모델에 있는 그대로 — 빈 문단입니다.
+      // 예전에는 빈 문자열이었지만, 모델에는 "아무것도 없음" 과 "빈 문단" 이
+      // 다른 값이고 소스 모드는 모델을 보여 주는 창입니다.
+      expect(htmlSourceArea.getRawContent().replace(/\s/g, '')).toBe('<p></p>')
     })
 
-    it('빈 HTML 마커를 정리해야 함', async () => {
-      // Given: 다양한 빈 HTML 패턴
+    it('빈 마커들은 모두 같은 빈 문단이 됩니다', async () => {
+      // Given: 브라우저가 만드는 빈 마커 여러 꼴
+      // When & Then: 스키마를 지나면 전부 한 가지로 모입니다
+      await htmlSourceArea.setContent(doc('<br>'))
+      expect(htmlSourceArea.getRawContent().replace(/\s/g, '')).toBe('<p></p>')
 
-      // When & Then: 각 패턴이 빈 문자열로 정리됨
-      await htmlSourceArea.setContent('<br>')
-      expect(htmlSourceArea.getRawContent()).toBe('')
+      await htmlSourceArea.setContent(doc('<p>&nbsp;</p>'))
+      expect(htmlSourceArea.getRawContent().replace(/\s/g, '')).toContain('<p>')
 
-      await htmlSourceArea.setContent('<p>&nbsp;</p>')
-      expect(htmlSourceArea.getRawContent()).toBe('')
+      /* 문단 안의 채움용 `<br>` 은 스키마가 걷어냅니다 */
+      await htmlSourceArea.setContent(doc('<p><br></p>'))
+      expect(htmlSourceArea.getRawContent().replace(/\s/g, '')).toBe('<p></p>')
 
-      await htmlSourceArea.setContent('<p><br></p>')
-      expect(htmlSourceArea.getRawContent()).toBe('')
-
-      await htmlSourceArea.setContent('<p></p>')
-      expect(htmlSourceArea.getRawContent()).toBe('')
+      await htmlSourceArea.setContent(doc('<p></p>'))
+      expect(htmlSourceArea.getRawContent().replace(/\s/g, '')).toBe('<p></p>')
     })
 
     it('HTML 구조를 보존해야 함', async () => {
@@ -190,11 +205,12 @@ describe('HtmlSourceArea', () => {
       const html = '<div><p><strong>Bold</strong> text</p></div>'
 
       // When: setContent로 설정
-      await htmlSourceArea.setContent(html)
+      await htmlSourceArea.setContent(doc(html))
 
-      // Then: HTML 구조가 보존됨
-      const content = await htmlSourceArea.getContent()
-      expect(content).toContain('div')
+      // Then: 스키마가 아는 구조만 남습니다 — `<div>` 는 문단으로 풀립니다
+      const content = asHtml(await htmlSourceArea.getContent())
+      expect(content).not.toContain('div')
+      expect(content).toContain('<strong>Bold</strong>')
       expect(content).toContain('strong')
       expect(content).toContain('Bold')
     })
@@ -475,10 +491,10 @@ describe('HtmlSourceArea', () => {
       const originalHTML = '<p>Hello <strong>World</strong></p>'
 
       // When: setContent → getContent 왕복
-      await htmlSourceArea.setContent(originalHTML)
-      const content = await htmlSourceArea.getContent()
+      await htmlSourceArea.setContent(doc(originalHTML))
+      const content = asHtml(await htmlSourceArea.getContent())
 
-      // Then: HTML 구조가 보존됨 (포맷팅은 달라질 수 있음)
+      // Then: 스키마가 아는 구조만 남습니다 — `<div>` 는 문단으로 풀립니다 (포맷팅은 달라질 수 있음)
       expect(content).toContain('Hello')
       expect(content).toContain('strong')
       expect(content).toContain('World')

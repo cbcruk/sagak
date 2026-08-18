@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest'
-import { createSagakSchema } from '../src/schema'
-import { roundTrip } from '../src/roundtrip'
+import { createSagakSchema } from '@/model/schema'
+import { roundTrip } from './round-trip'
 
 /**
  * 인용·코드블록을 스키마에 **넣을 것인가.**

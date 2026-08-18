@@ -25,6 +25,7 @@ export default defineConfig({
       ),
       'sagak-core': `${coreSrc}/index.ts`,
       '@/core': `${coreSrc}/core`,
+      '@/model': `${coreSrc}/model`,
       '@/plugins': `${coreSrc}/plugins`,
       '@/editor': `${coreSrc}/editor`,
     },
