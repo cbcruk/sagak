@@ -116,6 +116,71 @@ const hardBreak: NodeSpec = {
   toDOM: () => ['br'],
 }
 
+/**
+ * 값 붙는 마크를 **하나로 합친** 꼴 — `textStyle` 후보입니다.
+ *
+ * 붙여넣기에서 `<span>` 이 겹겹이 쌓이는 것을 막으려는 것인데, 합치면 잃는
+ * 것이 생깁니다. 어느 쪽이 나은지는 `style-marks.test.ts` 가 잽니다.
+ */
+const STYLE_PROPS = {
+  fontFamily: 'font-family',
+  fontSize: 'font-size',
+  letterSpacing: 'letter-spacing',
+  color: 'color',
+  backgroundColor: 'background-color',
+} as const
+
+type StyleProp = keyof typeof STYLE_PROPS
+
+function readStyles(el: HTMLElement): Record<StyleProp, string | null> {
+  return {
+    fontFamily: el.style.fontFamily || null,
+    fontSize: el.style.fontSize || null,
+    letterSpacing: el.style.letterSpacing || null,
+    color: el.style.color || null,
+    backgroundColor: el.style.backgroundColor || null,
+  }
+}
+
+const textStyleMark: MarkSpec = {
+  attrs: Object.fromEntries(
+    (Object.keys(STYLE_PROPS) as StyleProp[]).map((key) => [
+      key,
+      { default: null },
+    ])
+  ),
+  parseDOM: [
+    {
+      tag: 'span[style]',
+      getAttrs: (dom) => {
+        const attrs = readStyles(dom as HTMLElement)
+        return Object.values(attrs).some(Boolean) ? attrs : false
+      },
+    },
+    {
+      tag: 'font[color]',
+      getAttrs: (dom) => ({
+        color: (dom as HTMLElement).getAttribute('color'),
+      }),
+    },
+    {
+      tag: 'font[size]',
+      getAttrs: (dom) => ({
+        fontSize:
+          LEGACY_FONT_SIZES[(dom as HTMLElement).getAttribute('size') ?? ''] ??
+          '16px',
+      }),
+    },
+  ],
+  toDOM: (mark) => {
+    const style = (Object.keys(STYLE_PROPS) as StyleProp[])
+      .filter((key) => mark.attrs[key])
+      .map((key) => `${STYLE_PROPS[key]}: ${String(mark.attrs[key])}`)
+      .join('; ')
+    return ['span', { style }, 0]
+  },
+}
+
 /** `<span style="…">` 하나에 값을 담는 마크들 — 여섯 개가 같은 꼴입니다 */
 function styleMark(property: string, legacy?: NodeSpec['parseDOM']): MarkSpec {
   return {
@@ -135,7 +200,7 @@ function styleMark(property: string, legacy?: NodeSpec['parseDOM']): MarkSpec {
   }
 }
 
-const marks: Record<string, MarkSpec> = {
+const baseMarks: Record<string, MarkSpec> = {
   link: {
     attrs: { href: {}, title: { default: null } },
     inclusive: false,
@@ -222,6 +287,26 @@ const marks: Record<string, MarkSpec> = {
   backgroundColor: styleMark('background-color'),
 }
 
+/** 값 붙는 마크 다섯을 뺀 나머지 — 합친 꼴에서 쓰는 바탕입니다 */
+const STYLE_MARK_NAMES = [
+  'fontFamily',
+  'fontSize',
+  'letterSpacing',
+  'textColor',
+  'backgroundColor',
+] as const
+
+function marksFor(textStyle: boolean): Record<string, MarkSpec> {
+  if (!textStyle) return baseMarks
+
+  const rest = Object.fromEntries(
+    Object.entries(baseMarks).filter(
+      ([name]) => !STYLE_MARK_NAMES.includes(name as never)
+    )
+  )
+  return { ...rest, textStyle: textStyleMark }
+}
+
 /** `execCommand('fontSize')` 의 1~7 스케일 — 코어가 쓰던 값 */
 const LEGACY_FONT_SIZES: Record<string, string> = {
   '1': '10px',
@@ -231,6 +316,31 @@ const LEGACY_FONT_SIZES: Record<string, string> = {
   '5': '24px',
   '6': '32px',
   '7': '48px',
+}
+
+/**
+ * 툴바에는 없지만 **붙여넣기로는 들어오는** 블록들.
+ *
+ * 스키마에 없으면 문단으로 풀립니다 — 글자는 남고 구조만 사라집니다. 넣으면
+ * 붙여넣기가 원문에 가까워지지만, 툴바가 만들 수 없는 것을 문서가 갖게 되고
+ * 내보내기·CSS 도 따라와야 합니다.
+ */
+const blockquote: NodeSpec = {
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  parseDOM: [{ tag: 'blockquote' }],
+  toDOM: () => ['blockquote', 0],
+}
+
+const codeBlock: NodeSpec = {
+  group: 'block',
+  content: 'text*',
+  marks: '',
+  code: true,
+  defining: true,
+  parseDOM: [{ tag: 'pre', preserveWhitespace: 'full' }],
+  toDOM: () => ['pre', ['code', 0]],
 }
 
 const baseNodes = {
@@ -243,16 +353,72 @@ const baseNodes = {
   hard_break: hardBreak,
 }
 
-/* 목록과 표는 기성품입니다 — 스파이크에 없던 노드 스키마 8개 중 5개가 여기서 덮입니다 */
-const withLists = addListNodes(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  new Schema({ nodes: baseNodes, marks }).spec.nodes as any,
-  'paragraph block*',
-  'block'
-)
+export interface SchemaOptions {
+  /** 값 붙는 마크 다섯을 `textStyle` 하나로 합칩니다 */
+  textStyle?: boolean
+  /** 인용·코드블록을 스키마에 넣습니다 */
+  richBlocks?: boolean
+}
 
-const withTables = withLists.append(
-  tableNodes({ tableGroup: 'block', cellContent: 'block+', cellAttributes: {} })
-)
+export function createSagakSchema(options: SchemaOptions = {}): Schema {
+  const marks = marksFor(options.textStyle ?? false)
 
-export const sagakSchema = new Schema({ nodes: withTables, marks })
+  const nodes = options.richBlocks
+    ? { ...baseNodes, blockquote, code_block: codeBlock }
+    : baseNodes
+
+  /* 목록과 표는 기성품입니다 — 스파이크에 없던 노드 스키마 8개 중 5개가 여기서 덮입니다 */
+  const withLists = addListNodes(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    new Schema({ nodes, marks }).spec.nodes as any,
+    'paragraph block*',
+    'block'
+  )
+
+  const withTables = withLists.append(
+    tableNodes({
+      tableGroup: 'block',
+      cellContent: 'block+',
+      cellAttributes: {},
+    })
+  )
+
+  return new Schema({ nodes: withTables, marks })
+}
+
+/**
+ * 지금 결정 — **마크는 나누고, 인용·코드블록은 넣습니다.** 둘 다 쟀습니다.
+ *
+ * ## 마크를 안 합치는 이유 (`style-marks.test.ts`)
+ *
+ * 합치면 겹은 확실히 줄지만(최대 5겹 → 1겹) ProseMirror 에서 **같은 종류의
+ * 마크는 한 번만 붙습니다.** 겹친 `<span>` 은 안쪽이 바깥을 밀어내고, 밀려난
+ * 속성은 사라집니다.
+ *
+ *     <span style="font-family: Georgia"><span style="color: red">글
+ *     합침 → <span style="color: red">글        ← 글꼴이 없어졌습니다
+ *
+ * 그리고 저 꼴은 남의 것이 아니라 **툴바가 만드는 꼴**입니다 — 글꼴을 주고
+ * 색을 주면 저렇게 됩니다. 네 케이스 중 셋에서 속성을 잃었습니다. 겹치는
+ * `<span>` 은 보기 싫을 뿐이고, 잃는 것은 서식입니다.
+ *
+ * ## 인용·코드블록을 넣는 이유 (`rich-blocks.test.ts`)
+ *
+ * 코드블록이 결정적입니다. 안 넣으면 `<pre>` 가 문단으로 풀리며 **줄바꿈과
+ * 들여쓰기가 사라집니다.**
+ *
+ *     function f() {          →  function f() {   return 1 }
+ *       return 1
+ *     }
+ *
+ * 이건 구조 변화가 아니라 손실인데, 손실 검사가 공백을 지우고 비교하는 바람에
+ * 통과하고 있었습니다 (`roundtrip.ts` 의 `contentOf`). 잣대가 못 보던 자리입니다.
+ *
+ * 인용은 그만큼 세지 않습니다 — 글자는 남고 구조만 풀립니다. 코드블록을 넣는
+ * 김에 같이 넣습니다.
+ *
+ * **딸려 오는 일**: `blockquote`·`pre` 의 CSS, 내보내기 경로 확인, 그리고
+ * 툴바가 만들 수 없는 것을 문서가 갖게 된다는 것 — 나중에 커맨드를 붙일지는
+ * 따로 정합니다.
+ */
+export const sagakSchema = createSagakSchema({ richBlocks: true })
