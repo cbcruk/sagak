@@ -3,6 +3,20 @@ import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
 import { EventBus } from '@/core/event-bus'
 import { SelectionManager } from '@/core/selection-manager'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
+
+/*
+ * 이 검사들은 계속 **HTML 로 말합니다.**
+ *
+ * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
+ * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
+ * 옮기고 검사 본문은 읽던 대로 둡니다.
+ */
+const doc = (html: string) => parseHtml(html, sagakSchema, document)
+const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
+
 
 /**
  * EditingAreaManager 테스트
@@ -263,11 +277,11 @@ describe('EditingAreaManager', () => {
     it('모드 전환 시 콘텐츠를 보존해야 함', async () => {
       // Given: WYSIWYG 모드에 콘텐츠 설정
       const content = '<p>Hello World</p>'
-      await manager.setContent(content)
+      await manager.setContent(doc(content))
 
       // When: HTML 모드로 전환
       await manager.switchMode('html')
-      const htmlContent = await manager.getContent()
+      const htmlContent = asHtml(await manager.getContent())
 
       // Then: 콘텐츠가 보존됨
       expect(htmlContent).toContain('Hello World')
@@ -275,11 +289,11 @@ describe('EditingAreaManager', () => {
 
     it('WYSIWYG를 Text 모드로 변환해야 함', async () => {
       // Given: WYSIWYG 모드에 여러 줄 HTML 설정
-      await manager.setContent('<p>Line 1</p><p>Line 2</p>')
+      await manager.setContent(doc('<p>Line 1</p><p>Line 2</p>'))
 
       // When: Text 모드로 전환
       await manager.switchMode('text')
-      const textContent = await manager.getContent()
+      const textContent = asHtml(await manager.getContent())
 
       // Then: HTML이 텍스트로 변환됨
       expect(textContent).toContain('Line 1')
@@ -289,11 +303,11 @@ describe('EditingAreaManager', () => {
     it('Text를 WYSIWYG 모드로 변환해야 함', async () => {
       // Given: Text 모드에 여러 줄 텍스트 설정
       await manager.switchMode('text')
-      await manager.setContent('Line 1\nLine 2')
+      await manager.setContent(doc('Line 1\nLine 2'))
 
       // When: WYSIWYG 모드로 전환
       await manager.switchMode('wysiwyg')
-      const content = await manager.getContent()
+      const content = asHtml(await manager.getContent())
 
       // Then: 텍스트가 HTML로 변환됨
       expect(content).toContain('<p>')
@@ -303,7 +317,7 @@ describe('EditingAreaManager', () => {
     it('모든 모드를 통한 왕복 변환을 처리해야 함', async () => {
       // Given: WYSIWYG 모드에 초기 콘텐츠 설정
       const original = '<p>Test content</p>'
-      await manager.setContent(original)
+      await manager.setContent(doc(original))
 
       // When: 모든 모드를 순회
       await manager.switchMode('html') // WYSIWYG → HTML
@@ -311,17 +325,17 @@ describe('EditingAreaManager', () => {
       await manager.switchMode('wysiwyg') // Text → WYSIWYG
 
       // Then: 최종 콘텐츠에 원본 텍스트가 보존됨
-      const final = await manager.getContent()
+      const final = asHtml(await manager.getContent())
       expect(final).toContain('Test content')
     })
 
     it('빈 콘텐츠를 처리해야 함', async () => {
       // Given: 빈 콘텐츠 설정
-      await manager.setContent('')
+      await manager.setContent(doc(''))
 
       // When: HTML 모드로 전환
       await manager.switchMode('html')
-      const content = await manager.getContent()
+      const content = asHtml(await manager.getContent())
 
       // Then: 빈 콘텐츠가 유지됨
       expect(content).toBe('')
@@ -418,20 +432,20 @@ describe('EditingAreaManager', () => {
       const content = '<p>Hello World</p>'
 
       // When: 콘텐츠 설정
-      await manager.setContent(content)
+      await manager.setContent(doc(content))
 
       // Then: 설정한 콘텐츠가 조회됨
-      const retrieved = await manager.getContent()
+      const retrieved = asHtml(await manager.getContent())
       expect(retrieved).toBe(content)
     })
 
     it('현재 영역에서 콘텐츠를 가져와야 함', async () => {
       // Given: 현재 영역에 직접 콘텐츠 설정
       const currentArea = manager.getCurrentArea()
-      await currentArea?.setContent('<p>Test</p>')
+      await currentArea?.setContent(doc('<p>Test</p>'))
 
       // When: 매니저를 통해 콘텐츠 조회
-      const content = await manager.getContent()
+      const content = asHtml(await manager.getContent())
 
       // Then: 영역의 콘텐츠가 반환됨
       expect(content).toContain('Test')

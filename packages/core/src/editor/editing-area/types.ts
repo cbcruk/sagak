@@ -3,6 +3,7 @@
  * 편집 영역 모듈의 타입 정의
  */
 
+import type { Node } from 'prosemirror-model'
 import type { SanitizeOption } from './sanitizer'
 
 /**
@@ -11,10 +12,17 @@ import type { SanitizeOption } from './sanitizer'
 export type EditingMode = 'wysiwyg' | 'html' | 'text'
 
 /**
- * 중간 표현(IR) 형식의 콘텐츠
- * 모드 간 콘텐츠 전송에 사용되는 공통 형식
+ * 모드 사이를 오가는 **공통 형식**입니다.
+ *
+ * 예전에는 HTML 문자열이었습니다. 그러면 모드를 바꿀 때마다 문자열을 다시
+ * 파싱해야 하고, 무엇보다 **무엇이 진실인지가 모호해집니다** — WYSIWYG 의
+ * `innerHTML` 과 소스 모드의 textarea 값이 각자 진실 행세를 합니다.
+ *
+ * 이제 진실은 **문서 모델 하나**이고 각 모드는 그것을 보여 주는 창입니다.
+ * HTML 은 밖으로 나갈 때(내보내기·소스 보기·붙여넣기) 쓰는 형식이지 저장
+ * 형식이 아닙니다 (`docs/prosemirror-migration.md` §8).
  */
-export type IRContent = string
+export type IRContent = Node
 
 /**
  * `EditingArea` 설정
@@ -61,17 +69,12 @@ export interface EditingAreaConfig {
  */
 export interface EditingArea {
   /**
-   * IR(중간 표현) 형식으로 콘텐츠를 가져옵니다
-   *
-   * @returns `IRContent`로 resolve되는 `Promise`
+   * 지금 이 모드가 보고 있는 문서를 **모델로** 돌려줍니다
    */
   getContent(): Promise<IRContent>
 
   /**
-   * IR 형식에서 콘텐츠를 설정합니다
-   *
-   * @param content - IR 형식의 콘텐츠
-   * @returns 콘텐츠 설정 완료 시 resolve되는 `Promise`
+   * 모델을 이 모드가 보여 줄 꼴로 옮깁니다
    */
   setContent(content: IRContent): Promise<void>
 

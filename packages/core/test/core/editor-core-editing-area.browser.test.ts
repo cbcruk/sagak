@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EditorCore } from '@/core/editor-core'
 import type { EditorCoreConfig } from '@/core/editor-core'
 
+
+
 /**
  * EditorCore - EditingArea 통합 테스트
  *

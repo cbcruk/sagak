@@ -1,6 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { TextArea } from '@/editor/editing-area/modes/text-area'
 import type { EditingAreaConfig } from '@/editor/editing-area/types'
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
+
+/*
+ * 이 검사들은 계속 **HTML 로 말합니다.**
+ *
+ * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
+ * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
+ * 옮기고 검사 본문은 읽던 대로 둡니다.
+ */
+const doc = (html: string) => parseHtml(html, sagakSchema, document)
+const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
+
 
 /**
  * TextArea 테스트
@@ -112,7 +126,7 @@ describe('TextArea', () => {
       textArea.setRawContent('Hello World')
 
       // When: getContent 호출
-      const content = await textArea.getContent()
+      const content = asHtml(await textArea.getContent())
 
       // Then: HTML로 변환되어 반환됨
       expect(content).toBe('<p>Hello World</p>')
@@ -122,7 +136,7 @@ describe('TextArea', () => {
       // Given: HTML 문자열
 
       // When: setContent로 HTML 설정
-      await textArea.setContent('<p>Hello World</p>')
+      await textArea.setContent(doc('<p>Hello World</p>'))
 
       // Then: 텍스트로 변환되어 저장됨
       expect(textArea.getRawContent()).toBe('Hello World')
@@ -134,7 +148,7 @@ describe('TextArea', () => {
       textArea.setRawContent(text)
 
       // When: getContent 호출
-      const html = await textArea.getContent()
+      const html = asHtml(await textArea.getContent())
 
       // Then: 각 줄이 p 태그로 변환됨
       expect(html).toContain('<p>Line 1</p>')
@@ -147,7 +161,7 @@ describe('TextArea', () => {
       const html = '<p>Line 1</p><p>Line 2</p>'
 
       // When: setContent로 HTML 설정
-      await textArea.setContent(html)
+      await textArea.setContent(doc(html))
 
       // Then: 줄 바꿈으로 구분된 텍스트로 변환됨
       const rawContent = textArea.getRawContent()
@@ -159,7 +173,7 @@ describe('TextArea', () => {
       const html = '<p>Hello <strong>World</strong></p>'
 
       // When: setContent로 HTML 설정
-      await textArea.setContent(html)
+      await textArea.setContent(doc(html))
 
       // Then: 태그가 제거된 순수 텍스트로 변환됨
       const rawContent = textArea.getRawContent()
@@ -170,7 +184,7 @@ describe('TextArea', () => {
       // Given: 빈 문자열
 
       // When: setContent로 빈 콘텐츠 설정
-      await textArea.setContent('')
+      await textArea.setContent(doc(''))
 
       // Then: 빈 문자열이 저장됨
       expect(textArea.getRawContent()).toBe('')
@@ -180,7 +194,7 @@ describe('TextArea', () => {
       // Given: 빈 p 태그
 
       // When: setContent로 빈 HTML 설정
-      await textArea.setContent('<p><br></p>')
+      await textArea.setContent(doc('<p><br></p>'))
 
       // Then: 빈 문자열로 변환됨
       expect(textArea.getRawContent()).toBe('')
@@ -377,8 +391,8 @@ describe('TextArea', () => {
       textArea.setRawContent(originalText)
 
       // When: Text → HTML → Text 왕복 변환
-      const html = await textArea.getContent()
-      await textArea.setContent(html)
+      const html = asHtml(await textArea.getContent())
+      await textArea.setContent(doc(html))
 
       // Then: 원본 텍스트가 보존됨
       expect(textArea.getRawContent()).toBe(originalText)
@@ -390,8 +404,8 @@ describe('TextArea', () => {
       textArea.setRawContent(originalText)
 
       // When: Text → HTML → Text 왕복 변환
-      const html = await textArea.getContent()
-      await textArea.setContent(html)
+      const html = asHtml(await textArea.getContent())
+      await textArea.setContent(doc(html))
 
       // Then: 특수 문자가 보존됨
       expect(textArea.getRawContent()).toBe(originalText)
@@ -403,8 +417,8 @@ describe('TextArea', () => {
       textArea.setRawContent(originalText)
 
       // When: Text → HTML → Text 왕복 변환
-      const html = await textArea.getContent()
-      await textArea.setContent(html)
+      const html = asHtml(await textArea.getContent())
+      await textArea.setContent(doc(html))
 
       // Then: 빈 줄이 보존됨
       expect(textArea.getRawContent()).toBe(originalText)

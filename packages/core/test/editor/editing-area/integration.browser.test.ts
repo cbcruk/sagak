@@ -5,6 +5,20 @@ import { SelectionManager } from '@/core/selection-manager'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
 import type { EditingArea } from '@/editor/editing-area/types'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
+
+/*
+ * 이 검사들은 계속 **HTML 로 말합니다.**
+ *
+ * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
+ * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
+ * 옮기고 검사 본문은 읽던 대로 둡니다.
+ */
+const doc = (html: string) => parseHtml(html, sagakSchema, document)
+const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
+
 
 /**
  * Type guard to check if an EditingArea is a WysiwygArea
@@ -52,24 +66,24 @@ describe('Editing Area 통합', () => {
       expect(manager.getCurrentMode()).toBe('wysiwyg')
 
       // 2. WYSIWYG에서 콘텐츠 입력
-      await manager.setContent('<p>Hello <strong>World</strong></p>')
+      await manager.setContent(doc('<p>Hello <strong>World</strong></p>'))
 
       // 3. HTML 소스 모드로 전환하여 코드 확인
       await manager.switchMode('html')
-      const htmlContent = await manager.getContent()
+      const htmlContent = asHtml(await manager.getContent())
       expect(htmlContent).toContain('strong')
 
       // 4. HTML 소스에서 편집
-      await manager.setContent('<p>Modified content</p>')
+      await manager.setContent(doc('<p>Modified content</p>'))
 
       // 5. 텍스트 모드로 전환
       await manager.switchMode('text')
-      const textContent = await manager.getContent()
+      const textContent = asHtml(await manager.getContent())
       expect(textContent).toBe('<p>Modified content</p>')
 
       // Then: WYSIWYG으로 돌아와서 콘텐츠 확인
       await manager.switchMode('wysiwyg')
-      const finalContent = await manager.getContent()
+      const finalContent = asHtml(await manager.getContent())
       expect(finalContent).toContain('Modified content')
     })
 
@@ -83,17 +97,17 @@ describe('Editing Area 통합', () => {
       await manager.initialize()
 
       // When: 빈 콘텐츠로 시작하여 모든 모드 순회
-      await manager.setContent('')
+      await manager.setContent(doc(''))
 
       await manager.switchMode('html')
-      expect(await manager.getContent()).toBe('')
+      expect(asHtml(await manager.getContent())).toBe('')
 
       await manager.switchMode('text')
-      expect(await manager.getContent()).toBe('<p><br></p>')
+      expect(asHtml(await manager.getContent())).toBe('<p><br></p>')
 
       // Then: WYSIWYG으로 돌아와서 빈 콘텐츠 확인
       await manager.switchMode('wysiwyg')
-      const content = await manager.getContent()
+      const content = asHtml(await manager.getContent())
       expect(content).toBe('<p><br></p>')
     })
 
@@ -108,14 +122,14 @@ describe('Editing Area 통합', () => {
 
       const richContent =
         '<p>Line 1</p><p><strong>Bold</strong> and <em>italic</em></p>'
-      await manager.setContent(richContent)
+      await manager.setContent(doc(richContent))
 
       // When: HTML 모드로 전환 후 다시 WYSIWYG으로 복귀
       await manager.switchMode('html')
       await manager.switchMode('wysiwyg')
 
       // Then: 서식이 보존됨
-      const result = await manager.getContent()
+      const result = asHtml(await manager.getContent())
       expect(result).toContain('strong')
       expect(result).toContain('em')
     })
@@ -302,7 +316,7 @@ describe('Editing Area 통합', () => {
 
     it('빠른 모드 전환을 처리해야 함', async () => {
       // Given: 콘텐츠가 설정된 매니저
-      await manager.setContent('<p>Test</p>')
+      await manager.setContent(doc('<p>Test</p>'))
 
       // When: 여러 번 빠르게 모드 전환
       await manager.switchMode('html')
@@ -312,7 +326,7 @@ describe('Editing Area 통합', () => {
       await manager.switchMode('wysiwyg')
 
       // Then: 콘텐츠가 보존됨
-      const content = await manager.getContent()
+      const content = asHtml(await manager.getContent())
       expect(content).toContain('Test')
     })
 
@@ -346,7 +360,7 @@ describe('Editing Area 통합', () => {
 
     it('한 번에 하나의 영역만 표시해야 함', async () => {
       // Given: 콘텐츠가 설정되고 모든 모드가 로드된 상태
-      await manager.setContent('<p>Test</p>')
+      await manager.setContent(doc('<p>Test</p>'))
 
       await manager.switchMode('html')
       const htmlArea = await manager.getArea('html')
@@ -381,11 +395,11 @@ describe('Editing Area 통합', () => {
     it('순수 텍스트를 HTML로 변환해야 함', async () => {
       // Given: 텍스트 모드에서 여러 줄 텍스트 입력
       await manager.switchMode('text')
-      await manager.setContent('Line 1\nLine 2\nLine 3')
+      await manager.setContent(doc('Line 1\nLine 2\nLine 3'))
 
       // When: WYSIWYG 모드로 전환
       await manager.switchMode('wysiwyg')
-      const html = await manager.getContent()
+      const html = asHtml(await manager.getContent())
 
       // Then: 각 줄이 p 태그로 변환됨
       expect(html).toContain('<p>Line 1</p>')
@@ -395,11 +409,11 @@ describe('Editing Area 통합', () => {
 
     it('HTML을 순수 텍스트로 변환해야 함', async () => {
       // Given: WYSIWYG 모드에서 여러 단락 HTML 설정
-      await manager.setContent('<p>Line 1</p><p>Line 2</p><p>Line 3</p>')
+      await manager.setContent(doc('<p>Line 1</p><p>Line 2</p><p>Line 3</p>'))
 
       // When: 텍스트 모드로 전환
       await manager.switchMode('text')
-      const text = await manager.getContent()
+      const text = asHtml(await manager.getContent())
 
       // Then: HTML이 텍스트로 변환됨
       expect(text).toContain('Line 1')
@@ -409,11 +423,11 @@ describe('Editing Area 통합', () => {
 
     it('특수 문자를 처리해야 함', async () => {
       // Given: 특수 문자가 이스케이프된 HTML 설정
-      await manager.setContent('<p>Test &amp; &lt;special&gt; "characters"</p>')
+      await manager.setContent(doc('<p>Test &amp; &lt;special&gt; "characters"</p>'))
 
       // When: 텍스트 모드로 전환
       await manager.switchMode('text')
-      const text = await manager.getContent()
+      const text = asHtml(await manager.getContent())
 
       // Then: 텍스트 모드에서 이스케이프가 해제됨
       expect(text).toContain('&')
@@ -422,7 +436,7 @@ describe('Editing Area 통합', () => {
 
       // When: 다시 WYSIWYG으로 전환
       await manager.switchMode('wysiwyg')
-      const html = await manager.getContent()
+      const html = asHtml(await manager.getContent())
 
       // Then: 다시 이스케이프된 엔티티로 저장됨
       expect(html).toContain('&amp;')
@@ -432,11 +446,11 @@ describe('Editing Area 통합', () => {
 
     it('텍스트 모드에서 태그를 제거해야 함', async () => {
       // Given: 서식 태그가 포함된 HTML 설정
-      await manager.setContent('<p>Hello <strong>World</strong></p>')
+      await manager.setContent(doc('<p>Hello <strong>World</strong></p>'))
 
       // When: 텍스트 모드로 전환
       await manager.switchMode('text')
-      const text = await manager.getContent()
+      const text = asHtml(await manager.getContent())
 
       // Then: 서식 태그가 제거된 텍스트가 반환됨
       expect(text).toBe('<p>Hello World</p>')
@@ -460,7 +474,7 @@ describe('Editing Area 통합', () => {
     it('매우 긴 콘텐츠를 처리해야 함', async () => {
       // Given: 10,000자 길이의 콘텐츠
       const longContent = '<p>' + 'A'.repeat(10000) + '</p>'
-      await manager.setContent(longContent)
+      await manager.setContent(doc(longContent))
 
       // When: 모든 모드를 순회
       await manager.switchMode('html')
@@ -468,21 +482,21 @@ describe('Editing Area 통합', () => {
       await manager.switchMode('wysiwyg')
 
       // Then: 콘텐츠가 대부분 보존됨
-      const result = await manager.getContent()
+      const result = asHtml(await manager.getContent())
       expect(result.length).toBeGreaterThan(9000)
     })
 
     it('중첩된 HTML 구조를 처리해야 함', async () => {
       // Given: 깊게 중첩된 HTML 구조
       const nested = '<div><p><strong><em>Deeply nested</em></strong></p></div>'
-      await manager.setContent(nested)
+      await manager.setContent(doc(nested))
 
       // When: HTML 모드로 전환 후 다시 WYSIWYG으로 복귀
       await manager.switchMode('html')
       await manager.switchMode('wysiwyg')
 
       // Then: 중첩된 콘텐츠가 보존됨
-      const result = await manager.getContent()
+      const result = asHtml(await manager.getContent())
       expect(result).toContain('nested')
     })
 
@@ -493,7 +507,7 @@ describe('Editing Area 통합', () => {
         .map((_, i) => `<p>Paragraph ${i}</p>`)
         .join('')
 
-      await manager.setContent(paragraphs)
+      await manager.setContent(doc(paragraphs))
 
       // When: 모든 모드를 순회
       await manager.switchMode('html')
@@ -501,7 +515,7 @@ describe('Editing Area 통합', () => {
       await manager.switchMode('wysiwyg')
 
       // Then: 첫 번째와 마지막 단락이 보존됨
-      const result = await manager.getContent()
+      const result = asHtml(await manager.getContent())
       expect(result).toContain('Paragraph 0')
       expect(result).toContain('Paragraph 49')
     })
@@ -574,26 +588,26 @@ describe('Editing Area 통합', () => {
     it('잘못된 HTML에서 복구해야 함', async () => {
       // Given: HTML 모드에서 닫히지 않은 태그 입력
       await manager.switchMode('html')
-      await manager.setContent('<p>Unclosed tag')
+      await manager.setContent(doc('<p>Unclosed tag'))
 
       // When: WYSIWYG 모드로 전환
       await manager.switchMode('wysiwyg')
 
       // Then: 오류 없이 콘텐츠 조회 가능
       expect(async () => {
-        await manager.getContent()
+        asHtml(await manager.getContent())
       }).not.toThrow()
     })
 
     it('동일 모드로 전환을 처리해야 함', async () => {
       // Given: WYSIWYG 모드의 현재 콘텐츠
-      const contentBefore = await manager.getContent()
+      const contentBefore = asHtml(await manager.getContent())
 
       // When: 같은 WYSIWYG 모드로 전환 시도
       await manager.switchMode('wysiwyg')
 
       // Then: 콘텐츠가 변경되지 않음
-      const contentAfter = await manager.getContent()
+      const contentAfter = asHtml(await manager.getContent())
       expect(contentBefore).toBe(contentAfter)
     })
   })

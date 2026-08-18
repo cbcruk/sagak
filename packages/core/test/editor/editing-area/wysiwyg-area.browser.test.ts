@@ -3,6 +3,20 @@ import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { SelectionManager } from '@/core/selection-manager'
 import { EventBus } from '@/core/event-bus'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
+import type { Node as PMNode } from 'prosemirror-model'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
+
+/*
+ * 이 검사들은 계속 **HTML 로 말합니다.**
+ *
+ * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
+ * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
+ * 옮기고 검사 본문은 읽던 대로 둡니다.
+ */
+const doc = (html: string) => parseHtml(html, sagakSchema, document)
+const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
+
 
 /**
  * WysiwygArea 테스트
@@ -139,7 +153,7 @@ describe('WysiwygArea', () => {
       wysiwygArea.setRawContent('<p>Hello World</p>')
 
       // When: getContent 호출
-      const content = await wysiwygArea.getContent()
+      const content = asHtml(await wysiwygArea.getContent())
 
       // Then: 설정한 HTML이 반환됨
       expect(content).toBe('<p>Hello World</p>')
@@ -149,7 +163,7 @@ describe('WysiwygArea', () => {
       // Given: HTML 문자열
 
       // When: setContent로 HTML 설정
-      await wysiwygArea.setContent('<p>Hello World</p>')
+      await wysiwygArea.setContent(doc('<p>Hello World</p>'))
 
       // Then: 설정한 HTML이 저장됨
       expect(wysiwygArea.getRawContent()).toBe('<p>Hello World</p>')
@@ -159,7 +173,7 @@ describe('WysiwygArea', () => {
       // Given: 빈 문자열
 
       // When: setContent로 빈 콘텐츠 설정
-      await wysiwygArea.setContent('')
+      await wysiwygArea.setContent(doc(''))
 
       // Then: 기본 빈 p 태그로 정규화됨
       const content = wysiwygArea.getRawContent()
@@ -170,7 +184,7 @@ describe('WysiwygArea', () => {
       // Given: br 태그만 있는 HTML
 
       // When: setContent로 설정
-      await wysiwygArea.setContent('<br>')
+      await wysiwygArea.setContent(doc('<br>'))
 
       // Then: 기본 빈 p 태그로 정규화됨
       const content = wysiwygArea.getRawContent()
@@ -181,7 +195,7 @@ describe('WysiwygArea', () => {
       // Given: 빈 p 태그
 
       // When: setContent로 설정
-      await wysiwygArea.setContent('<p></p>')
+      await wysiwygArea.setContent(doc('<p></p>'))
 
       // Then: br이 포함된 p 태그로 정규화됨
       const content = wysiwygArea.getRawContent()
@@ -193,7 +207,7 @@ describe('WysiwygArea', () => {
       const html = '<p>Hello <strong>World</strong></p>'
 
       // When: setContent로 설정
-      await wysiwygArea.setContent(html)
+      await wysiwygArea.setContent(doc(html))
 
       // Then: 서식이 보존됨
       expect(wysiwygArea.getRawContent()).toBe(html)
@@ -204,7 +218,7 @@ describe('WysiwygArea', () => {
       const html = '<p>Paragraph 1</p><p>Paragraph 2</p>'
 
       // When: setContent로 설정
-      await wysiwygArea.setContent(html)
+      await wysiwygArea.setContent(doc(html))
 
       // Then: 단락 구조가 보존됨
       expect(wysiwygArea.getRawContent()).toBe(html)
@@ -763,9 +777,9 @@ describe('WysiwygArea', () => {
       wysiwygArea = new WysiwygArea({ container })
 
       // When: 스크립트가 포함된 콘텐츠를 설정
-      await wysiwygArea.setContent(
+      await wysiwygArea.setContent(doc(
         '<p>안전</p><script>alert(1)</script><img src="x" onerror="alert(1)">'
-      )
+      ))
 
       // Then: script와 이벤트 핸들러가 제거됨
       const html = wysiwygArea.getElement().innerHTML
@@ -779,7 +793,7 @@ describe('WysiwygArea', () => {
       wysiwygArea = new WysiwygArea({ container, sanitize: false })
 
       // When: 콘텐츠를 설정
-      await wysiwygArea.setContent('<p>x</p><em>기울임</em>')
+      await wysiwygArea.setContent(doc('<p>x</p><em>기울임</em>'))
 
       // Then: 입력이 그대로 유지됨
       const html = wysiwygArea.getElement().innerHTML

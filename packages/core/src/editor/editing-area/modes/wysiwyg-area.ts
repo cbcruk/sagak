@@ -2,6 +2,8 @@ import { logger } from '@/core/logger'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 import type { SelectionManager } from '@/core/selection-manager'
 import { WysiwygEvents, type EventBus } from '@/core'
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 import { resolveSanitizer, type Sanitizer } from '../sanitizer'
 import {
@@ -80,19 +82,26 @@ export class WysiwygArea implements EditingArea {
    * IR 형식(HTML)으로 콘텐츠를 가져옵니다
    */
   async getContent(): Promise<IRContent> {
-    return this.element.innerHTML
+    return parseHtml(this.element.innerHTML, sagakSchema, document)
   }
 
   /**
    * IR 형식(HTML)에서 콘텐츠를 설정합니다
    */
   async setContent(content: IRContent): Promise<void> {
-    if (!content || content === '<br>' || content === '<p></p>') {
+    /*
+     * 소독은 **HTML 경계에서** 합니다. 모델은 스키마를 통과한 것이라 위험한
+     * 것이 이미 없지만, 직렬화한 문자열을 DOM 에 넣는 것은 여전히 경계라
+     * 지나온 길을 그대로 지킵니다.
+     */
+    const html = toHtml(content, sagakSchema, document)
+
+    if (!html) {
       this.element.innerHTML = '<p><br></p>'
       return
     }
 
-    this.element.innerHTML = this.sanitize(content)
+    this.element.innerHTML = this.sanitize(html)
 
     if (!this.element.firstChild) {
       this.element.innerHTML = '<p><br></p>'

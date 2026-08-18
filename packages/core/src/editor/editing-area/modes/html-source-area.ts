@@ -1,3 +1,5 @@
+import { sagakSchema } from '@/model/schema'
+import { parseHtml, toHtml } from '@/model/storage'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 import { HTMLConverter } from '../converters/html-converter'
 
@@ -48,7 +50,12 @@ export class HtmlSourceArea implements EditingArea {
    * 원시 HTML 소스를 반환합니다
    */
   async getContent(): Promise<IRContent> {
-    return this.textarea.value
+    /*
+     * 손으로 고친 HTML 도 **스키마를 통과합니다.** 스키마 밖의 손질은 반영되지
+     * 않습니다 — 소스 모드는 저장 형식을 직접 보는 창이 아니라 모델에서 뽑아낸
+     * 표현이기 때문입니다 (`docs/prosemirror-migration.md` §8-3).
+     */
+    return parseHtml(this.textarea.value, sagakSchema, document)
   }
 
   /**
@@ -56,19 +63,9 @@ export class HtmlSourceArea implements EditingArea {
    * HTML 소스를 포맷하여 표시합니다
    */
   async setContent(content: IRContent): Promise<void> {
-    if (
-      !content ||
-      content === '<br>' ||
-      content === '<p>&nbsp;</p>' ||
-      content === '<p><br></p>' ||
-      content === '<p></p>'
-    ) {
-      this.textarea.value = ''
-      return
-    }
+    const html = toHtml(content, sagakSchema, document)
 
-    const formatted = this.converter.formatHTML(content)
-    this.textarea.value = formatted
+    this.textarea.value = html ? this.converter.formatHTML(html) : ''
   }
 
   /**
