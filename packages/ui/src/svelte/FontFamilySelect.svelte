@@ -1,7 +1,7 @@
 <script lang="ts">
   import { FontEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
-  import { subscribeToSelection } from '../state/selection'
+  import { editorState } from '../state/editor-state'
   import {
     familiesStore,
     statusStore,
@@ -41,11 +41,17 @@
    * 시스템 폰트 권한은 **사용자 제스처 안**이라야 물어볼 수 있습니다. 그래서
    * 목록의 마지막 항목을 고르는 것이 곧 요청입니다 — 고른 순간이 제스처입니다.
    *
-   * ## 가드는 새로 만들지 않았습니다
+   * ## 소스가 둘입니다
    *
-   * 선택 영역 구독은 `subscribeToSelection` 그대로입니다. IME 조합 중 무시,
-   * 다음 프레임까지 지연, 에디터 밖이면 건너뜀 — 렌더러를 네 번 갈아타는
-   * 동안 한 번도 안 바뀌었습니다.
+   * 지금 값은 **선택**(캐럿이 놓인 자리의 글꼴)과 **목록**(시스템 폰트가 들어오면
+   * 늘어납니다) 양쪽에 딸려 있습니다. 그래서 짝짓기가 여기 남습니다 — 둘 다
+   * 보는 자리가 여기뿐입니다. 각각의 구독은 `state/font-family.ts` 와
+   * `state/local-fonts.ts` 가 갖습니다.
+   *
+   * 가드는 새로 만들지 않았습니다. 선택 쪽 바닥은 여전히
+   * `subscribeToSelection` 이라 IME 조합 중 무시·다음 프레임까지 지연·에디터
+   * 밖이면 건너뜀을 그대로 지납니다 — 렌더러를 네 번 갈아타는 동안 한 번도 안
+   * 바뀐 가드입니다.
    */
 
   interface Props {
@@ -59,26 +65,22 @@
     value: string
   }
 
-  let families = $state<readonly string[]>(familiesStore.get())
-  let status = $state(statusStore.get())
   let value = $state(FALLBACK_FONTS[0].value)
 
+  /* 캐럿이 놓인 자리의 글꼴 — 구독은 `state/font-family.ts` 가 갖습니다 */
+  // svelte-ignore state_referenced_locally
+  const { fontFamily } = editorState(editor)
+
+  /*
+   * 권한 구독을 시작합니다 — 안 하면 이미 허용해 둔 사람에게도 목록이
+   * 영영 안 옵니다.
+   */
   $effect(() => {
-    const offFamilies = familiesStore.subscribe((next) => (families = next))
-    const offStatus = statusStore.subscribe((next) => (status = next))
-    /*
-     * 권한 구독을 시작합니다 — 안 하면 이미 허용해 둔 사람에게도 목록이
-     * 영영 안 옵니다.
-     */
     watchLocalFontPermission()
-    return () => {
-      offFamilies()
-      offStatus()
-    }
   })
 
   const system: Option[] = $derived(
-    families.map((family) => ({ label: family, value: family }))
+    $familiesStore.map((family) => ({ label: family, value: family }))
   )
 
   /** 목록이 두 무리로 갈리는가 — 시스템 폰트가 하나라도 있으면 그렇습니다 */
@@ -86,10 +88,10 @@
 
   /** 아직 안 받아 왔으면 받아오는 항목을 마지막에 답니다 */
   const loader: Option[] = $derived(
-    status === 'idle' || status === 'loading'
+    $statusStore === 'idle' || $statusStore === 'loading'
       ? [
           {
-            label: status === 'loading' ? 'Loading fonts…' : 'System fonts…',
+            label: $statusStore === 'loading' ? 'Loading fonts…' : 'System fonts…',
             value: LOAD_SYSTEM_FONTS_VALUE,
           },
         ]
@@ -99,19 +101,12 @@
   /** 지금 값을 맞출 때 훑는 전체 목록 */
   const all: Option[] = $derived([...FALLBACK_FONTS, ...system, ...loader])
 
-  function sync(): void {
-    const current =
-      editor.commandRegistry?.queryValue('fontName') ??
-      document.queryCommandValue('fontName')
-    const matched = all.find((option) => sameFontFamily(option.value, current))
-    value = matched ? matched.value : FALLBACK_FONTS[0].value
-  }
-
+  /* 선택이 움직여도, 목록이 늘어나도 고른 값을 다시 맞춥니다 */
   $effect(() => {
-    /* 목록이 바뀌면 고른 값도 다시 맞춥니다 */
-    void all
-    sync()
-    return subscribeToSelection(editor, sync)
+    const matched = all.find((option) =>
+      sameFontFamily(option.value, $fontFamily)
+    )
+    value = matched ? matched.value : FALLBACK_FONTS[0].value
   })
 
   const save = (): void => {

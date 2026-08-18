@@ -4,11 +4,10 @@
   import {
     attachDocument,
     create,
-    readDocument,
+    documentStore,
     readNow,
     save,
     saveAs,
-    subscribeToDocument,
   } from '../state/document-store'
   import {
     canSaveToComputer,
@@ -67,20 +66,13 @@
     requestName = (current: string) => window.prompt('Document name', current),
   }: Props = $props()
 
-  let doc = $state(readDocument())
-
   $effect(() => {
     attachDocument(editor)
-    const sync = (): void => {
-      doc = readDocument()
-    }
-    sync()
-    return subscribeToDocument(sync)
   })
 
   /** 이름이 없으면 물어보고 저장합니다 — 레거시 에디터의 ⌘S 그대로입니다 */
   async function saveOrAsk(): Promise<void> {
-    if (!doc.untitled) {
+    if (!$documentStore.untitled) {
       await save(editor)
       return
     }
@@ -90,7 +82,7 @@
   }
 
   async function askAndSaveAs(): Promise<void> {
-    const next = requestName(doc.name)
+    const next = requestName($documentStore.name)
     if (!next) return
     await saveAs(editor, next)
   }
@@ -102,7 +94,7 @@
    * 제스처를 잃어 대화상자가 안 뜹니다 (`document-bar.utils`).
    */
   function exportToComputer(): void {
-    void saveToComputer(doc.untitled ? 'Untitled.html' : doc.name, () =>
+    void saveToComputer($documentStore.untitled ? 'Untitled.html' : $documentStore.name, () =>
       readNow(editor)
     )
   }
@@ -128,7 +120,7 @@
    * 닫으면 글이 사라집니다.
    */
   $effect(() => {
-    if (!doc.dirty) return
+    if (!$documentStore.dirty) return
 
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
       event.preventDefault()
@@ -140,7 +132,7 @@
   })
 </script>
 
-{#if doc.available}
+{#if $documentStore.available}
   <div
     data-scope="document-bar"
     data-part="root"
@@ -157,12 +149,12 @@
       <span
         data-part="dot"
         style="display: inline-block; width: 1em; flex: none; text-align: center"
-        aria-hidden="true">{doc.dirty ? '●' : ''}</span
+        aria-hidden="true">{$documentStore.dirty ? '●' : ''}</span
       >
       <span
         data-part="name"
         style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
-        >{doc.name}</span
+        >{$documentStore.name}</span
       >
     </span>
 

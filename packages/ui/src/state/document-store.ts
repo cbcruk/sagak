@@ -1,3 +1,5 @@
+import { writable } from 'svelte/store'
+import type { Readable } from 'svelte/store'
 import {
   createDocumentStore,
   isDocumentStorageAvailable,
@@ -27,21 +29,21 @@ import {
  * `dirty` 를 플래그로 안 들고 **지금 내용과 마지막 저장 내용을 비교해서**
  * 얻는 것도 그대로입니다. 자동 저장 시절 `isDirty` 플래그가 여러 자리에서
  * 갱신되다 실제와 어긋났고, 비교로 얻으면 어긋날 자리가 없습니다.
+ *
+ * ## 알리는 길만 `svelte/store` 로 바꿨습니다
+ *
+ * 안쪽 `state` 는 그대로 평범한 객체입니다. `save`·`rename`·`remove` 가
+ * **그 자리에서 동기로** 읽어야 하고(`get(store)` 를 부를 자리가 아닙니다),
+ * 무엇보다 **값이 그대로면 아무에게도 안 알린다**는 성질을 지켜야 하기
+ * 때문입니다. `writable.update` 는 같은 값을 돌려줘도 구독자를 부릅니다.
+ *
+ * 그래서 바뀐 것이 있을 때만 새 스냅샷을 `documentStore` 에 넣습니다.
  */
 
 /** 아직 이름이 없는 문서 */
 export const UNTITLED = 'Untitled'
 
 const store = createDocumentStore()
-
-type Listener = () => void
-
-const listeners = new Set<Listener>()
-
-/** 어느 값이 바뀌든 한 번만 알립니다 — 부르는 쪽은 필요한 것만 다시 읽습니다 */
-function notify(): void {
-  for (const listener of listeners) listener()
-}
 
 interface State {
   /** 열려 있는 문서 이름 — 저장한 적이 없으면 `null` */
@@ -64,14 +66,7 @@ function set(next: Partial<State>): void {
     Object.assign(state, { [key]: value })
     changed = true
   }
-  if (changed) notify()
-}
-
-export function subscribeToDocument(listener: Listener): () => void {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
+  if (changed) snapshot.set(readDocument())
 }
 
 export interface DocumentSnapshot {
@@ -95,6 +90,13 @@ export function readDocument(): DocumentSnapshot {
     available: isDocumentStorageAvailable(),
     documents: state.list,
   }
+}
+
+const snapshot = writable<DocumentSnapshot>(readDocument())
+
+/** 열려 있는 문서 — 컴포넌트는 `$documentStore` 로 봅니다 */
+export const documentStore: Readable<DocumentSnapshot> = {
+  subscribe: snapshot.subscribe,
 }
 
 /**

@@ -1,5 +1,5 @@
-import { atom } from 'nanostores'
-import type { WritableAtom } from 'nanostores'
+import { writable } from 'svelte/store'
+import type { Writable } from 'svelte/store'
 import type { EditorContext } from 'sagak-core'
 
 /**
@@ -38,7 +38,7 @@ import type { EditorContext } from 'sagak-core'
  * 두 저장소입니다.
  */
 
-type Bucket = Map<string, WritableAtom<string>>
+type Bucket = Map<string, Writable<string>>
 
 const buckets = new WeakMap<EditorContext, Bucket>()
 
@@ -61,12 +61,12 @@ export function choiceStore(
   editor: EditorContext,
   key: string,
   initial: string
-): WritableAtom<string> {
+): Writable<string> {
   const bucket = bucketFor(editor)
 
   let store = bucket.get(key)
   if (!store) {
-    store = atom(initial)
+    store = writable(initial)
     bucket.set(key, store)
   }
   return store

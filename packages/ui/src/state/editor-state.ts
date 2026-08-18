@@ -10,6 +10,7 @@ import { listStore, listCommands } from './list'
 import type { ListCommands } from './list'
 import { linkStore } from './link'
 import { tableStore } from './table'
+import { fontFamilyStore } from './font-family'
 import type { AlignmentType } from '../components/alignment-buttons/alignment-buttons.shared'
 import type { ListType } from '../components/list-buttons/list-buttons.shared'
 
@@ -44,6 +45,8 @@ export interface EditorState {
   link: Readable<boolean>
   /** 캐럿이 표 안인지 */
   table: Readable<boolean>
+  /** 캐럿이 놓인 자리의 글꼴 이름 (날것) */
+  fontFamily: Readable<string>
 }
 
 export interface EditorCommands {
@@ -65,6 +68,7 @@ export function editorState(editor: EditorContext): EditorState {
       list: listStore(editor),
       link: linkStore(editor),
       table: tableStore(editor),
+      fontFamily: fontFamilyStore(editor),
     }
     bundles.set(editor, bundle)
   }

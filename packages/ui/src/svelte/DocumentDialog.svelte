@@ -3,11 +3,10 @@
   import {
     attachDocument,
     open as openDocument,
-    readDocument,
+    documentStore,
     refresh,
     remove,
     rename,
-    subscribeToDocument,
   } from '../state/document-store'
 
   /**
@@ -40,17 +39,11 @@
   }: Props = $props()
 
   let dialogEl: HTMLDialogElement
-  let doc = $state(readDocument())
   /** 지우기를 한 번 눌러 확인을 기다리는 문서 */
   let confirming = $state<string | null>(null)
 
   $effect(() => {
     attachDocument(editor)
-    const sync = (): void => {
-      doc = readDocument()
-    }
-    sync()
-    return subscribeToDocument(sync)
   })
 
   function openList(): void {
@@ -79,7 +72,7 @@
 <dialog bind:this={dialogEl} k="dialog-content" aria-label="Documents">
   <h2>Documents</h2>
 
-  {#if doc.documents.length === 0}
+  {#if $documentStore.documents.length === 0}
     <p data-part="empty" style="margin: 16px 0; color: var(--sagak-chrome-muted-fg)">
       No saved documents yet.
     </p>
@@ -88,14 +81,14 @@
       data-part="list"
       style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0; max-height: 280px; overflow-y: auto"
     >
-      {#each doc.documents as item (item.name)}
+      {#each $documentStore.documents as item (item.name)}
         <div data-part="row" data-name={item.name}>
           <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0">
             <button
               type="button"
               data-part="open"
               style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left"
-              aria-current={item.name === doc.name ? 'true' : undefined}
+              aria-current={item.name === $documentStore.name ? 'true' : undefined}
               onclick={() => {
                 dialogEl.close()
                 if (editor) void openDocument(editor, item.name)

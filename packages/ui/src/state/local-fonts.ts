@@ -1,4 +1,4 @@
-import { atom } from 'nanostores'
+import { writable } from 'svelte/store'
 import { supportsKorean } from './local-fonts.utils'
 
 /**
@@ -84,14 +84,14 @@ const CONCURRENCY = 8
 /*
  * 기계 하나에 목록도 하나입니다. 컴포넌트가 몇 개든 여기를 같이 봅니다.
  *
- * nanostores 관례는 `$status` 처럼 `$` 를 붙이는 것인데, **Svelte 가 `$` 로
- * 시작하는 이름을 스토어 자동 구독용으로 예약해 두어 그대로는 못 씁니다.**
- * 그래서 부르는 쪽 두 곳이 전부 가져오면서 이름을 바꾸고 있었습니다. 관례를
- * 지키는 값이 별칭 두 개보다 크지 않아 여기서 이름을 맞춥니다.
+ * 예전에는 nanostores 였습니다. 관례인 `$status` 라는 이름을 **Svelte 가 스토어
+ * 자동 구독용으로 예약해 두어** 못 쓰고, 부르는 쪽이 전부 이름을 바꿔 가져오던
+ * 자리입니다. `svelte/store` 로 옮기면서 그 어긋남이 없어집니다 — 이름은
+ * `statusStore` 이고, 읽는 쪽이 `$statusStore` 로 붙입니다.
  */
 
 /** 지금 어느 단계인가 — 아래 `loadLocalFonts` 가 옮깁니다 */
-export const statusStore = atom<LocalFontsStatus>(
+export const statusStore = writable<LocalFontsStatus>(
   queryFn() ? 'idle' : 'unsupported'
 )
 
@@ -101,7 +101,7 @@ export const statusStore = atom<LocalFontsStatus>(
  * `statusStore` 가 `'ready'` 여도 **빌 수 있습니다** — 거절당했거나 한국어
  * 폰트가 하나도 없는 기계입니다.
  */
-export const familiesStore = atom<string[]>([])
+export const familiesStore = writable<string[]>([])
 
 /** 진행 중인 호출 — 같은 요청이 겹쳐 나가지 않게 합니다 */
 let inFlight: Promise<void> | null = null
