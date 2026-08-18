@@ -1,4 +1,10 @@
 export { createEditor } from './create-editor'
+
+/* 문서 모델 — `docs/prosemirror-migration.md` */
+export { sagakSchema, createSagakSchema } from './model/schema'
+export type { SchemaOptions } from './model/schema'
+export { toJSON, fromJSON, toHtml, parseHtml } from './model/storage'
+export type { DocumentJSON } from './model/storage'
 export type { CreateEditorOptions, Editor } from './create-editor'
 
 export { EditorCore, AppStatus } from './core/editor-core'

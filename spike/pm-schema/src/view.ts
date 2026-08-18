@@ -4,7 +4,7 @@ import { DOMParser, DOMSerializer } from 'prosemirror-model'
 import { history, undo, redo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap, toggleMark } from 'prosemirror-commands'
-import { sagakSchema } from './schema'
+import { sagakSchema } from 'sagak-core'
 
 /**
  * 편집 표면을 `prosemirror-view` 에 맡긴 최소 구성.
