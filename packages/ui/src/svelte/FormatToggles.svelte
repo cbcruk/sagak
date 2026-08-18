@@ -1,8 +1,6 @@
 <script lang="ts">
   import { Bold, Italic, Underline, Strikethrough } from 'lucide'
   import type { IconNode } from 'lucide'
-  import { CoreEvents, TextStyleEvents } from 'sagak-core'
-  import type { EditorContext, FormattingState } from 'sagak-core'
   import { icon } from '../elements/icon'
 
   /**
@@ -24,6 +22,10 @@
    * 없어져서 넷을 한 파일에 두었습니다. 신호를 쓰려고 만든 층이 사라진 것이지
    * 성질이 달라진 것이 아닙니다.
    *
+   * 지금은 그 `$state` 도 여기 없습니다 — 구독은 `state/formatting.svelte.ts`
+   * 가 갖고, 이 파일은 받은 불리언 넷을 그립니다. prop 으로 받아도 갱신 범위는
+   * 같습니다.
+   *
    * 그래서 검사도 바꿔야 합니다. 렌더 범위를 Preact 의 `options.__r` 로 세던
    * 것은 이 컴포넌트에 더 이상 안 걸립니다 — `test/render.browser.test.tsx`
    * 에서 **DOM 이 얼마나 바뀌는지**로 옮겼습니다.
@@ -35,35 +37,26 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    isBold: boolean
+    isItalic: boolean
+    isUnderline: boolean
+    isStrikeThrough: boolean
+    onbold: () => void
+    onitalic: () => void
+    onunderline: () => void
+    onstrike: () => void
   }
 
-  const { editor }: Props = $props()
-
-  let isBold = $state(false)
-  let isItalic = $state(false)
-  let isUnderline = $state(false)
-  let isStrikeThrough = $state(false)
-
-  $effect(() => {
-    if (!editor) return
-    return editor.eventBus.on(
-      CoreEvents.FORMATTING_STATE_CHANGED,
-      'on',
-      (data?: unknown) => {
-        if (!data || typeof data !== 'object') return
-        const state = data as Partial<FormattingState>
-        if (typeof state.isBold === 'boolean') isBold = state.isBold
-        if (typeof state.isItalic === 'boolean') isItalic = state.isItalic
-        if (typeof state.isUnderline === 'boolean') {
-          isUnderline = state.isUnderline
-        }
-        if (typeof state.isStrikeThrough === 'boolean') {
-          isStrikeThrough = state.isStrikeThrough
-        }
-      }
-    )
-  })
+  const {
+    isBold,
+    isItalic,
+    isUnderline,
+    isStrikeThrough,
+    onbold,
+    onitalic,
+    onunderline,
+    onstrike,
+  }: Props = $props()
 
   const BUTTON_STYLE =
     'display: flex; align-items: center; justify-content: center; width: 28px; height: 26px; padding: 0'
@@ -73,21 +66,6 @@
     if (strokeWidth) el.setAttribute('stroke-width', strokeWidth)
     return el.outerHTML
   }
-
-  /*
-   * 쏘는 이벤트를 **실제로 있는 넷으로 좁혀** 둡니다.
-   *
-   * `string` 으로 두면 발행할 때 `as never` 캐스팅이 필요해지는데, 그건
-   * 이벤트 맵의 타입 검사를 스스로 꺼 버리는 셈입니다. `svelte-check` 를
-   * 붙이고서야 드러났습니다 — `tsc` 는 `.svelte` 를 안 봅니다.
-   */
-  type ToggleEvent =
-    | typeof TextStyleEvents.BOLD_CLICKED
-    | typeof TextStyleEvents.ITALIC_CLICKED
-    | typeof TextStyleEvents.UNDERLINE_CLICKED
-    | typeof TextStyleEvents.STRIKE_CLICKED
-
-  const emit = (name: ToggleEvent) => () => editor?.eventBus.emit(name)
 </script>
 
 <div k="toggle-group" role="group" aria-label="Text style">
@@ -98,7 +76,7 @@
     style={BUTTON_STYLE}
     title="Bold (⌘B)"
     aria-label="Bold"
-    onclick={emit(TextStyleEvents.BOLD_CLICKED)}
+    onclick={onbold}
   >
     {@html glyph(Bold, '2.5')}
   </button>
@@ -109,7 +87,7 @@
     style={BUTTON_STYLE}
     title="Italic (⌘I)"
     aria-label="Italic"
-    onclick={emit(TextStyleEvents.ITALIC_CLICKED)}
+    onclick={onitalic}
   >
     {@html glyph(Italic)}
   </button>
@@ -120,7 +98,7 @@
     style={BUTTON_STYLE}
     title="Underline (⌘U)"
     aria-label="Underline"
-    onclick={emit(TextStyleEvents.UNDERLINE_CLICKED)}
+    onclick={onunderline}
   >
     {@html glyph(Underline)}
   </button>
@@ -131,7 +109,7 @@
     style={BUTTON_STYLE}
     title="Strikethrough"
     aria-label="Strikethrough"
-    onclick={emit(TextStyleEvents.STRIKE_CLICKED)}
+    onclick={onstrike}
   >
     {@html glyph(Strikethrough)}
   </button>

@@ -10,6 +10,7 @@
     HEADING,
   } from './toolbar-select.specs'
   import HistoryButtons from './HistoryButtons.svelte'
+  import { editorState, editorCommands } from '../state/editor-state'
   import AlignmentButtons from './AlignmentButtons.svelte'
   import FormatToggles from './FormatToggles.svelte'
   import ListButtons from './ListButtons.svelte'
@@ -45,7 +46,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /**
      * 자동 저장 표시를 툴바에 넣습니다. **기본값은 꺼짐입니다.**
      *
@@ -67,6 +68,22 @@
   const { editor, showAutoSaveIndicator = false }: Props = $props()
 
   /*
+   * 상태는 store 가, 명령은 함수가, 잇는 일은 여기가 합니다.
+   *
+   * 구독을 툴바 안에 두면 이 파일이 저장소에서 제일 무거워지고, 컴포넌트 안에
+   * 두면 그 컴포넌트가 `editor` 전부를 받아야 합니다. 그 사이 자리라 여기엔
+   * 잇는 줄만 남습니다.
+   *
+   * `editor` 를 한 번만 읽습니다. `Editor` 가 컨텍스트를 갈아끼울 때는
+   * `{#if context}` 가 먼저 `null` 을 거치므로 툴바째 다시 마운트됩니다 —
+   * 바뀐 에디터를 놓칠 자리가 없습니다.
+   */
+  // svelte-ignore state_referenced_locally
+  const { history, formatting, alignment, list } = editorState(editor)
+  // svelte-ignore state_referenced_locally
+  const commands = editorCommands(editor)
+
+  /*
    * 더보기 메뉴가 열어 줄 다이얼로그들입니다.
    *
    * 좁은 화면에서는 이 트리거들이 감춰지고, 그 기능에 닿는 길이 더보기 메뉴
@@ -81,7 +98,12 @@
 </script>
 
 <div data-scope="toolbar" data-part="root" role="toolbar" aria-label="Text formatting">
-  <HistoryButtons {editor} />
+  <HistoryButtons
+    canUndo={$history.canUndo}
+    canRedo={$history.canRedo}
+    onundo={commands.history.undo}
+    onredo={commands.history.redo}
+  />
 
   <div data-part="separator"></div>
 
@@ -89,7 +111,16 @@
 
   <div data-part="separator"></div>
 
-  <FormatToggles {editor} />
+  <FormatToggles
+    isBold={$formatting.isBold}
+    isItalic={$formatting.isItalic}
+    isUnderline={$formatting.isUnderline}
+    isStrikeThrough={$formatting.isStrikeThrough}
+    onbold={commands.formatting.bold}
+    onitalic={commands.formatting.italic}
+    onunderline={commands.formatting.underline}
+    onstrike={commands.formatting.strikeThrough}
+  />
 
   <ColorPicker {editor} type="text" />
   <ColorPicker {editor} type="background" />
@@ -106,11 +137,18 @@
 
   <div data-part="separator"></div>
 
-  <AlignmentButtons {editor} />
+  <AlignmentButtons
+    current={$alignment}
+    onalign={commands.alignment.align}
+  />
 
   <div data-part="separator"></div>
 
-  <ListButtons {editor} />
+  <ListButtons
+    current={$list}
+    onunordered={commands.list.unordered}
+    onordered={commands.list.ordered}
+  />
 
   <!--
     구분선만 통째로 감춥니다. 다이얼로그를 품은 것들은 **트리거만** 감추고

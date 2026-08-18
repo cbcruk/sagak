@@ -1,13 +1,7 @@
 <script lang="ts">
   import { ListOrdered, List, ChevronDown } from 'lucide'
-  import { ParagraphEvents } from 'sagak-core'
-  import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../state/selection'
-  import {
-    getCurrentListType,
-    type ListType,
-  } from '../components/list-buttons/list-buttons.shared'
+  import type { ListType } from '../components/list-buttons/list-buttons.shared'
 
   /**
    * 목록 버튼 — **드롭다운 메뉴를 처음 옮기는 자리**입니다.
@@ -35,28 +29,21 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    current: ListType
+    onunordered: () => void
+    onordered: () => void
   }
 
-  const { editor }: Props = $props()
+  const { current, onunordered, onordered }: Props = $props()
 
   const menuId = $props.id()
 
   let menuEl: HTMLDialogElement
-  let currentList = $state<ListType>('none')
 
-  $effect(() => {
-    if (!editor) return
-    const sync = (): void => {
-      currentList = getCurrentListType()
-    }
-    sync()
-    return subscribeToSelection(editor, sync)
-  })
-
-  function choose(event: (typeof ParagraphEvents)[keyof typeof ParagraphEvents]): void {
+  /** 닫고 나서 알립니다 — 아래 "눌러도 메뉴는 스스로 닫히지 않습니다" 참고 */
+  function choose(run: () => void): void {
     menuEl.close()
-    editor?.eventBus.emit(event)
+    run()
   }
 </script>
 
@@ -66,12 +53,12 @@
     commandfor={menuId}
     data-part="icon-button"
     data-width="auto"
-    data-state={currentList !== 'none' ? 'on' : undefined}
+    data-state={current !== 'none' ? 'on' : undefined}
     title="List"
     aria-label="List"
     onclick={() => menuEl.show()}
   >
-    {@html icon(currentList === 'ordered' ? ListOrdered : List, 16).outerHTML}
+    {@html icon(current === 'ordered' ? ListOrdered : List, 16).outerHTML}
     {@html icon(ChevronDown, 12).outerHTML}
   </button>
 
@@ -79,16 +66,16 @@
     <button
       type="button"
       k="dropdown-menu-item"
-      selected={currentList === 'unordered'}
-      onclick={() => choose(ParagraphEvents.UNORDERED_LIST_CLICKED)}
+      selected={current === 'unordered'}
+      onclick={() => choose(onunordered)}
     >
       Bullet List
     </button>
     <button
       type="button"
       k="dropdown-menu-item"
-      selected={currentList === 'ordered'}
-      onclick={() => choose(ParagraphEvents.ORDERED_LIST_CLICKED)}
+      selected={current === 'ordered'}
+      onclick={() => choose(onordered)}
     >
       Numbered List
     </button>
