@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>붙여넣기 채집 — pm-schema</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 15px/1.6 system-ui, sans-serif;
+        max-width: 60rem;
+        margin: 3rem auto;
+        padding: 0 1.5rem;
+      }
+      h1 { font-size: 1.3rem; }
+      .drop {
+        border: 2px dashed currentColor;
+        border-radius: 8px;
+        padding: 2.5rem 1rem;
+        text-align: center;
+        opacity: 0.7;
+        margin: 1.5rem 0;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-all;
+        background: color-mix(in srgb, currentColor 8%, transparent);
+        padding: 0.75rem;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+      .render {
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 6px;
+        padding: 1rem;
+      }
+      .verdicts { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+      .ok { color: #15803d; font-weight: 600; }
+      .bad { color: #b91c1c; font-weight: 600; }
+      .note { opacity: 0.7; font-size: 13px; }
+      button { font: inherit; padding: 0.35rem 0.9rem; border-radius: 6px; }
+      h2 { font-size: 0.95rem; opacity: 0.75; margin-top: 2rem; }
+    </style>
+  </head>
+  <body>
+    <h1>붙여넣기 채집</h1>
+    <p>
+      구글 문서·워드·웹에서 복사한 뒤 이 페이지에 붙여넣으면(⌘V),
+      스키마를 통과시킨 결과를 보여줍니다.
+      <strong>손실 없음</strong>이 아니면 그 클립보드가 곧 고칠 거리입니다.
+    </p>
+
+    <div class="drop">여기서 ⌘V</div>
+    <div id="out"></div>
+
+    <script type="module" src="./capture.ts"></script>
+  </body>
+</html>
