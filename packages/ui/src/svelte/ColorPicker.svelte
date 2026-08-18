@@ -29,7 +29,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     type?: ColorType
   }
 
@@ -70,12 +70,12 @@
     current = color
     open = false
     addRecentColor(type, color)
-    editor?.eventBus.emit(event, { color })
+    editor.eventBus.emit(event, { color })
   }
 
   function remove(): void {
     open = false
-    editor?.eventBus.emit(event, { color: isText ? '#000000' : 'transparent' })
+    editor.eventBus.emit(event, { color: isText ? '#000000' : 'transparent' })
     current = isText ? '#000000' : '#ffff00'
   }
 

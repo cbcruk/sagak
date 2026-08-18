@@ -11,6 +11,7 @@ export {
   attachDocument,
   create,
   open,
+  documentStore,
   readDocument,
   readNow,
   refresh,
@@ -18,7 +19,6 @@ export {
   rename,
   save,
   saveAs,
-  subscribeToDocument,
 } from './state/document-store'
 export type { DocumentSnapshot } from './state/document-store'
 

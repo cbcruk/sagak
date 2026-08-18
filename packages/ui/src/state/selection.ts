@@ -33,17 +33,6 @@ function createTracker(context: EditorContext): Tracker {
   let frame: number | null = null
   let detach: (() => void) | null = null
 
-  const isSelectionInEditor = (): boolean => {
-    const element = context.element
-    if (!element) return false
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return false
-
-    const anchorNode = selection.anchorNode
-    return !!anchorNode && element.contains(anchorNode)
-  }
-
   const schedule = (): void => {
     if (context.selectionManager?.getIsComposing()) return
 
@@ -53,7 +42,7 @@ function createTracker(context: EditorContext): Tracker {
 
     frame = requestAnimationFrame(() => {
       frame = null
-      if (!isSelectionInEditor()) return
+      if (!isSelectionInside(context)) return
       for (const listener of listeners) listener()
     })
   }
@@ -96,6 +85,25 @@ function createTracker(context: EditorContext): Tracker {
       }
     },
   }
+}
+
+/**
+ * 지금 선택이 이 에디터 안에 있습니까.
+ *
+ * 위 가드 셋 중 셋째이면서, **구독 없이 한 번 읽을 때도 필요합니다** — 툴바가
+ * 뜨는 순간의 서식 상태를 재는 `state/formatting.svelte.ts` 가 같은 판정을
+ * 씁니다. 두 벌이 되면 이 파일 첫머리에 적힌 "가드가 제각각이던" 자리로
+ * 되돌아가므로 여기서 한 벌만 내놓습니다.
+ */
+export function isSelectionInside(context: EditorContext): boolean {
+  const element = context.element
+  if (!element) return false
+
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return false
+
+  const anchorNode = selection.anchorNode
+  return !!anchorNode && element.contains(anchorNode)
 }
 
 /**

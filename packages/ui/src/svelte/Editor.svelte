@@ -30,6 +30,11 @@
    *
    * `createEditor` 가 붙을 대상이라 준비되기 전에도 있어야 합니다. 툴바 쪽만
    * 준비된 뒤에 나옵니다 — Preact 판과 같은 순서입니다.
+   *
+   * 그 문(`{#if context}`)이 여기 하나뿐이라, 아래 컴포넌트들의 `editor` prop
+   * 은 `EditorContext` 입니다 — `| null` 이 아닙니다. provider 시절에는 아직
+   * 없는 에디터를 각자 막느라 전부 `| null` 이었고 `if (!editor) return` 이
+   * 스무 곳쯤 흩어져 있었습니다.
    */
 
   interface Props {

@@ -1,7 +1,5 @@
 <script lang="ts">
   import { Undo2, Redo2 } from 'lucide'
-  import { HistoryEvents } from 'sagak-core'
-  import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
 
   /**
@@ -12,30 +10,22 @@
    *
    * 이 상태는 렌더러를 세 번 갈아타는 동안 **한 번도 안 바뀌었습니다.** Preact
    * 시절에는 훅이 이 이벤트를 시그널로 감쌌고, nanotags 와 여기서는 직접
-   * 듣습니다. 감싸는 층만 달랐지 사실은 늘 코어에 있었습니다.
+   * 들었습니다. 감싸는 층만 달랐지 사실은 늘 코어에 있었습니다.
+   *
+   * 그래서 듣는 일을 `state/history.svelte.ts` 로 옮겼습니다. 여기 남은 것은
+   * **불리언 둘과 의도 둘**이고, 서명만 봐도 이 컴포넌트가 무엇에 기대는지
+   * 보입니다 — `editor: EditorContext` 는 "에디터 전부를 달라"라 그게 안
+   * 보였습니다.
    */
 
   interface Props {
-    editor: EditorContext | null
+    canUndo: boolean
+    canRedo: boolean
+    onundo: () => void
+    onredo: () => void
   }
 
-  const { editor }: Props = $props()
-
-  let canUndo = $state(false)
-  let canRedo = $state(false)
-
-  $effect(() => {
-    if (!editor) return
-    return editor.eventBus.on(
-      HistoryEvents.HISTORY_STATE_CHANGED,
-      'after',
-      (state?: unknown) => {
-        const next = (state ?? {}) as { canUndo?: boolean; canRedo?: boolean }
-        canUndo = !!next.canUndo
-        canRedo = !!next.canRedo
-      }
-    )
-  })
+  const { canUndo, canRedo, onundo, onredo }: Props = $props()
 </script>
 
 <div data-part="icon-button-group" role="group" aria-label="History">
@@ -45,7 +35,7 @@
     title="Undo (⌘Z)"
     aria-label="Undo"
     disabled={!canUndo}
-    onclick={() => editor?.eventBus.emit(HistoryEvents.UNDO)}
+    onclick={onundo}
   >
     {@html icon(Undo2, 16).outerHTML}
   </button>
@@ -55,7 +45,7 @@
     title="Redo (⌘⇧Z)"
     aria-label="Redo"
     disabled={!canRedo}
-    onclick={() => editor?.eventBus.emit(HistoryEvents.REDO)}
+    onclick={onredo}
   >
     {@html icon(Redo2, 16).outerHTML}
   </button>

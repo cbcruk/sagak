@@ -5,11 +5,8 @@
     TextAlignEnd,
     TextAlignJustify,
   } from 'lucide'
-  import { ParagraphEvents } from 'sagak-core'
-  import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../state/selection'
-  import { getCurrentAlignment } from '../components/alignment-buttons/alignment-buttons.shared'
+  import type { AlignmentType } from '../components/alignment-buttons/alignment-buttons.shared'
 
   /**
    * 정렬 버튼 넷 — 켜진 것 하나만 `data-state="active"` 입니다.
@@ -22,7 +19,8 @@
    * 구조적으로 없어집니다 — Svelte 가 바뀐 값만 반영합니다.
    *
    * `render.browser.test.ts` 가 그 헛쓰기를 처음 잡았고, 지금은 이 파일이
-   * 그 검사를 지나갑니다.
+   * 그 검사를 지나갑니다. 값이 prop 으로 오게 된 뒤에도 같습니다 — Svelte 는
+   * 바뀐 값만 반영합니다.
    *
    * ## 이름이 또 달랐습니다
    *
@@ -33,10 +31,11 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    current: AlignmentType
+    onalign: (align: AlignmentType) => void
   }
 
-  const { editor }: Props = $props()
+  const { current, onalign }: Props = $props()
 
   const ALIGNMENTS = [
     { value: 'left', label: 'Align Left', node: TextAlignStart },
@@ -44,17 +43,6 @@
     { value: 'right', label: 'Align Right', node: TextAlignEnd },
     { value: 'justify', label: 'Justify', node: TextAlignJustify },
   ] as const
-
-  let current = $state(getCurrentAlignment())
-
-  $effect(() => {
-    if (!editor) return
-    const sync = (): void => {
-      current = getCurrentAlignment()
-    }
-    sync()
-    return subscribeToSelection(editor, sync)
-  })
 </script>
 
 <div data-part="icon-button-group" role="group" aria-label="Alignment">
@@ -65,10 +53,7 @@
       data-state={current === item.value ? 'active' : undefined}
       title={item.label}
       aria-label={item.label}
-      onclick={() =>
-        editor?.eventBus.emit(ParagraphEvents.ALIGNMENT_CHANGED, {
-          align: item.value,
-        })}
+      onclick={() => onalign(item.value)}
     >
       {@html icon(item.node, 16).outerHTML}
     </button>

@@ -3,7 +3,7 @@
   import { ContentEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../state/selection'
+  import { editorState } from '../state/editor-state'
   import { getSelectedLink } from '../components/link-dialog/link-dialog.shared'
 
   /**
@@ -28,7 +28,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -37,19 +37,13 @@
 
   let dialogEl: HTMLDialogElement
   let url = $state('')
-  let onLink = $state(false)
 
-  $effect(() => {
-    if (!editor) return
-    const sync = (): void => {
-      onLink = !!getSelectedLink()
-    }
-    sync()
-    return subscribeToSelection(editor, sync)
-  })
+  /* 캐럿이 링크 위인지 — 구독은 `state/link.ts` 가 갖습니다 */
+  // svelte-ignore state_referenced_locally
+  const { link: onLink } = editorState(editor)
 
   export function open(): void {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
     url = getSelectedLink()?.href ?? ''
     dialogEl.showModal()
   }
@@ -58,7 +52,7 @@
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor?.selectionManager?.restoreSelection()
+      editor.selectionManager?.restoreSelection()
       action()
     })
   }
@@ -71,7 +65,7 @@
       return
     }
     restoreThen(() => {
-      editor?.eventBus.emit(ContentEvents.LINK_CHANGED, { url: trimmed })
+      editor.eventBus.emit(ContentEvents.LINK_CHANGED, { url: trimmed })
     })
   }
 
@@ -85,7 +79,7 @@
         selection?.removeAllRanges()
         selection?.addRange(range)
       }
-      editor?.eventBus.emit(ContentEvents.LINK_REMOVED)
+      editor.eventBus.emit(ContentEvents.LINK_REMOVED)
     })
   }
 </script>
@@ -94,7 +88,7 @@
   type="button"
   data-part="icon-button"
   data-mobile={hideTrigger ? 'hidden' : undefined}
-  data-state={onLink ? 'on' : undefined}
+  data-state={$onLink ? 'on' : undefined}
   title="Insert Link"
   aria-label="Insert Link"
   onclick={open}

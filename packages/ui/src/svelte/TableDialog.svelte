@@ -3,8 +3,7 @@
   import { ContentEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import { subscribeToSelection } from '../state/selection'
-  import { findTableAtSelection } from '../components/table-dialog/table-dialog.shared'
+  import { editorState } from '../state/editor-state'
 
   /**
    * 표 다이얼로그 — **한 다이얼로그가 두 얼굴**을 가집니다.
@@ -13,9 +12,10 @@
    * 제목과 `aria-label` 까지 갈립니다.
    *
    * 그 판정이 **선택 영역에서 나옵니다.** 캐럿이 표 안에 있는지 매번 봐야 하고,
-   * 그래서 `subscribeToSelection` 을 씁니다 — IME 조합 중 무시·다음 프레임까지
-   * 지연·에디터 밖이면 건너뜀 가드가 거기 들어 있습니다. nanotags 때 export 해
-   * 둔 것이 렌더러를 두 번 바꾸고도 그대로 쓰입니다.
+   * 그 구독은 `state/table.ts` 가 갖습니다 — 바닥은 여전히
+   * `subscribeToSelection` 이라 IME 조합 중 무시·다음 프레임까지 지연·에디터
+   * 밖이면 건너뜀 가드를 그대로 지납니다. nanotags 때 만든 그 가드가 렌더러를
+   * 두 번, 상태 층을 한 번 바꾸고도 그대로 쓰입니다.
    *
    * ## 관문이 이미 있었습니다
    *
@@ -25,7 +25,7 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 좁은 화면에서 트리거를 감춥니다 — 자세한 이유는 아래 */
     hideTrigger?: boolean
   }
@@ -35,7 +35,6 @@
   let dialogEl: HTMLDialogElement
   let rows = $state('3')
   let cols = $state('3')
-  let hasTable = $state(false)
 
   const rowCount = $derived(parseInt(rows, 10))
   const colCount = $derived(parseInt(cols, 10))
@@ -44,20 +43,15 @@
   )
 
   /*
-   * 선택이 바뀔 때마다 어느 얼굴인지 다시 봅니다. 다이얼로그가 닫혀 있을 때도
-   * 봐야 합니다 — 툴바 버튼의 켜짐 표시가 이 값을 씁니다.
+   * 어느 얼굴인지는 선택이 바뀔 때마다 다시 봅니다. 다이얼로그가 닫혀 있을 때도
+   * 봐야 합니다 — 툴바 버튼의 켜짐 표시가 같은 값을 씁니다. 구독은
+   * `state/table.ts` 가 갖습니다.
    */
-  $effect(() => {
-    if (!editor) return
-    const sync = (): void => {
-      hasTable = !!findTableAtSelection()
-    }
-    sync()
-    return subscribeToSelection(editor, sync)
-  })
+  // svelte-ignore state_referenced_locally
+  const { table: hasTable } = editorState(editor)
 
   export function open(): void {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
     rows = '3'
     cols = '3'
     dialogEl.showModal()
@@ -67,7 +61,7 @@
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor?.selectionManager?.restoreSelection()
+      editor.selectionManager?.restoreSelection()
       action()
     })
   }
@@ -75,7 +69,7 @@
   function create(): void {
     if (!isValid) return
     restoreThen(() => {
-      editor?.eventBus.emit(ContentEvents.TABLE_CREATE, {
+      editor.eventBus.emit(ContentEvents.TABLE_CREATE, {
         rows: rowCount,
         cols: colCount,
       })
@@ -84,12 +78,12 @@
 
   const insertRow = (position: 'above' | 'below') => () =>
     restoreThen(() => {
-      editor?.eventBus.emit(ContentEvents.TABLE_INSERT_ROW, { position })
+      editor.eventBus.emit(ContentEvents.TABLE_INSERT_ROW, { position })
     })
 
   const insertColumn = (position: 'left' | 'right') => () =>
     restoreThen(() => {
-      editor?.eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position })
+      editor.eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position })
     })
 
   /* 쏘는 이벤트를 실제로 있는 셋으로 좁힙니다 — `as never` 를 안 쓰려고 */
@@ -100,7 +94,7 @@
 
   const emit = (name: DeleteEvent) => () =>
     restoreThen(() => {
-      editor?.eventBus.emit(name)
+      editor.eventBus.emit(name)
     })
 </script>
 
@@ -108,7 +102,7 @@
   type="button"
   data-part="icon-button"
   data-mobile={hideTrigger ? 'hidden' : undefined}
-  data-state={hasTable ? 'on' : undefined}
+  data-state={$hasTable ? 'on' : undefined}
   title="Insert Table"
   aria-label="Insert Table"
   onclick={open}
@@ -116,10 +110,10 @@
   {@html icon(Table, 18).outerHTML}
 </button>
 
-<dialog bind:this={dialogEl} k="dialog-content" aria-label={hasTable ? 'Edit Table' : 'Insert Table'}>
-  <h2>{hasTable ? 'Edit Table' : 'Insert Table'}</h2>
+<dialog bind:this={dialogEl} k="dialog-content" aria-label={$hasTable ? 'Edit Table' : 'Insert Table'}>
+  <h2>{$hasTable ? 'Edit Table' : 'Insert Table'}</h2>
 
-  {#if !hasTable}
+  {#if !$hasTable}
     <div style="display: flex; gap: 12px">
       <div style="flex: 1">
         <label k="label" for="table-rows">Rows</label>

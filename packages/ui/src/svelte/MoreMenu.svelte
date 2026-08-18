@@ -71,7 +71,7 @@
     | 'find'
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     /** 툴바가 그 다이얼로그를 엽니다 — 좁은 화면에서는 여기가 유일한 길입니다 */
     onOpenDialog?: (which: DialogName) => void
   }
@@ -190,7 +190,7 @@
      * 잡힙니다.
      */
     close()
-    if (item.emit) editor?.eventBus.emit(item.emit)
+    if (item.emit) editor.eventBus.emit(item.emit)
     if (item.dialog) onOpenDialog?.(item.dialog)
   }
 

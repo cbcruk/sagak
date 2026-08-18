@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
-  import { subscribeToSelection } from '../state/selection'
+  import { fromSelection } from '../state/from-selection'
   import { choiceStore } from '../state/toolbar-choice'
   import type { ToolbarSelectSpec } from './toolbar-select.specs'
 
@@ -18,7 +18,7 @@
    * | 따라가는 것 | 글자 크기 | 선택 영역에서 매번 읽습니다 |
    * | 안 따라가는 것 | 줄 간격·자간·문단 | `spec.chosen` 저장소 |
    *
-   * 따라가는 쪽만 `subscribeToSelection` 을 씁니다. IME 조합 중 무시 같은
+   * 따라가는 쪽만 선택 구독을 씁니다(`fromSelection`). IME 조합 중 무시 같은
    * 가드가 거기 들어 있고, 이 구독은 렌더러를 네 번 갈아타는 동안 한 번도
    * 안 바뀌었습니다.
    *
@@ -39,13 +39,21 @@
    */
 
   interface Props {
-    editor: EditorContext | null
+    editor: EditorContext
     spec: ToolbarSelectSpec
   }
 
   const { editor, spec }: Props = $props()
 
   /** 안 따라가는 쪽만 칸을 갖습니다 — 따라가는 쪽 값의 출처는 문서입니다 */
+  /*
+   * 지금 값을 코어에 물어보는 구독입니다. `spec` 마다 묻는 것이 달라
+   * 에디터 묶음(`editor-state.ts`)에 들어가지 않습니다 — 이 인스턴스가 곧
+   * 그 spec 하나라 여기서 만드는 것이 맞습니다.
+   */
+  // svelte-ignore state_referenced_locally
+  const queried = fromSelection(editor, () => spec.query?.(editor), undefined)
+
   const store = $derived(
     spec.initialValue === undefined
       ? null
@@ -64,38 +72,34 @@
   let unlisted = $state<string | null>(null)
 
   $effect(() => {
-    if (!editor || !spec.query) return
-    const sync = (): void => {
-      const current = spec.query?.(editor)
+    if (!spec.query) return
+    const current = $queried
 
-      if (current === undefined || current === '') {
-        unlisted = null
-        value = spec.fallbackValue ?? spec.options[0].value
-        return
-      }
-
-      if (spec.options.some((option) => option.value === current)) {
-        unlisted = null
-        value = current
-        return
-      }
-
-      /* 목록 밖 — 실제 값을 보여줄 수 있으면 그렇게 합니다 */
-      if (spec.unlisted) {
-        unlisted = current
-        value = current
-        return
-      }
-
+    if (current === undefined || current === '') {
       unlisted = null
       value = spec.fallbackValue ?? spec.options[0].value
+      return
     }
-    sync()
-    return subscribeToSelection(editor, sync)
+
+    if (spec.options.some((option) => option.value === current)) {
+      unlisted = null
+      value = current
+      return
+    }
+
+    /* 목록 밖 — 실제 값을 보여줄 수 있으면 그렇게 합니다 */
+    if (spec.unlisted) {
+      unlisted = current
+      value = current
+      return
+    }
+
+    unlisted = null
+    value = spec.fallbackValue ?? spec.options[0].value
   })
 
   const save = (): void => {
-    editor?.selectionManager?.saveSelection()
+    editor.selectionManager?.saveSelection()
   }
 </script>
 
@@ -107,7 +111,6 @@
   onmousedown={save}
   onfocus={save}
   onchange={() => {
-    if (!editor) return
     store?.set(value)
     editor.selectionManager?.restoreSelection()
     spec.apply(editor, value)
