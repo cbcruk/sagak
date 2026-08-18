@@ -176,13 +176,28 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 **손실 없음**이 아닌 클립보드가 나오면 그게 곧 고칠 거리이고, 픽스처로 복사해
 `paste.test.ts` 에 붙이면 회귀 검사가 됩니다.
 
-### 2단계 — 편집 표면 교체
+### 2단계 — 편집 표면 교체 (스파이크 착수)
 
 `prosemirror-view` 가 편집 영역을 가져갑니다. 제일 큰 덩어리이고 IME 가 여기 있습니다.
 이 단계가 끝나면 `editing-area`·`wysiwyg-area`·`stored-marks` 의 `beforeinput` 처리가
 사라집니다.
 
 **게이트**: IME/composition 테스트 전부 통과. 한글 조합 중 서식·undo·붙여넣기.
+
+본체를 건드리기 전에 스파이크에서 게이트부터 겁니다
+([`view.browser.test.ts`](../spike/pm-schema/test/view.browser.test.ts)). 툴바도 플러그인도
+없이 `EditorView` 하나만 올리고 **입력만** 봅니다 — 여기서 안 되는 것은 나중에도 안 됩니다.
+
+한글은 이미 답이 반쯤 나와 있습니다. [`spike/doc-model`](../spike/doc-model) 이 쟀듯
+**조합 중 입력은 막을 수 없습니다** — `insertCompositionText` 는 `cancelable === false`
+이고 조합 이벤트를 전부 `preventDefault` 해도 글자는 들어갑니다. 그러니 질문은 "막을 수
+있는가" 가 아니라 **"PM 이 그 뒤를 제대로 수습하는가"** 입니다.
+
+진짜 조합은 CDP 의 `Input.imeSetComposition` 으로 일으킵니다. `CompositionEvent` 를
+직접 dispatch 하는 것은 내 코드가 내 코드를 확인하는 것이라 재는 값이 없습니다.
+
+붙여넣기는 **따로 잽니다.** PM 은 자기 경로(`clipboardParser`)로 처리하므로 §2 의
+`DOMParser` 왕복 결과가 그대로 적용된다고 볼 수 없습니다.
 
 ### 3단계 — 커맨드·플러그인 34개 이전
 
@@ -230,13 +245,30 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 | 세 겹 | 3 → 1 | 3/3 / **1/3** |
 | 겹친 것 + 굵게 | 2 → 1 | 2/2 / **1/2** |
 
+**여기서 근거를 한 번 고쳤습니다.** 처음에는 "겹친 `<span>` 은 툴바가 만드는 꼴" 이라고
+적었는데, 그건 재지 않고 가정한 것이었습니다. 브라우저에서 제품 커맨드를 실제로 돌려
+보니 **같은 범위에 셋을 걸면 한 `<span>` 에 몰아넣습니다.**
+
 ```
-<span style="font-family: Georgia"><span style="color: red">글
-합침 → <span style="color: red">글        ← 글꼴이 없어졌습니다
+제품(같은 범위):  <span style="font-family: Georgia; color: rgb(255, 0, 0)">가나다라</span>
 ```
 
-그리고 저 꼴은 남의 것이 아니라 **툴바가 만드는 꼴**입니다. 겹치는 `<span>` 은 보기
-싫을 뿐이고, 잃는 것은 서식입니다. ([`style-marks.test.ts`](../spike/pm-schema/test/style-marks.test.ts))
+이 꼴이면 합쳐도 잃을 것이 없습니다. 겹치는 것은 **범위가 다를 때**입니다 — 전체에
+글꼴을 주고 앞 두 글자에만 색을 주면 그때 겹칩니다.
+
+```
+제품(범위 다름):  <span style="font-family: Georgia"><span style="color: red">가나</span>다라</span>
+
+겹친 글자('가나')에 걸린 스타일
+  나눔: color: rgb(255, 0, 0); font-family: Georgia;
+  합침: color: rgb(255, 0, 0);          ← 겹친 구간에서만 글꼴이 사라집니다
+```
+
+결론은 그대로지만 **이유가 좁아졌습니다.** 합치면 문서가 통째로 망가지는 게 아니라
+**겹치는 구간에서 바깥 속성을 잃습니다.** 그 대신 얻는 것은 겹 하나 줄이는 것뿐이라
+여전히 안 합치는 쪽입니다.
+([`style-marks.test.ts`](../spike/pm-schema/test/style-marks.test.ts) ·
+[`produced.browser.test.ts`](../spike/pm-schema/test/produced.browser.test.ts))
 
 ### 7-2. 인용·코드블록은 **넣습니다**
 
