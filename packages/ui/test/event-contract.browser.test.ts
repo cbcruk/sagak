@@ -5,7 +5,7 @@ import { mountEditor, settle, type MountedEditor } from './harness'
 /**
  * 이벤트 계약 — 요청에는 처리자가 있어야 합니다.
  *
- * ## 76 → 36 종
+ * ## 76 → 33 종
  *
  * 서식 32종이 통째로 없어졌습니다. 굵게·글꼴·정렬·목록·표·이미지·링크가 전부
  * 커맨드가 됐고, 툴바는 커맨드 레지스트리를 직접 부릅니다. 이름이 문자열이던
@@ -74,11 +74,11 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 36종 전부를 덮어야 함', async () => {
+  it('분류가 33종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(36)
+    expect(total).toBe(33)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 

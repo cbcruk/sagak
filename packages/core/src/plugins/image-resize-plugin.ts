@@ -238,7 +238,6 @@ export function createImageResizePlugin(
         const target = e.target as HTMLElement
 
         if (target.tagName === 'IMG') {
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
           showResizeHandles(target as HTMLImageElement)
           eventBus.emit(ImageResizeEvents.IMAGE_RESIZE_START, { image: target })
         } else if (

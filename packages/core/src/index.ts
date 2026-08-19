@@ -82,7 +82,6 @@ export type {
 } from './core/command-map'
 export {
   CoreEvents,
-  HistoryEvents,
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,

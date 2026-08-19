@@ -132,61 +132,93 @@ describe('CommandRegistry', () => {
     })
   })
 
-  describe('runCommand 헬퍼', () => {
-    it('CAPTURE_SNAPSHOT를 발행한 뒤 커맨드를 실행해야 함', () => {
-      const registry = new CommandRegistry(ctx)
-      const order: string[] = []
-      eventBus.on(CoreEvents.CAPTURE_SNAPSHOT, 'on', () => {
-        order.push('snapshot')
-      })
+  describe('runCommand 헬퍼 — 커맨드를 부르는 하나뿐인 문', () => {
+    /**
+     * 커맨드 하나를 돌릴 때마다 되풀이되는 규약을 이 자리에 모았습니다.
+     * 예전에는 스물몇 플러그인이 각자 들고 있었고, 그중 둘(되돌리기 끊기·
+     * 포커스 되돌리기)은 **버스를 한 바퀴 돌아** 편집 영역에 닿았습니다.
+     */
+    const areaStub = () => {
+      const calls: string[] = []
+
+      return {
+        calls,
+        area: {
+          closeHistoryGroup: (): void => {
+            calls.push('closeHistory')
+          },
+          focus: (): void => {
+            calls.push('focus')
+          },
+        },
+      }
+    }
+
+    it('되돌리기를 끊은 뒤에 커맨드를 실행해야 함', () => {
+      const stub = areaStub()
+      const registry = new CommandRegistry({
+        ...ctx,
+        editingAreaManager: {
+          getCurrentArea: () => stub.area,
+        },
+      } as never)
+
       registry.register('bold', () => {
-        order.push('command')
+        stub.calls.push('command')
         return true
       })
 
-      const result = runCommand(registry, eventBus, 'bold')
-      expect(result).toBe(true)
-      expect(order).toEqual(['snapshot', 'command'])
+      expect(runCommand(registry, eventBus, 'bold')).toBe(true)
+      expect(stub.calls).toEqual(['closeHistory', 'command', 'focus'])
     })
 
-    it('커맨드가 성공하면 실행 뒤에 FOCUS_REQUESTED를 발행해야 함', () => {
-      const registry = new CommandRegistry(ctx)
-      const order: string[] = []
-      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
-        order.push('focus')
-      })
-      registry.register('bold', () => {
-        order.push('command')
-        return true
-      })
+    it('커맨드가 실패하면 포커스를 안 되돌려야 함', () => {
+      const stub = areaStub()
+      const registry = new CommandRegistry({
+        ...ctx,
+        editingAreaManager: {
+          getCurrentArea: () => stub.area,
+        },
+      } as never)
 
-      runCommand(registry, eventBus, 'bold')
-      expect(order).toEqual(['command', 'focus'])
-    })
-
-    it('커맨드가 실패하면 FOCUS_REQUESTED를 발행하지 않아야 함', () => {
-      const registry = new CommandRegistry(ctx)
-      let focusCount = 0
-      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
-        focusCount += 1
-      })
       registry.register('bold', () => false)
 
       expect(runCommand(registry, eventBus, 'bold')).toBe(false)
-      expect(focusCount).toBe(0)
+      expect(stub.calls).toEqual(['closeHistory'])
     })
 
-    it('등록되지 않은 커맨드에는 FOCUS_REQUESTED를 발행하지 않아야 함', () => {
+    it('성공하면 무엇이 바뀌었는지 알려야 함', () => {
       const registry = new CommandRegistry(ctx)
-      let focusCount = 0
-      eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
-        focusCount += 1
+      const seen: unknown[] = []
+
+      eventBus.on(CoreEvents.STYLE_CHANGED, 'on', (data) => {
+        seen.push(data)
+      })
+      registry.register('fontName', () => true)
+
+      runCommand(registry, eventBus, 'fontName', 'Georgia')
+
+      expect(seen).toEqual([{ style: 'fontName', value: 'Georgia' }])
+    })
+
+    /**
+     * Why: 한글을 조립하는 중에 서식이 끼어들면 글자가 끊깁니다.
+     * How: 가드가 플러그인마다 있던 것을 이 경계 한 곳으로 모았습니다.
+     */
+    it('조합 중에는 커맨드를 안 돌려야 함', () => {
+      const registry = new CommandRegistry({
+        ...ctx,
+        composition: { isComposing: () => true, destroy: () => {} },
+      })
+      let ran = false
+
+      registry.register('bold', () => {
+        ran = true
+        return true
       })
 
-      expect(runCommand(registry, eventBus, 'insertHorizontalRule')).toBe(
-        false
-      )
-      expect(focusCount).toBe(0)
+      expect(runCommand(registry, eventBus, 'bold')).toBe(false)
+      expect(ran).toBe(false)
     })
   })
 

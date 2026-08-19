@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { cdp, userEvent } from '@vitest/browser/context'
 import { TextSelection } from 'prosemirror-state'
+import { undo, redo } from 'prosemirror-history'
 import { EventBus } from '@/core/event-bus'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
-import { WysiwygEvents, HistoryEvents } from '@/core/events'
+import { WysiwygEvents } from '@/core/events'
 
 /**
  * **한글이 이 이주의 관문입니다.**
@@ -108,10 +109,12 @@ describe('한글 조합 — 제품의 편집 영역에서', () => {
     await composeHan()
     expect(text()).toBe('가나한')
 
-    eventBus.emit(HistoryEvents.UNDO)
+    /* 되돌리기도 커맨드입니다 — 다른 것과 같은 문으로 들어옵니다 */
+    const handle = area.getStateHandle()
+    undo(handle.getState()!, handle.dispatch)
     expect(text()).toBe('가나')
 
-    eventBus.emit(HistoryEvents.REDO)
+    redo(handle.getState()!, handle.dispatch)
     expect(text()).toBe('가나한')
   })
 

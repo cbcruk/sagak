@@ -1,3 +1,4 @@
+import { undo, redo } from 'prosemirror-history'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { CommandRegistry } from '@/core/command-registry'
 import { sagakSchema } from './schema'
@@ -125,6 +126,16 @@ const PLAIN: Record<string, Command> = {
   deleteColumn: commands.deleteColumn,
   deleteTable: commands.deleteTable,
   deleteImage,
+
+  /*
+   * 되돌리기도 커맨드입니다.
+   *
+   * 예전에는 버스의 `UNDO`/`REDO` 를 편집 영역이 듣고 있었습니다. 문서를
+   * 고치는 일인데 다른 문으로 들어왔던 셈이고, 그래서 조합 가드도 따로
+   * 지나지 않았습니다.
+   */
+  undo,
+  redo,
 }
 
 /** 툴바의 눌림 표시가 보는 것들 */

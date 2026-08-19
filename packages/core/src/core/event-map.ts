@@ -1,6 +1,5 @@
 import {
   CoreEvents,
-  HistoryEvents,
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
@@ -138,7 +137,6 @@ export interface EditorEventMap {
   // --- 코어 ---
   [CoreEvents.APP_READY]: void
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
-  [CoreEvents.CAPTURE_SNAPSHOT]: void
   [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
 
@@ -154,8 +152,6 @@ export interface EditorEventMap {
   /** 객체형과 URL 문자열을 모두 받습니다 */
 
   // --- 히스토리 ---
-  [HistoryEvents.UNDO]: void
-  [HistoryEvents.REDO]: void
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: FindPayload
@@ -262,7 +258,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
   [CoreEvents.APP_READY]: 'notify',
   [CoreEvents.STYLE_CHANGED]: 'notify',
-  [CoreEvents.CAPTURE_SNAPSHOT]: 'request',
   [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
 
@@ -275,8 +270,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 콘텐츠 ---
 
   // --- 히스토리 ---
-  [HistoryEvents.UNDO]: 'request',
-  [HistoryEvents.REDO]: 'request',
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: 'request',

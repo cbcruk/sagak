@@ -509,7 +509,6 @@ export function createFindReplacePlugin(
               return false
             }
 
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             const target = currentMatches[currentMatchIndex]
             let tr = current.tr
@@ -591,7 +590,6 @@ export function createFindReplacePlugin(
               return true
             }
 
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             const done = runModelCommand(context, (state, dispatch) => {
               /* 뒤에서부터 갑니다 — 앞쪽 자리가 그대로 유효합니다 */

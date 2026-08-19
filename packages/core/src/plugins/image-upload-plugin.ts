@@ -1,5 +1,4 @@
 import type { Plugin, EditorContext } from '@/core'
-import { CoreEvents } from '@/core'
 import { runModelCommand } from '@/model/bridge'
 import { insertImage } from '@/model/commands'
 
@@ -176,7 +175,6 @@ export function createImageUploadPlugin(
 
         for (const file of Array.from(files)) {
           if (file.type.startsWith('image/')) {
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             await insertImageFromFile(file, context)
           }
         }
@@ -193,7 +191,6 @@ export function createImageUploadPlugin(
             e.preventDefault()
             const file = item.getAsFile()
             if (file) {
-              eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
               await insertImageFromFile(file, context)
             }
             break
@@ -207,7 +204,6 @@ export function createImageUploadPlugin(
         (args?: unknown) => {
           const data = args as { file: File } | undefined
           if (data?.file) {
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
             void insertImageFromFile(data.file, context)
           }
         }

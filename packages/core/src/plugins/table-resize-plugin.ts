@@ -177,7 +177,6 @@ export function createTableResizePlugin(
         if (result) {
           e.preventDefault()
 
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
           const widths = getColumnWidths(table)
 

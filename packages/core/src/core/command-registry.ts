@@ -3,6 +3,7 @@ import { CoreEvents } from './events'
 import type { EventBus } from './event-bus'
 import type { CommandArgs, CommandName } from './command-map'
 import type { CompositionTracker } from './composition'
+import type { EditingArea } from './types'
 
 /**
  * 커맨드 실행 컨텍스트
@@ -11,6 +12,8 @@ import type { CompositionTracker } from './composition'
  */
 export interface CommandContext {
   eventBus: EventBus
+  /** 지금 편집 영역 — 커맨드 경계가 되돌리기·포커스를 챙기는 데 씁니다 */
+  editingAreaManager?: { getCurrentArea(): EditingArea | undefined }
   composition?: CompositionTracker
   element?: HTMLElement
 }
@@ -93,6 +96,11 @@ export class CommandRegistry {
    */
   isComposing(): boolean {
     return this.context.composition?.isComposing() ?? false
+  }
+
+  /** 지금 편집 영역 — 커맨드 경계가 되돌리기·포커스를 챙기는 데 씁니다 */
+  editingArea() {
+    return this.context.editingAreaManager?.getCurrentArea()
   }
 
   /**
@@ -273,13 +281,21 @@ export function runCommand<K extends CommandName>(
     return false
   }
 
-  eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
+  const area = registry.editingArea()
+
+  /* 되돌리기가 여기서 끊깁니다 — 예전에는 버스를 한 바퀴 돌았습니다 */
+  area?.closeHistoryGroup?.()
 
   const result = registry.run(name, ...args)
 
   if (result) {
     eventBus.emit(CoreEvents.STYLE_CHANGED, { style: name, value: args[0] })
-    eventBus.emit(CoreEvents.FOCUS_REQUESTED)
+
+    /*
+     * 툴바 버튼을 누르면 포커스가 그 버튼에 남습니다. 커맨드는 문서 상태로
+     * 도니까 먹긴 하지만, 이어지는 타이핑이 편집 영역에 안 닿습니다.
+     */
+    area?.focus()
   }
 
   return result

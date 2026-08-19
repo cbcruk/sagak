@@ -1,7 +1,6 @@
 import type { Plugin, EditorContext } from '@/core'
 import {
   WysiwygEvents,
-  HistoryEvents,
   createDefaultCommandRegistry,
   runCommand,
 } from '@/core'
@@ -60,12 +59,12 @@ const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { key: 'u', ctrlKey: true, run: 'underline' },
 
   // History
-  { key: 'z', metaKey: true, event: HistoryEvents.UNDO },
-  { key: 'z', ctrlKey: true, event: HistoryEvents.UNDO },
-  { key: 'z', metaKey: true, shiftKey: true, event: HistoryEvents.REDO },
-  { key: 'z', ctrlKey: true, shiftKey: true, event: HistoryEvents.REDO },
-  { key: 'y', metaKey: true, event: HistoryEvents.REDO },
-  { key: 'y', ctrlKey: true, event: HistoryEvents.REDO },
+  { key: 'z', metaKey: true, run: 'undo' },
+  { key: 'z', ctrlKey: true, run: 'undo' },
+  { key: 'z', metaKey: true, shiftKey: true, run: 'redo' },
+  { key: 'z', ctrlKey: true, shiftKey: true, run: 'redo' },
+  { key: 'y', metaKey: true, run: 'redo' },
+  { key: 'y', ctrlKey: true, run: 'redo' },
 ]
 
 /**

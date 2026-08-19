@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { EventBus } from '@/core/event-bus'
 import { TextSelection } from 'prosemirror-state'
-import { undoDepth, redoDepth } from 'prosemirror-history'
+import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -570,14 +570,20 @@ describe('WysiwygArea', () => {
       handle.dispatch(handle.getState()!.tr.insertText(text, 1))
     }
 
+    /** 되돌리기도 커맨드입니다 — 다른 것과 같은 문으로 들어옵니다 */
+    const history = (command: typeof undo): void => {
+      const handle = wysiwygArea.getStateHandle()
+      command(handle.getState()!, handle.dispatch)
+    }
+
     it('되돌리고 다시 합니다', () => {
       type('가나')
       expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
 
-      eventBus.emit('UNDO')
+      history(undo)
       expect(wysiwygArea.getRawContent()).toBe('<p></p>')
 
-      eventBus.emit('REDO')
+      history(redo)
       expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
     })
 
@@ -599,7 +605,7 @@ describe('WysiwygArea', () => {
       type('가')
       expect(depth()).toEqual({ undo: 1, redo: 0 })
 
-      eventBus.emit('UNDO')
+      history(undo)
       expect(depth()).toEqual({ undo: 0, redo: 1 })
     })
 
@@ -611,7 +617,7 @@ describe('WysiwygArea', () => {
       type('가나')
       wysiwygArea.setRawContent('<p>다른 문서</p>')
 
-      eventBus.emit('UNDO')
+      history(undo)
 
       expect(wysiwygArea.getRawContent()).toBe('<p>다른 문서</p>')
     })

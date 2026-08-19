@@ -163,7 +163,6 @@ export function createAutoSavePlugin(
       const replaceContent = (next: string): void => {
         if (readContent() === next) return
 
-        eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
         writeContent(next)
       }
 

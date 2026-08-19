@@ -144,6 +144,11 @@ export interface EditingArea {
   getHighlighter?(): Highlighter
 
   /**
+   * 되돌리기 기록을 여기서 끊습니다 — 커맨드 경계가 부릅니다
+   */
+  closeHistoryGroup?(): void
+
+  /**
    * 상태가 바뀔 때마다 알립니다 — 자기 문서를 소유하는 영역만 있습니다.
    *
    * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이라, 구독하는 쪽이 DOM 이벤트를

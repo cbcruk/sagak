@@ -45,6 +45,10 @@ export interface CommandMap {
   insertUnorderedList: void
   insertOrderedList: void
 
+  /* 되돌리기 — 문서를 고치는 일이라 다른 커맨드와 같은 문으로 들어옵니다 */
+  undo: void
+  redo: void
+
   /* 넣기 */
   insertHorizontalRule: void
   insertText: string

@@ -24,7 +24,6 @@ export const CoreEvents = {
    * 히스토리 스냅샷 캡처 요청
    * 스타일 적용 등 즉시 스냅샷이 필요할 때 발행
    */
-  CAPTURE_SNAPSHOT: 'CAPTURE_SNAPSHOT',
 
   /**
    * 편집 영역으로 포커스 복귀 요청
@@ -53,14 +52,6 @@ export const CoreEvents = {
  * 남은 이벤트는 **커맨드가 아닌 것들**입니다 — 되돌리기·찾기·자동 저장·
  * 자동 완성처럼 상태나 흐름을 다루는 일, 그리고 밖에서 붙을 확장점.
  */
-
-/**
- * 히스토리 플러그인 이벤트 (기본값)
- */
-export const HistoryEvents = {
-  UNDO: 'UNDO',
-  REDO: 'REDO',
-} as const
 
 /**
  * 찾기/바꾸기 플러그인 이벤트 (기본값)
@@ -148,7 +139,6 @@ export const ImageUploadEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...HistoryEvents,
   ...FindReplaceEvents,
   ...AutocompleteEvents,
   ...EditingAreaEvents,
