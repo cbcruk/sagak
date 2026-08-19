@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { BoldPlugin } from '@/plugins/bold-plugin'
 import { ItalicPlugin } from '@/plugins/italic-plugin'
 import { UnderlinePlugin } from '@/plugins/underline-plugin'
@@ -9,34 +11,25 @@ import { StrikePlugin } from '@/plugins/strike-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('다중 플러그인 등록 (여러 플러그인 초기화)', () => {
@@ -93,7 +86,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('여러 스타일을 순차적으로 적용해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 3개 스타일 순차 적용
@@ -102,9 +95,9 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
       eventBus.emit('UNDERLINE_CLICKED')
 
       // Then: 각 스타일에 대해 execCommand가 올바른 순서로 호출되어야 함
-      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'bold', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'italic', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'underline', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'bold', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'italic', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'underline', undefined)
       expect(execCommandSpy).toHaveBeenCalledTimes(3)
 
       execCommandSpy.mockRestore()
@@ -112,7 +105,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
 
     it('각 스타일마다 개별 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand Mock과 STYLE_CHANGED 리스너 설정
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -134,7 +127,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('4가지 스타일을 모두 함께 적용해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 모든 스타일 적용
@@ -167,7 +160,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('조합 중 모든 텍스트 스타일 명령을 차단해야 함', () => {
       // Given: console.warn Mock과 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -194,7 +187,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('조합 종료 후 모든 명령을 허용해야 함', () => {
       // Given: execCommand Mock과 조합 시작 후 종료
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -249,7 +242,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
       await pluginManager.register(StrikePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       pluginManager.destroyAll()
@@ -288,7 +281,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
         .mockImplementation(() => {})
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockImplementation((command) => {
           if (command === 'bold') throw new Error('Bold failed')
           if (command === 'italic') return true
@@ -318,7 +311,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
         .mockImplementation(() => {})
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockImplementationOnce(() => {
           throw new Error('Failed')
         })
@@ -352,7 +345,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
 
     it('여러 플러그인에서 단계를 올바른 순서로 실행해야 함', () => {
       // Given: execCommand Mock과 실행 순서 추적 설정
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const executionOrder: string[] = []
 
@@ -415,7 +408,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('서식 도구 모음 클릭 순서를 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 Bold → Italic → Bold(토글) → Underline 순서로 클릭
@@ -426,10 +419,10 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
 
       // Then: 모든 클릭이 올바른 순서로 처리되어야 함
       expect(execCommandSpy).toHaveBeenCalledTimes(4)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'bold', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'italic', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'bold', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(4, 'underline', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'bold', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'italic', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'bold', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(4, 'underline', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -437,7 +430,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('키보드 단축키 시뮬레이션을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: Ctrl+B, Ctrl+I, Ctrl+U 단축키 시뮬레이션
@@ -454,7 +447,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
     it('빠른 연속 클릭을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: Bold를 10번 연속 클릭 (더블클릭 또는 실수 클릭)

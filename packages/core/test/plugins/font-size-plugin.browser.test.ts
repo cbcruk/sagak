@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import {
   createFontSizePlugin,
   FontSizePlugin,
@@ -9,34 +11,25 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('FontSizePlugin (글자 크기 설정)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -85,14 +78,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
     it('제공된 크기로 fontSize 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: FONT_SIZE_CHANGED 이벤트 발생
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })
@@ -115,14 +101,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it.each([['9px'], ['15px'], ['36px'], ['1.5rem'], ['120%']])(
       'CSS 길이 %s 를 그대로 먹여야 함',
       (value) => {
-        const textNode = element.firstChild!.firstChild as Text
-        const range = document.createRange()
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, 5)
-
-        const selection = window.getSelection()!
-        selection.removeAllRanges()
-        selection.addRange(range)
+      ed.selectAll()
 
         const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: value })
 
@@ -137,14 +116,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
      * 1~7 을 들이대면 `24px` 이 "범위 밖" 으로 막힙니다.
      */
     it('CSS 길이에는 1–7 범위 검사를 걸지 않아야 함', () => {
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: '48px' })
 
@@ -153,7 +125,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
     it('크기 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -171,7 +143,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: execCommand가 실패하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -187,7 +159,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('모든 유효한 글자 크기(1-7)를 처리해야 함', () => {
       // Given: execCommand가 성공하는 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 모든 유효한 크기(1-7)로 이벤트 발생
@@ -199,9 +171,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       expect(execCommandSpy).toHaveBeenCalledTimes(7)
       for (let size = 1; size <= 7; size++) {
         expect(execCommandSpy).toHaveBeenCalledWith(
-          'fontSize',
-          false,
-          String(size)
+          'fontSize', String(size)
         )
       }
 
@@ -222,7 +192,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('fontSize가 제공되지 않으면 차단해야 함', () => {
       // Given: fontSize가 없는 이벤트 데이터
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: fontSize 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -243,7 +213,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       // Given: 데이터 없이 이벤트
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 데이터 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -261,7 +231,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('숫자가 아닌 글자 크기를 차단해야 함', () => {
       // Given: 문자열 fontSize
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 문자열 fontSize로 이벤트 발생
       const result = eventBus.emit('FONT_SIZE_CHANGED', {
@@ -282,7 +252,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('최소값 미만의 글자 크기를 차단해야 함', () => {
       // Given: 범위 미만의 fontSize
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 0 fontSize로 이벤트 발생
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 0 })
@@ -301,7 +271,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('최대값 초과의 글자 크기를 차단해야 함', () => {
       // Given: 범위 초과의 fontSize
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 8 fontSize로 이벤트 발생
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 8 })
@@ -326,16 +296,12 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
         maxSize: 10,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: fontSize: 0으로 이벤트 발생
@@ -363,7 +329,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('IME 입력 중에는 글자 크기 변경을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -385,7 +351,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
     it('조합 종료 후에는 글자 크기 변경을 허용해야 함', () => {
       // Given: IME 조합이 종료된 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -410,16 +376,12 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
         checkComposition: false,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -453,7 +415,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -483,7 +445,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       await pluginManager.register(FontSizePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })
@@ -516,7 +478,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발생
@@ -524,7 +486,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
       // Then: 글자 크기 명령이 실행됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('fontSize', false, '5')
+      expect(execCommandSpy).toHaveBeenCalledWith('fontSize', '5')
 
       execCommandSpy.mockRestore()
     })

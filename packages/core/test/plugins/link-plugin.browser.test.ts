@@ -2,38 +2,31 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { createLinkPlugin, LinkPlugin } from '@/plugins/link-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('LinkPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -84,13 +77,7 @@ describe('LinkPlugin', () => {
 
     it('should execute createLink command with URL object', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: URL 객체로 LINK_CHANGED 이벤트 발행
       const result = eventBus.emit('LINK_CHANGED', {
@@ -106,13 +93,7 @@ describe('LinkPlugin', () => {
 
     it('should execute createLink command with direct URL string', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 직접 URL 문자열로 LINK_CHANGED 이벤트 발행
       const result = eventBus.emit('LINK_CHANGED', 'https://example.com')
@@ -125,7 +106,7 @@ describe('LinkPlugin', () => {
 
     it('should emit STYLE_CHANGED event after successful link creation', () => {
       // Given: execCommand mock과 이벤트 리스너 준비
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -143,7 +124,7 @@ describe('LinkPlugin', () => {
 
     it('should not emit STYLE_CHANGED if execCommand fails', () => {
       // Given: execCommand가 실패하도록 mock 설정
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -170,25 +151,24 @@ describe('LinkPlugin', () => {
 
     it('should execute unlink command', () => {
       // Given: execCommand spy와 텍스트 선택 준비
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: LINK_REMOVED 이벤트 발행
       const result = eventBus.emit('LINK_REMOVED')
 
-      // Then: 링크 없이 성공해야 함 (링크가 없으면 no-op)
-      expect(result).toBe(true)
+      /*
+       * Then: **벗길 링크가 없으면 false** 입니다.
+       *
+       * `execCommand('unlink')` 는 아무것도 안 하고 성공이라 답했습니다.
+       * 모델 커맨드는 "할 수 있었는가" 를 답하므로 없으면 false 입니다.
+       */
+      expect(result).toBe(false)
       expect(element.querySelector('a')).toBeNull()
     })
 
     it('should emit STYLE_CHANGED event after successful unlink', () => {
       // Given: execCommand mock과 이벤트 리스너 준비
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -220,7 +200,7 @@ describe('LinkPlugin', () => {
     it('should accept valid HTTPS URLs', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 유효한 HTTPS URL들로 이벤트 발행
@@ -239,7 +219,7 @@ describe('LinkPlugin', () => {
     it('should accept valid HTTP URLs', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: HTTP URL로 이벤트 발행
@@ -254,7 +234,7 @@ describe('LinkPlugin', () => {
     it('should accept mailto links', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: mailto URL로 이벤트 발행
@@ -269,7 +249,7 @@ describe('LinkPlugin', () => {
     it('should accept tel links', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: tel URL로 이벤트 발행
@@ -284,7 +264,7 @@ describe('LinkPlugin', () => {
     it('should accept relative URLs', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 상대 경로 URL들로 이벤트 발행
@@ -301,7 +281,7 @@ describe('LinkPlugin', () => {
     it('should reject invalid URLs when validation is enabled', () => {
       // Given: console.warn spy와 execCommand spy 준비
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 위험한 URL로 이벤트 발행
       eventBus.emit('LINK_CHANGED', { url: 'javascript:alert(1)' })
@@ -320,7 +300,7 @@ describe('LinkPlugin', () => {
     it('should block when no URL is provided', () => {
       // Given: console.warn spy와 execCommand spy 준비
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: URL 없이 이벤트 발행
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -337,7 +317,7 @@ describe('LinkPlugin', () => {
     it('should block when data is undefined', () => {
       // Given: console.warn spy와 execCommand spy 준비
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 데이터 없이 이벤트 발행
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -364,17 +344,13 @@ describe('LinkPlugin', () => {
       const customPlugin = createLinkPlugin({
         requireProtocol: true,
       })
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 프로토콜이 있는 URL과 없는 URL로 이벤트 발행
@@ -397,17 +373,13 @@ describe('LinkPlugin', () => {
       const customPlugin = createLinkPlugin({
         allowedProtocols: ['https:'],
       })
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 허용된 프로토콜과 허용되지 않은 프로토콜로 이벤트 발행
@@ -431,16 +403,12 @@ describe('LinkPlugin', () => {
       const customPlugin = createLinkPlugin({
         validateUrl: false,
       })
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 유효하지 않은 URL로 이벤트 발행
@@ -468,7 +436,7 @@ describe('LinkPlugin', () => {
     it('should block link creation during IME composition', () => {
       // Given: console.warn spy와 execCommand spy 준비, IME 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -492,7 +460,7 @@ describe('LinkPlugin', () => {
     it('should block unlink during IME composition', () => {
       // Given: console.warn spy와 execCommand spy 준비, IME 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -514,7 +482,7 @@ describe('LinkPlugin', () => {
     it('should allow link operations after composition ends', () => {
       // Given: execCommand mock 준비, IME 조합 시작 후 종료
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -551,7 +519,7 @@ describe('LinkPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -577,7 +545,7 @@ describe('LinkPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -607,7 +575,7 @@ describe('LinkPlugin', () => {
       await pluginManager.register(LinkPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('LINK_CHANGED', { url: 'https://example.com' })
@@ -643,7 +611,7 @@ describe('LinkPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -652,11 +620,9 @@ describe('LinkPlugin', () => {
 
       // Then: 커스텀 이벤트가 처리되어야 함
       expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'https://example.com'
+        'createLink', 'https://example.com'
       )
-      expect(execCommandSpy).toHaveBeenCalledWith('unlink', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('unlink', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -676,7 +642,7 @@ describe('LinkPlugin', () => {
     it('should create external link', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 외부 링크 생성
@@ -684,9 +650,7 @@ describe('LinkPlugin', () => {
 
       // Then: createLink가 호출되어야 함
       expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'https://example.com'
+        'createLink', 'https://example.com'
       )
 
       execCommandSpy.mockRestore()
@@ -695,7 +659,7 @@ describe('LinkPlugin', () => {
     it('should create email link', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 이메일 링크 생성
@@ -703,9 +667,7 @@ describe('LinkPlugin', () => {
 
       // Then: createLink가 호출되어야 함
       expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'mailto:test@example.com'
+        'createLink', 'mailto:test@example.com'
       )
 
       execCommandSpy.mockRestore()
@@ -714,7 +676,7 @@ describe('LinkPlugin', () => {
     it('should create phone link', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 전화번호 링크 생성
@@ -722,9 +684,7 @@ describe('LinkPlugin', () => {
 
       // Then: createLink가 호출되어야 함
       expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        'tel:+1234567890'
+        'createLink', 'tel:+1234567890'
       )
 
       execCommandSpy.mockRestore()
@@ -733,7 +693,7 @@ describe('LinkPlugin', () => {
     it('should create internal/relative link', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 상대 경로 링크 생성
@@ -741,9 +701,7 @@ describe('LinkPlugin', () => {
 
       // Then: createLink가 호출되어야 함
       expect(execCommandSpy).toHaveBeenCalledWith(
-        'createLink',
-        false,
-        '/docs/guide'
+        'createLink', '/docs/guide'
       )
 
       execCommandSpy.mockRestore()
@@ -752,7 +710,7 @@ describe('LinkPlugin', () => {
     it('should handle link edit by creating new link', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 링크 생성 후 수정
@@ -768,7 +726,7 @@ describe('LinkPlugin', () => {
     it('should handle link removal', () => {
       // Given: execCommand mock 준비
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 링크 생성 후 삭제
@@ -780,10 +738,9 @@ describe('LinkPlugin', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'createLink',
-        false,
         'https://example.com'
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'unlink', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'unlink', undefined)
 
       execCommandSpy.mockRestore()
     })

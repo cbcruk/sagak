@@ -4,7 +4,6 @@ import {
   runCommand,
   type CommandContext,
 } from '@/core/command-registry'
-import { registerLegacyExecCommands } from '@/core/legacy-exec-command'
 import { EventBus } from '@/core/event-bus'
 import { CoreEvents } from '@/core/events'
 
@@ -189,48 +188,50 @@ describe('CommandRegistry', () => {
     })
   })
 
-  describe('registerLegacyExecCommands', () => {
-    it('run은 document.execCommand에 위임해야 함', () => {
-      const spy = vi
-        .spyOn(document, 'execCommand')
-        .mockReturnValue(true)
+  /**
+   * precedence 체인 자체를 잽니다.
+   *
+   * 예전에는 이 자리에 `registerLegacyExecCommands` 가 있었습니다 —
+   * `document.execCommand` 로 된 최하위 폴백이었고, 그 위에 자체 구현이
+   * 얹히는 것을 여기서 확인했습니다. 그 층은 **모델이 늘 먼저 답하게 되면서
+   * 한 번도 안 잡혀** 지웠습니다 (`test/model/command-layers.browser.test.ts`).
+   *
+   * 체인 규약은 그대로 살아 있으므로 층을 흉내 내 잽니다.
+   */
+  describe('precedence 체인', () => {
+    it('높은 층이 낮은 층을 가립니다', () => {
       const registry = new CommandRegistry(ctx)
-      registerLegacyExecCommands(registry)
+      const low = vi.fn(() => true)
+
+      registry.register('bold', low, -100)
+      registry.register('bold', () => true, 100)
 
       expect(registry.run('bold')).toBe(true)
-      expect(spy).toHaveBeenCalledWith('bold', false)
+      expect(low).not.toHaveBeenCalled()
     })
 
-    it('값이 있으면 execCommand 3번째 인자로 전달해야 함', () => {
-      const spy = vi
-        .spyOn(document, 'execCommand')
-        .mockReturnValue(true)
+    /**
+     * `undefined` 는 **"처리하지 않았다"** 입니다. 모델 커맨드가 상태 없이
+     * 불렸을 때 이 답을 주고, 그래서 아래 층이 이어받습니다.
+     */
+    it('처리하지 않으면 아래 층으로 넘어갑니다', () => {
       const registry = new CommandRegistry(ctx)
-      registerLegacyExecCommands(registry)
+      const low = vi.fn(() => true)
 
-      registry.run('foreColor', '#ff0000')
-      expect(spy).toHaveBeenCalledWith('foreColor', false, '#ff0000')
+      registry.register('bold', low, -100)
+      registry.register('bold', () => undefined, 100)
+
+      expect(registry.run('bold')).toBe(true)
+      expect(low).toHaveBeenCalled()
     })
 
-    it('queryState는 document.queryCommandState에 위임해야 함', () => {
-      const spy = vi
-        .spyOn(document, 'queryCommandState')
-        .mockReturnValue(true)
+    it('값 조회도 같은 규약을 씁니다', () => {
       const registry = new CommandRegistry(ctx)
-      registerLegacyExecCommands(registry)
 
-      expect(registry.queryState('italic')).toBe(true)
-      expect(spy).toHaveBeenCalledWith('italic')
-    })
+      registry.registerValueQuery('fontSize', () => '15px', 0)
+      registry.registerValueQuery('fontSize', () => undefined, 100)
 
-    it('자체 구현이 더 높은 precedence로 레거시를 오버라이드해야 함', () => {
-      const spy = vi.spyOn(document, 'execCommand').mockReturnValue(true)
-      const registry = new CommandRegistry(ctx)
-      registerLegacyExecCommands(registry)
-      registry.register('bold', () => true, 0) // 레거시(-100)보다 높음
-
-      registry.run('bold')
-      expect(spy).not.toHaveBeenCalled()
+      expect(registry.queryValue('fontSize')).toBe('15px')
     })
   })
 })

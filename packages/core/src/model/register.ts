@@ -40,6 +40,29 @@ export interface StateHandle {
 
 const marks = sagakSchema.marks
 
+/**
+ * `formatBlock` — 제목과 문단.
+ *
+ * 값이 `'<h2>'` 같은 꼴로 옵니다. `execCommand` 시절의 계약이라 그대로 받고,
+ * 여기서 모델 커맨드로 옮깁니다. 이 이름이 모델에 없던 동안 **제목만 아래
+ * 층으로 새어 나가고 있었습니다** — 툴바 커맨드 중 마지막 하나였습니다.
+ */
+function formatBlock(value: string): Command {
+  const tag = value.replace(/[<>]/g, '').toLowerCase()
+  const heading = /^h([1-6])$/.exec(tag)
+
+  if (heading) {
+    return commands.heading(Number(heading[1]))
+  }
+
+  if (tag === 'p' || tag === 'div') {
+    return commands.paragraph
+  }
+
+  /* 모르는 태그는 처리하지 않습니다 */
+  return () => false
+}
+
 /** 값을 받는 커맨드들 — 인자가 없으면 아무것도 안 합니다 */
 const WITH_VALUE: Record<string, (value: string) => Command> = {
   fontName: commands.fontName,
@@ -49,6 +72,7 @@ const WITH_VALUE: Record<string, (value: string) => Command> = {
   letterSpacing: commands.letterSpacing,
   lineHeight: commands.lineHeight,
   createLink,
+  formatBlock,
 }
 
 const PLAIN: Record<string, Command> = {
@@ -85,14 +109,28 @@ const STATE_QUERIES: Record<string, (state: EditorState) => boolean> = {
   createLink: (state) => !!linkAt(state),
 }
 
-/** 툴바의 셀렉트가 보는 것들 */
-const VALUE_QUERIES: Record<string, (state: EditorState) => string> = {
-  fontName: (state) => markValue(state, marks.fontFamily) ?? '',
-  fontSize: (state) => markValue(state, marks.fontSize) ?? '',
-  foreColor: (state) => markValue(state, marks.textColor) ?? '',
-  backColor: (state) => markValue(state, marks.backgroundColor) ?? '',
-  letterSpacing: (state) => markValue(state, marks.letterSpacing) ?? '',
-  lineHeight: (state) => blockAttr(state, 'lineHeight') ?? '',
+/**
+ * 툴바의 셀렉트가 보는 것들.
+ *
+ * **`undefined` 를 돌려주는 것이 뜻이 있습니다.** 문서에 그 값이 안 걸려 있다는
+ * 뜻이고, 그러면 아래 precedence 로 넘어가 **화면에 실제로 그려진 값**이
+ * 답합니다 (`native-query.ts` 의 `getComputedStyle`).
+ *
+ * 글자 크기가 그렇습니다. 서식 없는 글은 스타일시트가 정한 15px 로 그려지는데
+ * 모델에는 그런 마크가 없습니다. 여기서 빈 문자열을 주면 툴바가 기본값을
+ * 가리켜, **가장 흔한 경우가 가장 크게 틀립니다.**
+ */
+const VALUE_QUERIES: Record<
+  string,
+  (state: EditorState) => string | undefined
+> = {
+  fontName: (state) => markValue(state, marks.fontFamily),
+  fontSize: (state) => markValue(state, marks.fontSize),
+  fontSizeCss: (state) => markValue(state, marks.fontSize),
+  foreColor: (state) => markValue(state, marks.textColor),
+  backColor: (state) => markValue(state, marks.backgroundColor),
+  letterSpacing: (state) => markValue(state, marks.letterSpacing),
+  lineHeight: (state) => blockAttr(state, 'lineHeight') ?? undefined,
 }
 
 /**

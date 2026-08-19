@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import {
   createFontFamilyPlugin,
   FontFamilyPlugin,
@@ -9,34 +11,25 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('FontFamilyPlugin (글꼴 설정)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -84,14 +77,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
 
     it('제공된 글꼴로 fontName 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: FONT_FAMILY_CHANGED 이벤트 발생
       const result = eventBus.emit('FONT_FAMILY_CHANGED', {
@@ -107,7 +93,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
 
     it('글꼴 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -125,7 +111,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: execCommand가 실패하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -141,7 +127,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
     it('여러 글꼴을 처리해야 함', () => {
       // Given: execCommand가 성공하는 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
       const fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Courier New']
 
@@ -156,7 +142,6 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         expect(execCommandSpy).toHaveBeenNthCalledWith(
           index + 1,
           'fontName',
-          false,
           font
         )
       })
@@ -178,7 +163,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
     it('fontFamily가 제공되지 않으면 차단해야 함', () => {
       // Given: fontFamily가 없는 이벤트 데이터
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: fontFamily 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -198,7 +183,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
     it('data가 undefined면 차단해야 함', () => {
       // Given: 데이터 없이 이벤트
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 데이터 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -228,16 +213,12 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         allowedFonts: ['Arial', 'Helvetica', 'Times New Roman'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 허용된 글꼴로 이벤트 발생
@@ -261,16 +242,12 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         allowedFonts: ['Arial', 'Helvetica'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 허용되지 않은 글꼴로 이벤트 발생
       const result = eventBus.emit('FONT_FAMILY_CHANGED', {
@@ -303,7 +280,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
     it('IME 입력 중에는 글꼴 변경을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -327,7 +304,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
     it('조합 종료 후에는 글꼴 변경을 허용해야 함', () => {
       // Given: IME 조합이 종료된 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -354,16 +331,12 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         checkComposition: false,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -399,7 +372,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -431,7 +404,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
       await pluginManager.register(FontFamilyPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('FONT_FAMILY_CHANGED', { fontFamily: 'Arial' })
@@ -464,7 +437,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발생
@@ -472,7 +445,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
 
       // Then: 글꼴 명령이 실행됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('fontName', false, 'Arial')
+      expect(execCommandSpy).toHaveBeenCalledWith('fontName', 'Arial')
 
       execCommandSpy.mockRestore()
     })

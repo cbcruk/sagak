@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import {
   createAlignmentPlugin,
   AlignmentPlugin,
@@ -9,34 +11,25 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('AlignmentPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -83,14 +76,7 @@ describe('AlignmentPlugin', () => {
 
     it('왼쪽 정렬 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 왼쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'left' })
@@ -103,14 +89,7 @@ describe('AlignmentPlugin', () => {
 
     it('가운데 정렬 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 가운데 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'center' })
@@ -123,14 +102,7 @@ describe('AlignmentPlugin', () => {
 
     it('오른쪽 정렬 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 오른쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'right' })
@@ -143,14 +115,7 @@ describe('AlignmentPlugin', () => {
 
     it('양쪽 정렬 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 양쪽 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'justify' })
@@ -164,7 +129,7 @@ describe('AlignmentPlugin', () => {
     it('모든 정렬 타입을 지원해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 모든 정렬 타입 이벤트 발행
@@ -175,24 +140,17 @@ describe('AlignmentPlugin', () => {
 
       // Then: 각 정렬에 맞는 명령이 실행되어야 함
       expect(execCommandSpy).toHaveBeenCalledTimes(4)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'justifyLeft', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'justifyRight', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(4, 'justifyFull', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'justifyLeft', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'justifyRight', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(4, 'justifyFull', undefined)
 
       execCommandSpy.mockRestore()
     })
 
     it('객체 래퍼 없이 직접 문자열을 허용해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 문자열 형태로 정렬 이벤트 발행
       const result = eventBus.emit('ALIGNMENT_CHANGED', 'center')
@@ -205,7 +163,7 @@ describe('AlignmentPlugin', () => {
 
     it('정렬 변경 성공 후 STYLE_CHANGED 이벤트를 발행해야 함', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -224,7 +182,7 @@ describe('AlignmentPlugin', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발행하지 않아야 함', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -252,7 +210,7 @@ describe('AlignmentPlugin', () => {
     it('유효하지 않은 정렬 타입을 거부해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 유효하지 않은 정렬 타입 전달
       eventBus.emit('ALIGNMENT_CHANGED', { align: 'invalid' })
@@ -270,7 +228,7 @@ describe('AlignmentPlugin', () => {
     it('정렬이 제공되지 않으면 차단해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 빈 객체 전달
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -289,7 +247,7 @@ describe('AlignmentPlugin', () => {
     it('데이터가 undefined일 때 차단해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: undefined 전달
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -318,16 +276,12 @@ describe('AlignmentPlugin', () => {
         allowedAlignments: ['left', 'center', 'right'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 허용 목록에 있는 정렬 적용
@@ -349,16 +303,12 @@ describe('AlignmentPlugin', () => {
         allowedAlignments: ['left', 'center'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 허용 목록에 없는 정렬 적용 시도
       const result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'justify' })
@@ -389,7 +339,7 @@ describe('AlignmentPlugin', () => {
     it('IME 입력 중에는 정렬 변경을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -411,7 +361,7 @@ describe('AlignmentPlugin', () => {
     it('조합 종료 후에는 정렬 변경을 허용해야 함', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -445,7 +395,7 @@ describe('AlignmentPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -475,7 +425,7 @@ describe('AlignmentPlugin', () => {
       await pluginManager.register(AlignmentPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('ALIGNMENT_CHANGED', { align: 'center' })
@@ -510,7 +460,7 @@ describe('AlignmentPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -518,7 +468,7 @@ describe('AlignmentPlugin', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyRight', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('justifyRight', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -537,7 +487,7 @@ describe('AlignmentPlugin', () => {
     it('정렬 도구 모음 버튼을 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 툴바 버튼 클릭
@@ -554,7 +504,7 @@ describe('AlignmentPlugin', () => {
     it('빠른 정렬 변경을 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 빠르게 정렬 변경
@@ -572,7 +522,7 @@ describe('AlignmentPlugin', () => {
     it('정렬을 위한 키보드 단축키를 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 키보드 단축키로 정렬 변경
@@ -589,14 +539,14 @@ describe('AlignmentPlugin', () => {
     it('공식 문서용 양쪽 정렬을 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 양쪽 정렬 적용
       eventBus.emit('ALIGNMENT_CHANGED', { align: 'justify' })
 
       // Then: justifyFull 명령이 실행되어야 함
-      expect(execCommandSpy).toHaveBeenCalledWith('justifyFull', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('justifyFull', undefined)
 
       execCommandSpy.mockRestore()
     })

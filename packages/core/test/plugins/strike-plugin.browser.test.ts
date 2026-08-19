@@ -2,38 +2,31 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { createStrikePlugin, StrikePlugin } from '@/plugins/strike-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -80,14 +73,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
 
     it('STRIKE_CLICKED 이벤트에서 취소선 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: STRIKE_CLICKED 이벤트 발생
       const result = eventBus.emit('STRIKE_CLICKED')
@@ -99,7 +85,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
 
     it('취소선 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -114,7 +100,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: execCommand가 실패하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -141,7 +127,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
     it('IME 입력 중에는 취소선을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -163,7 +149,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
     it('조합 종료 후에는 취소선을 허용해야 함', () => {
       // Given: IME 조합이 종료된 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -188,16 +174,12 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
         checkComposition: false,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -227,7 +209,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
 
     it('3단계(BEFORE/ON/AFTER)를 모두 실행해야 함', () => {
       // Given: 각 단계별 리스너 등록
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const beforeSpy = vi.fn().mockReturnValue(true)
       const onSpy = vi.fn().mockReturnValue(true)
@@ -282,7 +264,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발생
@@ -290,7 +272,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
 
       // Then: 취소선 명령이 실행됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('strikeThrough', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('strikeThrough', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -302,7 +284,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
       })
       await pluginManager.register(customPlugin)
 
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 기본 이벤트 발생
       eventBus.emit('STRIKE_CLICKED')
@@ -330,7 +312,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -360,7 +342,7 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
       await pluginManager.register(StrikePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('STRIKE_CLICKED')
@@ -414,15 +396,12 @@ describe('StrikePlugin (취소선 텍스트 스타일 적용)', () => {
       // Given: SelectionManager 없는 컨텍스트
       pluginManager.destroyAll()
 
-      const contextWithoutSM = {
-        eventBus,
-        config: {},
-      }
+      const contextWithoutSM = { ...context, selectionManager: undefined }
       const managerWithoutSM = new PluginManager(contextWithoutSM)
       await managerWithoutSM.register(StrikePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 이벤트 발생

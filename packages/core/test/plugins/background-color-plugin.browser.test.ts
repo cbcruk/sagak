@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import {
   createBackgroundColorPlugin,
   BackgroundColorPlugin,
@@ -9,34 +11,25 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('BackgroundColorPlugin (배경 색상 설정)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -85,14 +78,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('hex 색상으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: hex 색상으로 BACKGROUND_COLOR_CHANGED 이벤트 발생
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {
@@ -108,14 +94,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('rgb 색상으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: rgb 색상으로 BACKGROUND_COLOR_CHANGED 이벤트 발생
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {
@@ -130,14 +109,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('색상 이름으로 backColor 명령을 실행해야 함', () => {
       // Given: execCommand spy 설정과 텍스트 선택
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 색상 이름으로 BACKGROUND_COLOR_CHANGED 이벤트 발생
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {
@@ -152,7 +124,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('색상 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하도록 모킹
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -171,7 +143,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: execCommand가 실패하도록 모킹
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -200,7 +172,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('유효한 hex 색상(#RRGGBB)을 허용해야 함', () => {
       // Given: execCommand를 성공으로 모킹
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 여러 hex 색상으로 이벤트 발생
@@ -217,7 +189,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('유효한 hex 색상(#RGB)을 허용해야 함', () => {
       // Given: execCommand를 성공으로 모킹
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 짧은 hex 색상으로 이벤트 발생
@@ -234,7 +206,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('유효한 rgb 색상을 허용해야 함', () => {
       // Given: execCommand를 성공으로 모킹
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: rgb 색상으로 이벤트 발생
@@ -250,7 +222,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('유효한 rgba 색상을 허용해야 함', () => {
       // Given: execCommand를 성공으로 모킹
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: rgba 색상으로 이벤트 발생
@@ -267,7 +239,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('색상 이름을 허용해야 함', () => {
       // Given: execCommand를 성공으로 모킹
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 색상 이름으로 이벤트 발생
@@ -284,7 +256,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('유효하지 않은 색상 형식을 거부해야 함', () => {
       // Given: console.warn과 execCommand spy 설정
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 잘못된 색상 형식으로 이벤트 발생
       eventBus.emit('BACKGROUND_COLOR_CHANGED', { color: '#GG0000' })
@@ -306,16 +278,12 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         validateFormat: false,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 잘못된 형식으로 이벤트 발생
@@ -343,16 +311,12 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         allowedColors: ['#FFFF00', '#00FFFF', '#FF00FF'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 허용 목록의 색상으로 이벤트 발생
@@ -376,16 +340,12 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         allowedColors: ['#FFFF00', '#00FFFF'],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 허용 목록에 없는 색상으로 이벤트 발생
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {
@@ -419,7 +379,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('색상이 제공되지 않으면 차단해야 함', () => {
       // Given: console.warn과 execCommand spy 설정
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 색상 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -439,7 +399,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('data가 undefined면 차단해야 함', () => {
       // Given: console.warn과 execCommand spy 설정
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: data 없이 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -469,7 +429,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('IME 입력 중에는 색상 변경을 차단해야 함', () => {
       // Given: IME 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -493,7 +453,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
     it('조합 종료 후에는 색상 변경을 허용해야 함', () => {
       // Given: IME 조합 시작 후 종료
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -530,7 +490,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -562,7 +522,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
       await pluginManager.register(BackgroundColorPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 플러그인 활성화 상태에서 이벤트 발생
@@ -600,7 +560,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발생
@@ -608,7 +568,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
       // Then: 이벤트가 처리됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('backColor', false, '#FFFF00')
+      expect(execCommandSpy).toHaveBeenCalledWith('backColor', '#FFFF00')
 
       execCommandSpy.mockRestore()
     })

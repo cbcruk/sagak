@@ -41,6 +41,23 @@ export type Command = (
 const marks = sagakSchema.marks
 const nodes = sagakSchema.nodes
 
+/**
+ * `execCommand` 시절의 1–7 스케일을 CSS 로 폅니다.
+ *
+ * 이벤트 계약(`FONT_SIZE_CHANGED`)이 아직 두 꼴을 다 받습니다 — 툴바는
+ * `'24px'` 를 보내지만 밖에서 `5` 로 부를 수 있습니다. 그 변환이 예전에는
+ * 네이티브 커맨드 층에 있었고, 그 층이 없어지면서 여기로 왔습니다.
+ */
+const LEGACY_SIZES = ['10px', '13px', '16px', '18px', '24px', '32px', '48px']
+
+function toCssSize(value: string): string {
+  const step = Number(value)
+
+  return Number.isInteger(step) && step >= 1 && step <= 7
+    ? LEGACY_SIZES[step - 1]
+    : value
+}
+
 /** 지금 선택에 이 마크가 걸려 있는가 — 툴바의 눌림 표시가 씁니다 */
 export function isMarkActive(state: EditorState, type: MarkType): boolean {
   const { from, $from, to, empty } = state.selection
@@ -146,7 +163,7 @@ export const commands = {
   superscript: toggleMark(marks.superscript),
 
   fontName: (value: string) => setMarkValue(marks.fontFamily, value),
-  fontSize: (value: string) => setMarkValue(marks.fontSize, value),
+  fontSize: (value: string) => setMarkValue(marks.fontSize, toCssSize(value)),
   foreColor: (value: string) => setMarkValue(marks.textColor, value),
   backColor: (value: string) => setMarkValue(marks.backgroundColor, value),
   letterSpacing: (value: string) => setMarkValue(marks.letterSpacing, value),

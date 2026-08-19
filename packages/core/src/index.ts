@@ -74,54 +74,9 @@ export {
 } from './core/default-commands'
 export type { DefaultCommandsOptions } from './core/default-commands'
 export {
-  registerNativeAlignment,
-  NATIVE_PRECEDENCE,
-} from './core/commands/native-alignment'
-export { registerNativeFormatBlock } from './core/commands/native-format-block'
-export { registerNativeInlineToggles } from './core/commands/native-inline-toggles'
-export { registerNativeInlineStyles } from './core/commands/native-inline-styles'
-export { registerNativeList } from './core/commands/native-list'
-export {
-  registerNativeFontSize,
-  legacyFontSizeToCss,
-  cssToLegacyFontSize,
-} from './core/commands/native-font-size'
-export { registerNativeQueries } from './core/commands/native-query'
-export {
-  insertHTMLAtSelection,
-  insertTextAtSelection,
-} from './core/commands/range-insert'
-export {
-  installStoredMarks,
-  togglePendingFormat,
-  getPendingFormat,
-  clearPendingFormats,
-  hasPendingFormats,
-  insertTextWithPendingFormats,
-} from './core/commands/stored-marks'
-export {
-  toggleList,
-  shiftIndent,
-  toggleListForBlocks,
-  shiftIndentForBlocks,
-  INDENT_STEP,
-} from './core/commands/list-format'
-export type { ListType } from './core/commands/list-format'
-export {
-  applyInlineStyle,
-  applyLink,
-  removeLink,
-  applyInlineStyleInRange,
-  applyLinkInRange,
-  removeLinkInRange,
-} from './core/commands/inline-style'
-export type { InlineStyleProp } from './core/commands/inline-style'
-export {
-  toggleInlineFormat,
-  toggleFormatInRange,
-  INLINE_FORMATS,
-} from './core/commands/inline-format'
-export type { InlineFormat } from './core/commands/inline-format'
+  registerComputedQueries,
+  COMPUTED_PRECEDENCE,
+} from './core/commands/computed-query'
 export { HistoryManager } from './core/history-manager'
 export type {
   HistoryState,

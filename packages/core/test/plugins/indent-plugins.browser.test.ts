@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
 import { createIndentPlugin, IndentPlugin } from '@/plugins/indent-plugin'
@@ -7,34 +9,20 @@ import { createOutdentPlugin, OutdentPlugin } from '@/plugins/outdent-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('IndentPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -80,14 +68,7 @@ describe('IndentPlugin', () => {
 
     it('should execute indent command', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 들여쓰기 이벤트 발행
       const result = eventBus.emit('INDENT_CLICKED')
@@ -101,7 +82,7 @@ describe('IndentPlugin', () => {
 
     it('should emit STYLE_CHANGED event after successful indent', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -119,7 +100,7 @@ describe('IndentPlugin', () => {
 
     it('should not emit STYLE_CHANGED if execCommand fails', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -147,7 +128,7 @@ describe('IndentPlugin', () => {
     it('should block indent during IME composition', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -169,7 +150,7 @@ describe('IndentPlugin', () => {
     it('should allow indent after composition ends', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -203,7 +184,7 @@ describe('IndentPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -233,7 +214,7 @@ describe('IndentPlugin', () => {
       await pluginManager.register(IndentPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('INDENT_CLICKED')
@@ -268,7 +249,7 @@ describe('IndentPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -276,7 +257,7 @@ describe('IndentPlugin', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('indent', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('indent', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -284,31 +265,20 @@ describe('IndentPlugin', () => {
 })
 
 describe('OutdentPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -354,30 +324,23 @@ describe('OutdentPlugin', () => {
 
     it('should execute outdent command', () => {
       // Given: execCommand spy와 선택 영역
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 내어쓰기 이벤트 발행
       const result = eventBus.emit('OUTDENT_CLICKED')
 
       // Then: outdent 명령이 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('outdent', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('outdent', undefined)
 
       execCommandSpy.mockRestore()
     })
 
     it('should emit STYLE_CHANGED event after successful outdent', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -395,7 +358,7 @@ describe('OutdentPlugin', () => {
 
     it('should not emit STYLE_CHANGED if execCommand fails', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -423,7 +386,7 @@ describe('OutdentPlugin', () => {
     it('should block outdent during IME composition', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       expect(selectionManager.getIsComposing()).toBe(true)
@@ -445,7 +408,7 @@ describe('OutdentPlugin', () => {
     it('should allow outdent after composition ends', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
@@ -479,7 +442,7 @@ describe('OutdentPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -509,7 +472,7 @@ describe('OutdentPlugin', () => {
       await pluginManager.register(OutdentPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('OUTDENT_CLICKED')
@@ -544,7 +507,7 @@ describe('OutdentPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -552,7 +515,7 @@ describe('OutdentPlugin', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('outdent', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('outdent', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -565,31 +528,18 @@ describe('Indent/Outdent Plugins Integration', () => {
    * How: 두 플러그인을 동시에 등록하고 연속된 들여쓰기/내어쓰기 동작 테스트
    */
 
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('Multiple indent/outdent plugins', () => {
@@ -610,7 +560,7 @@ describe('Indent/Outdent Plugins Integration', () => {
     it('should handle indent and outdent operations', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 들여쓰기와 내어쓰기를 번갈아 실행
@@ -620,16 +570,16 @@ describe('Indent/Outdent Plugins Integration', () => {
 
       // Then: 각 명령이 순서대로 실행되어야 함
       expect(execCommandSpy).toHaveBeenCalledTimes(3)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'indent', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', false)
-      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'outdent', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(1, 'indent', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', undefined)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(3, 'outdent', undefined)
 
       execCommandSpy.mockRestore()
     })
 
     it('should emit separate STYLE_CHANGED events', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -653,7 +603,7 @@ describe('Indent/Outdent Plugins Integration', () => {
     it('should handle rapid indent/outdent operations', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 빠르게 들여쓰기/내어쓰기 조정
