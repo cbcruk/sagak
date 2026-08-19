@@ -149,7 +149,7 @@ describe('Editing Area 통합', () => {
       // Given: 이벤트 수집을 위한 핸들러가 등록된 EventBus
       const events: string[] = []
 
-      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', (data) => {
+      eventBus.on('EDITING_AREA_MODE_CHANGED', (data) => {
         events.push(`${data.from}→${data.to}`)
       })
 
@@ -167,7 +167,7 @@ describe('Editing Area 통합', () => {
     it('WYSIWYG 전용 이벤트를 발행해야 함', async () => {
       // Given: WYSIWYG 콘텐츠 변경 핸들러가 등록된 매니저
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', handler)
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
 
       const config: EditingAreaManagerConfig = {
         container,
@@ -188,7 +188,7 @@ describe('Editing Area 통합', () => {
     it('포커스 이벤트를 발행해야 함', async () => {
       // Given: WYSIWYG 포커스 핸들러가 등록된 매니저
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_FOCUSED', 'on', handler)
+      eventBus.on('WYSIWYG_FOCUSED', handler)
 
       const config: EditingAreaManagerConfig = {
         container,
@@ -209,7 +209,7 @@ describe('Editing Area 통합', () => {
     it('모든 모드로부터 이벤트를 수신해야 함', async () => {
       // Given: WYSIWYG 콘텐츠 변경 핸들러가 등록된 매니저
       const wysiwygHandler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', wysiwygHandler)
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', wysiwygHandler)
 
       const config: EditingAreaManagerConfig = {
         container,

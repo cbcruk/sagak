@@ -38,9 +38,7 @@
     const bus = editor.eventBus
 
     const offShow = bus.on(
-      AutocompleteEvents.AUTOCOMPLETE_SHOW,
-      'on',
-      (payload?: unknown) => {
+      AutocompleteEvents.AUTOCOMPLETE_SHOW, (payload?: unknown) => {
         const data = payload as {
           suggestions: string[]
           prefix: string
@@ -54,16 +52,14 @@
       }
     )
 
-    const offHide = bus.on(AutocompleteEvents.AUTOCOMPLETE_HIDE, 'on', () => {
+    const offHide = bus.on(AutocompleteEvents.AUTOCOMPLETE_HIDE, () => {
       visible = false
       suggestions = []
       selectedIndex = 0
     })
 
     const offSelect = bus.on(
-      AutocompleteEvents.AUTOCOMPLETE_SELECT,
-      'on',
-      (payload?: unknown) => {
+      AutocompleteEvents.AUTOCOMPLETE_SELECT, (payload?: unknown) => {
         if (!payload || !(payload as object).hasOwnProperty('direction')) return
         if (!visible || suggestions.length === 0) return
 
@@ -79,9 +75,7 @@
     )
 
     const offApply = bus.on(
-      AutocompleteEvents.AUTOCOMPLETE_APPLY,
-      'on',
-      (payload?: unknown) => {
+      AutocompleteEvents.AUTOCOMPLETE_APPLY, (payload?: unknown) => {
         /* 페이로드가 있으면 이미 적용된 것이라 흘려보냅니다 */
         if (payload && (payload as object).hasOwnProperty('word')) return
         if (!visible || suggestions.length === 0) return

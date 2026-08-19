@@ -119,7 +119,7 @@ describe('EventBus Integration', () => {
    */
   it('커맨드가 성공하면 STYLE_CHANGED 를 쏩니다', () => {
     const handler = vi.fn()
-    context.eventBus.on('STYLE_CHANGED', 'on', handler)
+    context.eventBus.on('STYLE_CHANGED', handler)
 
     const editableArea = container.querySelector('[contenteditable="true"]')
     /*

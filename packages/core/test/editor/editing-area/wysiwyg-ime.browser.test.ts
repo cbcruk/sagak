@@ -126,7 +126,7 @@ describe('한글 조합 — 제품의 편집 영역에서', () => {
    */
   it('내용 변경 알림이 조합 결과를 싣습니다', async () => {
     const seen: string[] = []
-    eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'on', (data) => {
+    eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, (data) => {
       seen.push(data.content)
     })
 
@@ -224,7 +224,7 @@ describe('붙여넣기 — PM 의 클립보드 경로', () => {
 
   it('붙여넣기 알림이 나갑니다', () => {
     let seen = false
-    eventBus.on(WysiwygEvents.WYSIWYG_PASTE, 'on', () => {
+    eventBus.on(WysiwygEvents.WYSIWYG_PASTE, () => {
       seen = true
     })
 

@@ -307,9 +307,7 @@ export function createAutocompletePlugin(
       }
 
       const unsubKeyup = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYUP,
-        'on',
-        (data?: unknown) => {
+        WysiwygEvents.WYSIWYG_KEYUP, (data?: unknown) => {
           if (!data || typeof data !== 'object' || !('event' in data)) {
             return
           }
@@ -336,9 +334,7 @@ export function createAutocompletePlugin(
       )
 
       const unsubKeydown = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYDOWN,
-        'on',
-        (data?: unknown) => {
+        WysiwygEvents.WYSIWYG_KEYDOWN, (data?: unknown) => {
           if (!isAutocompleteVisible) {
             return
           }
@@ -365,9 +361,7 @@ export function createAutocompletePlugin(
       )
 
       const unsubApply = eventBus.on(
-        AutocompleteEvents.AUTOCOMPLETE_APPLY,
-        'on',
-        (data?: unknown) => {
+        AutocompleteEvents.AUTOCOMPLETE_APPLY, (data?: unknown) => {
           if (!data || typeof data !== 'object' || !('word' in data)) {
             return
           }
@@ -378,7 +372,7 @@ export function createAutocompletePlugin(
         }
       )
 
-      const unsubBlur = eventBus.on(WysiwygEvents.WYSIWYG_BLURRED, 'on', () => {
+      const unsubBlur = eventBus.on(WysiwygEvents.WYSIWYG_BLURRED, () => {
         setTimeout(() => {
           hideAutocomplete()
         }, 150)

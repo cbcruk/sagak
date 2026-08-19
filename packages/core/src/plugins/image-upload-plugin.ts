@@ -199,9 +199,7 @@ export function createImageUploadPlugin(
       }
 
       const unsubUploadFromFile = eventBus.on(
-        ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE,
-        'on',
-        (args?: unknown) => {
+        ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE, (args?: unknown) => {
           const data = args as { file: File } | undefined
           if (data?.file) {
             void insertImageFromFile(data.file, context)

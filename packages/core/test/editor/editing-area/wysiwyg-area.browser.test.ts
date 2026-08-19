@@ -276,7 +276,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 SHOWN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_SHOWN', 'on', handler)
+      eventBus.on('WYSIWYG_AREA_SHOWN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -292,7 +292,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 HIDDEN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_HIDDEN', 'on', handler)
+      eventBus.on('WYSIWYG_AREA_HIDDEN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -633,7 +633,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 CONTENT_CHANGED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', handler)
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -664,7 +664,7 @@ describe('WysiwygArea', () => {
       wysiwygArea.setRawContent('<p>글자가 좀 있는 문단입니다</p>')
 
       let payload: { content: string } | undefined
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', (data) => {
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', (data) => {
         payload = data
       })
 
@@ -693,7 +693,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 FOCUSED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_FOCUSED', 'on', handler)
+      eventBus.on('WYSIWYG_FOCUSED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -710,7 +710,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 BLURRED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_BLURRED', 'on', handler)
+      eventBus.on('WYSIWYG_BLURRED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -727,7 +727,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 KEYDOWN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_KEYDOWN', 'on', handler)
+      eventBus.on('WYSIWYG_KEYDOWN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)

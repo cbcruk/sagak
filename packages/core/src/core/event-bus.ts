@@ -3,14 +3,9 @@ import { CoreEvents } from './events'
 import type { EditorEventMap, KnownEventName, PayloadOf } from './event-map'
 
 /**
- * `EventBus` 생명주기의 이벤트 단계
- */
-export type EventPhase = 'before' | 'on' | 'after'
-
-/**
  * 이벤트 핸들러 함수
  *
- * @returns `false`를 반환하면 후속 핸들러 실행을 중단, `true` 또는 `void`를 반환하면 계속
+ * @returns `false`를 반환하면 후속 핸들러 실행을 중단합니다
  */
 export type EventHandler = (...args: unknown[]) => boolean | void
 
@@ -20,179 +15,99 @@ export type EventHandler = (...args: unknown[]) => boolean | void
 export type Unsubscribe = () => void
 
 /**
- * `EventBus` - 이벤트 기반 통신 시스템
+ * `EventBus` — 이벤트 기반 통신.
  *
- * 세 단계 이벤트 생명주기를 지원합니다:
- * - `BEFORE`: 사전 처리, 이벤트를 취소할 수 있음
- * - `ON`: 주요 처리
- * - `AFTER`: 사후 처리
+ * ## 단계가 없어졌습니다
+ *
+ * `before`/`on`/`after` 셋이었습니다. [`event-bus-refactor.md`](../../../../docs/event-bus-refactor.md)
+ * 가 처음 잰 것이 그 단계 모델이었고, 결론은 **거의 비어 있다** 였습니다 —
+ * `after` 40개 중 35개가 빈 함수, `before` 35개가 전부 같은 IME 가드.
+ *
+ * 그 문서의 처방은 "버스를 교체하자" 가 아니라 **"가드를 제자리에 놓으면
+ * 단계가 남을 이유를 잃는다"** 였습니다. 실제로 그렇게 됐습니다.
+ *
+ * ```
+ * 가드를 커맨드 경계로        before 35 → 3
+ * 서식이 커맨드가 됨          after      → 0
+ * 남은 셋을 핸들러 앞머리로   before  3 → 0
+ * ```
+ *
+ * 마지막 셋은 찾기/바꾸기의 값 검증이었고, 구독자가 하나뿐이라 "남보다 먼저"
+ * 라는 단계의 값이 없었습니다 — 그냥 함수 첫머리입니다.
  *
  * @example
  * ```typescript
- * const bus = new EventBus();
+ * const bus = new EventBus()
+ * const off = bus.on('FIND', (data) => { … })
  *
- * // Subscribe to an event
- * const unsubscribe = bus.on('BOLD_CLICKED', 'on', () => {
- *   document.execCommand('bold');
- * });
- *
- * // Emit an event
- * bus.emit('BOLD_CLICKED');
- *
- * // Unsubscribe
- * unsubscribe();
+ * bus.emit('FIND', { query: '가나' })
+ * off()
  * ```
  */
 export class EventBus {
-  private handlers: Map<string, Map<EventPhase, Set<EventHandler>>> = new Map()
+  private handlers: Map<string, Set<EventHandler>> = new Map()
 
   /**
    * 이벤트를 구독합니다
    *
-   * @param event 이벤트 이름
-   * @param phase 이벤트 단계 (`before`, `on`, `after`)
-   * @param handler 이벤트 핸들러 함수
    * @returns 구독 해제 함수
-   *
-   * @example
-   * ```typescript
-   * const unsubscribe = bus.on('APP_READY', 'before', () => {
-   *   console.log('App is preparing...');
-   * });
-   * ```
    */
-  on<E extends string>(
+  on<E extends KnownEventName>(
     event: E,
-    phase: EventPhase,
     handler: (payload: PayloadOf<E>) => boolean | void
   ): Unsubscribe
-  on(event: string, phase: EventPhase, handler: EventHandler): Unsubscribe {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Map())
-    }
+  on(event: string, handler: EventHandler): Unsubscribe
+  on(event: string, handler: EventHandler): Unsubscribe {
+    const set = this.handlers.get(event) ?? new Set<EventHandler>()
 
-    const eventHandlers = this.handlers.get(event)!
+    set.add(handler)
+    this.handlers.set(event, set)
 
-    if (!eventHandlers.has(phase)) {
-      eventHandlers.set(phase, new Set())
-    }
-
-    const phaseHandlers = eventHandlers.get(phase)!
-
-    phaseHandlers.add(handler)
-
-    return () => this.off(event, phase, handler)
+    return () => this.off(event, handler)
   }
 
   /**
    * 이벤트 구독을 해제합니다
-   *
-   * @param event 이벤트 이름
-   * @param phase 이벤트 단계
-   * @param handler 제거할 이벤트 핸들러
    */
-  off(event: string, phase: EventPhase, handler: EventHandler): void {
-    const eventHandlers = this.handlers.get(event)
+  off(event: string, handler: EventHandler): void {
+    const set = this.handlers.get(event)
 
-    if (!eventHandlers) return
+    if (!set) return
 
-    const phaseHandlers = eventHandlers.get(phase)
+    set.delete(handler)
 
-    if (!phaseHandlers) return
-
-    phaseHandlers.delete(handler)
-
-    if (phaseHandlers.size === 0) {
-      eventHandlers.delete(phase)
-    }
-
-    if (eventHandlers.size === 0) {
-      this.handlers.delete(event)
-    }
+    if (set.size === 0) this.handlers.delete(event)
   }
 
   /**
    * 이벤트를 발행합니다
    *
-   * 핸들러를 순서대로 실행합니다: `BEFORE` → `ON` → `AFTER`
-   * `BEFORE` 또는 `ON` 단계의 핸들러가 `false`를 반환하면 체인이 중단됩니다.
-   * `AFTER` 단계는 이벤트를 취소할 수 없습니다 (항상 계속됨).
-   *
-   * @param event 이벤트 이름
-   * @param args 핸들러에 전달할 인자
-   * @returns 모든 핸들러가 실행되면 `true`, `BEFORE` 또는 `ON` 단계에서 취소되면 `false`
-   *
-   * @example
-   * ```typescript
-   * // Cancel event in BEFORE phase
-   * bus.on('SAVE', 'before', () => {
-   *   if (!isValid()) return false; // Cancel
-   * });
-   *
-   * const result = bus.emit('SAVE'); // false if cancelled
-   * ```
+   * @returns 핸들러 중 하나라도 `false`를 반환하면 `false`
    */
-  emit<E extends string>(
+  emit<E extends KnownEventName>(
     event: E,
-    ...args: E extends KnownEventName
-      ? EditorEventMap[E] extends void
-        ? []
-        : [payload: EditorEventMap[E]]
-      : unknown[]
+    ...args: PayloadOf<E> extends void ? [] : [payload: PayloadOf<E>]
   ): boolean
+  emit(event: string, ...args: unknown[]): boolean
   emit(event: string, ...args: unknown[]): boolean {
-    if (!this.execPhase(event, 'before', args)) {
-      return false
-    }
+    const set = this.handlers.get(event)
 
-    if (!this.execPhase(event, 'on', args)) {
-      return false
-    }
+    if (!set) return true
 
-    this.execPhase(event, 'after', args)
-
-    return true
-  }
-
-  /**
-   * 특정 단계의 모든 핸들러를 실행합니다
-   *
-   * @param event 이벤트 이름
-   * @param phase 이벤트 단계
-   * @param args 핸들러에 전달할 인자
-   * @returns 핸들러가 `false`를 반환하면 `false`, 그렇지 않으면 `true`
-   */
-  private execPhase(
-    event: string,
-    phase: EventPhase,
-    args: unknown[]
-  ): boolean {
-    const eventHandlers = this.handlers.get(event)
-
-    if (!eventHandlers) return true
-
-    const phaseHandlers = eventHandlers.get(phase)
-
-    if (!phaseHandlers) return true
-
-    for (const handler of phaseHandlers) {
+    for (const handler of set) {
       try {
-        const result = handler(...args)
-        if (result === false) {
-          return false
-        }
+        if (handler(...args) === false) return false
       } catch (error) {
-        logger.error(
-          `Error in event handler for "${event}" (${phase} phase):`,
-          error
-        )
+        logger.error(`Error in event handler for "${event}":`, error)
 
-        // 핸들러 오류를 ERROR 이벤트로 노출합니다.
-        // ERROR 이벤트 자체의 핸들러 오류는 재발행하지 않아 무한 루프를 막습니다.
+        /*
+         * 핸들러 오류를 `ERROR` 이벤트로 노출합니다. `ERROR` 자체의 핸들러
+         * 오류는 재발행하지 않아 무한 루프를 막습니다.
+         */
         if (event !== CoreEvents.ERROR) {
           this.emit(CoreEvents.ERROR, {
-            source: `event-bus:${event}:${phase}`,
-            message: `Error in event handler for "${event}" (${phase} phase)`,
+            source: `event-bus:${event}`,
+            message: `Error in event handler for "${event}"`,
             error,
           })
         }
@@ -203,52 +118,32 @@ export class EventBus {
   }
 
   /**
-   * 이벤트의 모든 핸들러를 제거합니다
-   *
-   * @param event 이벤트 이름
+   * 이 이벤트의 구독을 전부 해제합니다
    */
   clear(event: string): void {
     this.handlers.delete(event)
   }
 
   /**
-   * 모든 이벤트의 모든 핸들러를 제거합니다
+   * 모든 구독을 해제합니다
    */
   clearAll(): void {
     this.handlers.clear()
   }
 
   /**
-   * 등록된 모든 이벤트를 가져옵니다
-   *
-   * @returns 이벤트 이름 배열
+   * 구독자가 있는 이벤트 이름들 — 계약 검사가 씁니다
    */
   getEvents(): string[] {
     return Array.from(this.handlers.keys())
   }
 
   /**
-   * 이벤트에 핸들러가 있는지 확인합니다
-   *
-   * @param event 이벤트 이름
-   * @param phase 확인할 선택적 단계
-   * @returns 핸들러가 존재하면 `true`
+   * 이 이벤트에 핸들러가 있습니까
    */
-  hasHandlers(event: string, phase?: EventPhase): boolean {
-    const eventHandlers = this.handlers.get(event)
-
-    if (!eventHandlers) return false
-
-    if (phase) {
-      const phaseHandlers = eventHandlers.get(phase)
-
-      return phaseHandlers ? phaseHandlers.size > 0 : false
-    }
-
-    for (const phaseHandlers of eventHandlers.values()) {
-      if (phaseHandlers.size > 0) return true
-    }
-
-    return false
+  hasHandlers(event: string): boolean {
+    return (this.handlers.get(event)?.size ?? 0) > 0
   }
 }
+
+export type { EditorEventMap }

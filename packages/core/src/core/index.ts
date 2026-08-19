@@ -1,5 +1,5 @@
 export { EventBus } from './event-bus'
-export type { EventPhase, EventHandler, Unsubscribe } from './event-bus'
+export type { EventHandler, Unsubscribe } from './event-bus'
 
 export { PluginManager } from './plugin-manager'
 export type { Plugin, EditorContext, EditorConfig } from './types'

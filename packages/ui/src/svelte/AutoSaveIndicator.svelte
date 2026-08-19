@@ -107,9 +107,7 @@
 
   $effect(() => {
     return editor.eventBus.on(
-      AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED,
-      'on',
-      (data?: unknown) => {
+      AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED, (data?: unknown) => {
         const next = (data ?? {}) as {
           status?: AutoSaveStatus
           timestamp?: number

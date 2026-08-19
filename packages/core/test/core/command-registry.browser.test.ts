@@ -191,7 +191,7 @@ describe('CommandRegistry', () => {
       const registry = new CommandRegistry(ctx)
       const seen: unknown[] = []
 
-      eventBus.on(CoreEvents.STYLE_CHANGED, 'on', (data) => {
+      eventBus.on(CoreEvents.STYLE_CHANGED, (data) => {
         seen.push(data)
       })
       registry.register('fontName', () => true)

@@ -25,7 +25,7 @@ describe('EventBus', () => {
       const handler = vi.fn()
 
       // When: 이벤트 구독 후 발행
-      bus.on('TEST_EVENT', 'on', handler)
+      bus.on('TEST_EVENT', handler)
       bus.emit('TEST_EVENT')
 
       // Then: 핸들러가 1번 호출되어야 함
@@ -35,7 +35,7 @@ describe('EventBus', () => {
     it('핸들러에 인자를 전달할 수 있어야 함', () => {
       // Given: 핸들러가 구독된 상태
       const handler = vi.fn()
-      bus.on('TEST_EVENT', 'on', handler)
+      bus.on('TEST_EVENT', handler)
 
       // When: 인자와 함께 이벤트 발행
       bus.emit('TEST_EVENT', 'arg1', 'arg2', 123)
@@ -50,8 +50,8 @@ describe('EventBus', () => {
       const handler2 = vi.fn()
 
       // When: 동일 이벤트에 두 핸들러 등록 후 발행
-      bus.on('TEST_EVENT', 'on', handler1)
-      bus.on('TEST_EVENT', 'on', handler2)
+      bus.on('TEST_EVENT', handler1)
+      bus.on('TEST_EVENT', handler2)
       bus.emit('TEST_EVENT')
 
       // Then: 모든 핸들러가 호출되어야 함
@@ -64,81 +64,40 @@ describe('EventBus', () => {
    * Why: 플러그인이 이벤트 전/중/후 시점에 개입할 수 있도록 지원
    * How: before(검증) → on(실행) → after(정리) 3단계로 실행, `false` 반환 시 중단
    */
-  describe('이벤트 단계 (3단계 생명주기)', () => {
-    it('단계가 순서대로 실행되어야 함: before → on → after', () => {
-      // Given: 각 단계에 핸들러 등록
+  /**
+   * Why: 핸들러가 `false` 를 돌려주면 뒤따르는 핸들러를 안 부르고 발행이
+   *      실패로 끝나야 합니다 — 값 검증이 그 규약을 씁니다.
+   * How: 예전에는 `before`/`on`/`after` 세 단계가 있었고 취소는 `before` 의
+   *      일이었습니다. `after` 구독자가 0이 되고 `before` 도 셋만 남으면서
+   *      단계를 걷었습니다 — 남은 셋은 구독자가 하나뿐이라 "남보다 먼저" 라는
+   *      값이 없었고, 그냥 핸들러 첫머리입니다
+   *      (`docs/prosemirror-migration.md` §11-5).
+   */
+  describe('취소 (false 를 돌려주면)', () => {
+    it('뒤따르는 핸들러를 안 부르고 false 로 끝나야 함', () => {
       const calls: string[] = []
 
-      bus.on('TEST_EVENT', 'before', () => {
-        calls.push('before')
+      bus.on('TEST_EVENT', () => {
+        calls.push('first')
+        return false
+      })
+      bus.on('TEST_EVENT', () => {
+        calls.push('second')
       })
 
-      bus.on('TEST_EVENT', 'on', () => {
-        calls.push('on')
-      })
-
-      bus.on('TEST_EVENT', 'after', () => {
-        calls.push('after')
-      })
-
-      // When: 이벤트 발행
-      bus.emit('TEST_EVENT')
-
-      // Then: 순서대로 실행되어야 함
-      expect(calls).toEqual(['before', 'on', 'after'])
+      expect(bus.emit('TEST_EVENT')).toBe(false)
+      expect(calls).toEqual(['first'])
     })
 
-    it('before 단계에서 false 반환 시 실행을 중단해야 함', () => {
-      // Given: 각 단계에 핸들러 등록, before는 false 반환
-      const beforeHandler = vi.fn(() => false)
-      const onHandler = vi.fn()
-      const afterHandler = vi.fn()
+    it('아무도 안 막으면 true 로 끝나야 함', () => {
+      bus.on('TEST_EVENT', () => {})
+      bus.on('TEST_EVENT', () => true)
 
-      bus.on('TEST_EVENT', 'before', beforeHandler)
-      bus.on('TEST_EVENT', 'on', onHandler)
-      bus.on('TEST_EVENT', 'after', afterHandler)
-
-      // When: 이벤트 발행
-      const result = bus.emit('TEST_EVENT')
-
-      // Then: before만 실행되고 나머지는 중단되어야 함
-      expect(beforeHandler).toHaveBeenCalledTimes(1)
-      expect(onHandler).not.toHaveBeenCalled()
-      expect(afterHandler).not.toHaveBeenCalled()
-      expect(result).toBe(false)
+      expect(bus.emit('TEST_EVENT')).toBe(true)
     })
 
-    it('on 단계에서 false 반환 시 실행을 중단해야 함', () => {
-      // Given: 각 단계에 핸들러 등록, on은 false 반환
-      const beforeHandler = vi.fn()
-      const onHandler = vi.fn(() => false)
-      const afterHandler = vi.fn()
-
-      bus.on('TEST_EVENT', 'before', beforeHandler)
-      bus.on('TEST_EVENT', 'on', onHandler)
-      bus.on('TEST_EVENT', 'after', afterHandler)
-
-      // When: 이벤트 발행
-      const result = bus.emit('TEST_EVENT')
-
-      // Then: before와 on만 실행되고 after는 중단되어야 함
-      expect(beforeHandler).toHaveBeenCalledTimes(1)
-      expect(onHandler).toHaveBeenCalledTimes(1)
-      expect(afterHandler).not.toHaveBeenCalled()
-      expect(result).toBe(false)
-    })
-
-    it('after 단계에서 false 반환해도 실행을 계속해야 함', () => {
-      // Given: after 핸들러가 false 반환
-      const afterHandler = vi.fn(() => false)
-      bus.on('TEST_EVENT', 'after', afterHandler)
-
-      // When: 이벤트 발행
-      const result = bus.emit('TEST_EVENT')
-
-      // Then: after는 정리 단계이므로 false 반환해도 이벤트는 완료됨
-      expect(afterHandler).toHaveBeenCalledTimes(1)
-      expect(result).toBe(true)
+    it('구독자가 없으면 true 입니다', () => {
+      expect(bus.emit('TEST_EVENT')).toBe(true)
     })
   })
 
@@ -150,7 +109,7 @@ describe('EventBus', () => {
     it('반환된 함수로 구독을 해제할 수 있어야 함', () => {
       // Given: 구독된 핸들러
       const handler = vi.fn()
-      const unsubscribe = bus.on('TEST_EVENT', 'on', handler)
+      const unsubscribe = bus.on('TEST_EVENT', handler)
 
       // When: 이벤트 발행 후 구독 해제, 다시 발행
       bus.emit('TEST_EVENT')
@@ -167,13 +126,13 @@ describe('EventBus', () => {
     it('off 메서드로 구독을 해제할 수 있어야 함', () => {
       // Given: 구독된 핸들러
       const handler = vi.fn()
-      bus.on('TEST_EVENT', 'on', handler)
+      bus.on('TEST_EVENT', handler)
 
       // When: 이벤트 발행 후 off로 해제, 다시 발행
       bus.emit('TEST_EVENT')
       expect(handler).toHaveBeenCalledTimes(1)
 
-      bus.off('TEST_EVENT', 'on', handler)
+      bus.off('TEST_EVENT', handler)
 
       bus.emit('TEST_EVENT')
 
@@ -186,8 +145,8 @@ describe('EventBus', () => {
       const handler1 = vi.fn()
       const handler2 = vi.fn()
 
-      const unsubscribe1 = bus.on('TEST_EVENT', 'on', handler1)
-      bus.on('TEST_EVENT', 'on', handler2)
+      const unsubscribe1 = bus.on('TEST_EVENT', handler1)
+      bus.on('TEST_EVENT', handler2)
 
       // When: handler1만 구독 해제 후 이벤트 발행
       unsubscribe1()
@@ -209,8 +168,8 @@ describe('EventBus', () => {
       const handler1 = vi.fn()
       const handler2 = vi.fn()
 
-      bus.on('EVENT_1', 'on', handler1)
-      bus.on('EVENT_2', 'on', handler2)
+      bus.on('EVENT_1', handler1)
+      bus.on('EVENT_2', handler2)
 
       // When: EVENT_1만 정리
       bus.clear('EVENT_1')
@@ -228,8 +187,8 @@ describe('EventBus', () => {
       const handler1 = vi.fn()
       const handler2 = vi.fn()
 
-      bus.on('EVENT_1', 'on', handler1)
-      bus.on('EVENT_2', 'on', handler2)
+      bus.on('EVENT_1', handler1)
+      bus.on('EVENT_2', handler2)
 
       // When: 모든 핸들러 정리
       bus.clearAll()
@@ -250,9 +209,9 @@ describe('EventBus', () => {
   describe('유틸리티 메서드 (이벤트 조회)', () => {
     it('등록된 모든 이벤트를 가져올 수 있어야 함', () => {
       // Given: 여러 이벤트에 핸들러 등록
-      bus.on('EVENT_1', 'on', () => {})
-      bus.on('EVENT_2', 'on', () => {})
-      bus.on('EVENT_3', 'before', () => {})
+      bus.on('EVENT_1', () => {})
+      bus.on('EVENT_2', () => {})
+      bus.on('EVENT_3', () => {})
 
       // When: 이벤트 목록 조회
       const events = bus.getEvents()
@@ -265,20 +224,17 @@ describe('EventBus', () => {
     })
 
     it('이벤트에 핸들러가 있는지 확인할 수 있어야 함', () => {
-      // Given: EVENT_1의 on 단계에 핸들러 등록
-      bus.on('EVENT_1', 'on', () => {})
+      // Given: EVENT_1 에 핸들러 등록
+      bus.on('EVENT_1', () => {})
 
-      // When: 핸들러 존재 확인
-      // Then: 등록된 이벤트와 단계는 true, 나머지는 false
+      // Then: 등록된 이벤트는 true, 나머지는 false
       expect(bus.hasHandlers('EVENT_1')).toBe(true)
-      expect(bus.hasHandlers('EVENT_1', 'on')).toBe(true)
-      expect(bus.hasHandlers('EVENT_1', 'before')).toBe(false)
       expect(bus.hasHandlers('NON_EXISTENT')).toBe(false)
     })
 
     it('핸들러 제거 후 hasHandlers가 false를 반환해야 함', () => {
       // Given: 핸들러가 등록된 이벤트
-      bus.on('EVENT_1', 'on', () => {})
+      bus.on('EVENT_1', () => {})
       expect(bus.hasHandlers('EVENT_1')).toBe(true)
 
       // When: 핸들러 제거
@@ -305,8 +261,8 @@ describe('EventBus', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      bus.on('TEST_EVENT', 'on', errorHandler)
-      bus.on('TEST_EVENT', 'on', normalHandler)
+      bus.on('TEST_EVENT', errorHandler)
+      bus.on('TEST_EVENT', normalHandler)
 
       // When: 이벤트 발행
       const result = bus.emit('TEST_EVENT')
@@ -327,7 +283,7 @@ describe('EventBus', () => {
       // When: 존재하지 않는 핸들러 구독 해제
       // Then: 에러 없이 안전하게 처리되어야 함
       expect(() => {
-        bus.off('NON_EXISTENT', 'on', handler)
+        bus.off('NON_EXISTENT', handler)
       }).not.toThrow()
     })
   })
@@ -342,19 +298,19 @@ describe('EventBus', () => {
       const calls: string[] = []
 
       // 플러그인이 BOLD_CLICKED 구독
-      bus.on('BOLD_CLICKED', 'on', () => {
+      bus.on('BOLD_CLICKED', () => {
         calls.push('toggle bold')
         bus.emit('SELECTION_CHANGED')
       })
 
       // 플러그인이 SELECTION_CHANGED 구독
-      bus.on('SELECTION_CHANGED', 'after', () => {
+      bus.on('SELECTION_CHANGED', () => {
         calls.push('update state')
         bus.emit('BOLD_STATE_CHANGED', { active: true })
       })
 
       // UI가 BOLD_STATE_CHANGED 구독
-      bus.on('BOLD_STATE_CHANGED', 'after', (state) => {
+      bus.on('BOLD_STATE_CHANGED', (state) => {
         const active = (state as { active: boolean }).active
         calls.push(`ui update: ${active}`)
       })
@@ -370,12 +326,12 @@ describe('EventBus', () => {
       // Given: 저장 가능 여부를 제어하는 플래그
       let canSave = false
 
-      bus.on('SAVE', 'before', () => {
+      bus.on('SAVE', () => {
         if (!canSave) return false
       })
 
       const saveHandler = vi.fn()
-      bus.on('SAVE', 'on', saveHandler)
+      bus.on('SAVE', saveHandler)
 
       // When: 첫 번째 저장 시도 (canSave = false)
       let result = bus.emit('SAVE')
@@ -397,11 +353,11 @@ describe('EventBus', () => {
       // Given: 다이얼로그 닫기 이벤트와 정리 핸들러
       const cleanupHandler = vi.fn()
 
-      bus.on('DIALOG_CLOSE', 'on', () => {
+      bus.on('DIALOG_CLOSE', () => {
         // 메인 핸들러
       })
 
-      bus.on('DIALOG_CLOSE', 'after', cleanupHandler)
+      bus.on('DIALOG_CLOSE', cleanupHandler)
 
       // When: 다이얼로그 닫기 이벤트 발행
       bus.emit('DIALOG_CLOSE')

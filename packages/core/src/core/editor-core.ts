@@ -148,9 +148,7 @@ export class EditorCore {
     if (config.onError) {
       const { onError } = config
       this.onErrorUnsub = this.eventBus.on(
-        CoreEvents.ERROR,
-        'on',
-        (data?: unknown) => {
+        CoreEvents.ERROR, (data?: unknown) => {
           onError(data as EditorErrorData)
         }
       )
@@ -162,9 +160,7 @@ export class EditorCore {
      * 편집 영역에 닿지 않고 사라집니다.
      */
     this.focusRequestUnsub = this.eventBus.on(
-      CoreEvents.FOCUS_REQUESTED,
-      'on',
-      () => {
+      CoreEvents.FOCUS_REQUESTED, () => {
         this.focus()
       }
     )

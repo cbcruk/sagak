@@ -101,9 +101,7 @@ export function subscribeToModel(
   attach()
 
   const unsubMode = context.eventBus.on(
-    EditingAreaEvents.EDITING_AREA_MODE_CHANGED,
-    'after',
-    attach
+    EditingAreaEvents.EDITING_AREA_MODE_CHANGED, attach
   )
 
   return () => {

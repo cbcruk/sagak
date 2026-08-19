@@ -66,9 +66,9 @@ describe('이벤트 계약', () => {
     // 어느 단계에 붙었든 처리자면 됩니다
     const unhandled = requests.filter(
       (name) =>
-        !eventBus.hasHandlers(name, 'before') &&
-        !eventBus.hasHandlers(name, 'on') &&
-        !eventBus.hasHandlers(name, 'after')
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name)
     )
 
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
@@ -116,9 +116,9 @@ describe('이벤트 계약', () => {
     const { eventBus } = ed.context
     const unheard = byKind('notify').filter(
       (name) =>
-        !eventBus.hasHandlers(name, 'before') &&
-        !eventBus.hasHandlers(name, 'on') &&
-        !eventBus.hasHandlers(name, 'after')
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name)
     )
 
     const surprises = unheard.filter((n) => !EXTENSION_POINTS.includes(n))

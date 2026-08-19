@@ -25,7 +25,7 @@ describe('error reporting', () => {
         .mockImplementation(() => {})
       const bus = new EventBus()
       const received: unknown[] = []
-      bus.on(CoreEvents.ERROR, 'on', (data?: unknown) => {
+      bus.on(CoreEvents.ERROR, (data?: unknown) => {
         received.push(data)
       })
 
@@ -47,11 +47,11 @@ describe('error reporting', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       const bus = new EventBus()
       const errors: Array<{ source: string }> = []
-      bus.on(CoreEvents.ERROR, 'on', (data?: unknown) => {
+      bus.on(CoreEvents.ERROR, (data?: unknown) => {
         errors.push(data as { source: string })
       })
 
-      bus.on('SOME_EVENT', 'on', () => {
+      bus.on('SOME_EVENT', () => {
         throw new Error('handler failed')
       })
       bus.emit('SOME_EVENT')
@@ -64,12 +64,12 @@ describe('error reporting', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       const bus = new EventBus()
       let count = 0
-      bus.on(CoreEvents.ERROR, 'on', () => {
+      bus.on(CoreEvents.ERROR, () => {
         count++
         throw new Error('error handler failed')
       })
 
-      bus.on('SOME_EVENT', 'on', () => {
+      bus.on('SOME_EVENT', () => {
         throw new Error('handler failed')
       })
 
@@ -131,7 +131,7 @@ describe('error reporting', () => {
             'plugin:test:failing'
           )
 
-          context.eventBus.on('DO_FAIL', 'on', () => {
+          context.eventBus.on('DO_FAIL', () => {
             report(new Error('nope'), 'Failed to do thing:')
 
             return false
@@ -140,7 +140,7 @@ describe('error reporting', () => {
       }
 
       const core = new EditorCore()
-      core.getEventBus().on(CoreEvents.ERROR, 'on', (data?: unknown) => {
+      core.getEventBus().on(CoreEvents.ERROR, (data?: unknown) => {
         errors.push(data as { source: string; message: string })
       })
       await core.registerPlugin(failingPlugin)

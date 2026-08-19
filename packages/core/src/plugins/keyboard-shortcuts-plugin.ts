@@ -133,9 +133,7 @@ export function createKeyboardShortcutsPlugin(
         context.commandRegistry ?? createDefaultCommandRegistry(context)
 
       const unsubKeydown = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYDOWN,
-        'on',
-        (data?: unknown) => {
+        WysiwygEvents.WYSIWYG_KEYDOWN, (data?: unknown) => {
           if (!data || typeof data !== 'object' || !('event' in data)) {
             return
           }

@@ -48,9 +48,7 @@
 
   $effect(() => {
     return editor.eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      (payload?: unknown) => {
+      CoreEvents.STYLE_CHANGED, (payload?: unknown) => {
         const data = (payload ?? {}) as {
           style?: string
           matchCount?: number

@@ -83,7 +83,7 @@ describe('자동 완성 팝오버', () => {
     await settle(4)
 
     let applied: unknown = null
-    bus.on(AutocompleteEvents.AUTOCOMPLETE_APPLY, 'after', (payload) => {
+    bus.on(AutocompleteEvents.AUTOCOMPLETE_APPLY, (payload) => {
       if (payload) applied = payload
     })
 
@@ -120,7 +120,7 @@ describe('자동 완성 팝오버', () => {
     expect(selectedIndex()).toBe(1)
 
     const applied: unknown[] = []
-    bus.on(AutocompleteEvents.AUTOCOMPLETE_APPLY, 'after', (payload) => {
+    bus.on(AutocompleteEvents.AUTOCOMPLETE_APPLY, (payload) => {
       if (payload) applied.push(payload)
     })
 
