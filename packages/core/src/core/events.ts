@@ -53,17 +53,12 @@ export const CoreEvents = {
  * 자동 완성처럼 상태나 흐름을 다루는 일, 그리고 밖에서 붙을 확장점.
  */
 
-/**
- * 찾기/바꾸기 플러그인 이벤트 (기본값)
+/*
+ * 찾기/바꾸기 여섯은 여기 없습니다 — `findReplace(context)` 의 메서드입니다
+ * (`features/find-replace.ts`). 한 객체의 메서드를 이름 문자열로 부르는 데는
+ * 이유가 없었고, 결과(일치 개수·현재 번호)를 서식 알림에 얹어 되쏘던 것도
+ * 함께 없어졌습니다.
  */
-export const FindReplaceEvents = {
-  FIND: 'FIND',
-  FIND_NEXT: 'FIND_NEXT',
-  FIND_PREVIOUS: 'FIND_PREVIOUS',
-  REPLACE: 'REPLACE',
-  REPLACE_ALL: 'REPLACE_ALL',
-  CLEAR_FIND: 'CLEAR_FIND',
-} as const
 
 /**
  * 자동완성 플러그인 이벤트
@@ -128,7 +123,6 @@ export const ImageUploadEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...FindReplaceEvents,
   ...AutocompleteEvents,
   ...EditingAreaEvents,
   ...AutoSaveEvents,

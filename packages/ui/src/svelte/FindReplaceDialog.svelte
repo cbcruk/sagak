@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Search } from 'lucide'
-  import { CoreEvents, FindReplaceEvents } from 'sagak-core'
-  import type { EditorContext } from 'sagak-core'
+  import { findReplace } from 'sagak-core'
+  import type { EditorContext, FindState } from 'sagak-core'
   import { icon } from '../elements/icon'
 
   /**
@@ -22,10 +22,13 @@
    * Esc 든 Close 버튼이든 **어느 경로로 닫혀도** 강조 표시가 정리되어야 합니다.
    * 버튼 핸들러에만 붙이면 Esc 로 닫았을 때 강조가 남습니다.
    *
-   * ## 일치 개수는 코어가 알려줍니다
+   * ## 일치 개수는 부른 자리에서 돌아옵니다
    *
-   * `STYLE_CHANGED` 의 `style === 'find'` 페이로드에서 옵니다. 플러그인은 0부터
-   * 세고 표시는 1부터라, 하나도 없으면 `-1` 이 옵니다.
+   * 예전에는 이벤트 여섯을 쏘고, 답은 `STYLE_CHANGED` 의 `style === 'find'`
+   * 를 구독해서 받았습니다. 지금은 `findReplace(editor)` 의 메서드가 상태를
+   * 그대로 돌려줍니다 — 구독도, 페이로드를 되짚는 타입 검사도 없습니다.
+   *
+   * 코어는 0부터 세고 표시는 1부터라, 하나도 없으면 `index` 가 `-1` 입니다.
    */
 
   interface Props {
@@ -46,26 +49,13 @@
 
   const hasQuery = $derived(!!findText.trim())
 
-  $effect(() => {
-    return editor.eventBus.on(
-      CoreEvents.STYLE_CHANGED, (payload?: unknown) => {
-        const data = (payload ?? {}) as {
-          style?: string
-          matchCount?: number
-          matchIndex?: number
-        }
-        if (data.style !== 'find') return
-        if (
-          typeof data.matchCount !== 'number' ||
-          typeof data.matchIndex !== 'number'
-        ) {
-          return
-        }
-        matchCount = data.matchCount
-        currentMatch = data.matchIndex < 0 ? 0 : data.matchIndex + 1
-      }
-    )
-  })
+  /* 에디터가 갈리면 찾기 객체도 따라갑니다 — 에디터당 하나로 캐시됩니다 */
+  const find = $derived(findReplace(editor))
+
+  function show(state: FindState): void {
+    matchCount = state.matches
+    currentMatch = state.index < 0 ? 0 : state.index + 1
+  }
 
   /** 바뀐 옵션을 **인자로** 받습니다 — 렌더를 기다리지 않으려고 */
   function runFind(override?: {
@@ -73,26 +63,20 @@
     wholeWord?: boolean
   }): void {
     if (!findText.trim()) return
-    editor.eventBus.emit(FindReplaceEvents.FIND, {
-      query: findText,
-      caseSensitive,
-      wholeWord,
-      ...override,
-    })
+    show(find.find(findText, { caseSensitive, wholeWord, ...override }))
   }
 
   function replace(all: boolean): void {
     if (!findText.trim()) return
-    editor.eventBus.emit(
-      all ? FindReplaceEvents.REPLACE_ALL : FindReplaceEvents.REPLACE,
-      { query: findText, replacement: replaceText, caseSensitive, wholeWord }
+    show(
+      all
+        ? find.replaceAll(findText, replaceText, { caseSensitive, wholeWord })
+        : find.replace(replaceText)
     )
   }
 
   function onClose(): void {
-    editor.eventBus.emit(FindReplaceEvents.CLEAR_FIND)
-    matchCount = 0
-    currentMatch = 0
+    show(find.clear())
   }
 
   export function open(): void {
@@ -102,7 +86,7 @@
   function onFindKeydown(e: KeyboardEvent): void {
     if (e.key !== 'Enter') return
     e.preventDefault()
-    if (matchCount > 0) editor.eventBus.emit(FindReplaceEvents.FIND_NEXT)
+    if (matchCount > 0) show(find.next())
     else runFind()
   }
 </script>
@@ -181,7 +165,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => editor.eventBus.emit(FindReplaceEvents.FIND_PREVIOUS)}
+      onclick={() => show(find.previous())}
       disabled={matchCount === 0}
     >
       ↑ Prev
@@ -190,7 +174,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => editor.eventBus.emit(FindReplaceEvents.FIND_NEXT)}
+      onclick={() => show(find.next())}
       disabled={matchCount === 0}
     >
       ↓ Next

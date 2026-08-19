@@ -39,7 +39,6 @@ export type { EditorCoreConfig } from './editor-core'
 
 export {
   CoreEvents,
-  FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
   EditorEvents,

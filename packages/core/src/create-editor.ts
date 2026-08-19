@@ -4,7 +4,6 @@ import type { EditorContext, Plugin, EditingMode } from './core/types'
 import type { LogLevel } from './core/logger'
 import type { EditorErrorData } from './core/errors'
 
-import { createFindReplacePlugin } from './plugins/find-replace-plugin'
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
 import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
@@ -20,7 +19,6 @@ import {
  * Default plugins included in the editor
  */
 const defaultPlugins: Plugin[] = [
-  createFindReplacePlugin(),
   createKeyboardShortcutsPlugin(),
   createAutocompletePlugin(),
   createTableResizePlugin(),

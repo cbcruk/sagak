@@ -5,6 +5,14 @@ export { sagakSchema, createSagakSchema } from './model/schema'
 export type { SchemaOptions } from './model/schema'
 export { toJSON, fromJSON, toHtml, parseHtml } from './model/storage'
 
+/** 찾기/바꾸기 — 이벤트 여섯이 아니라 객체 하나입니다 */
+export { findReplace } from './features/find-replace'
+export type {
+  FindReplace,
+  FindState,
+  FindOptions,
+} from './features/find-replace'
+
 /**
  * 선택이 무엇 위에 있는지 묻는 자리 — **UI 가 DOM 을 안 걷어도 됩니다.**
  *
@@ -82,7 +90,6 @@ export type {
 } from './core/command-map'
 export {
   CoreEvents,
-  FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
   EditorEvents,
