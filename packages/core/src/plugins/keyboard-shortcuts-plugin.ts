@@ -1,177 +1,94 @@
+import { keymap } from 'prosemirror-keymap'
 import type { Plugin, EditorContext } from '@/core'
-import {
-  WysiwygEvents,
-  createDefaultCommandRegistry,
-  runCommand,
-} from '@/core'
+import { createDefaultCommandRegistry, runCommand } from '@/core'
 import type { CommandName } from '@/core/command-map'
 
 /**
- * Shortcut definition
+ * 단축키 하나.
+ *
+ * `key` 는 `prosemirror-keymap` 의 표기를 씁니다 — `'Mod-b'` 의 `Mod` 는
+ * mac 에서 `Cmd`, 나머지에서 `Ctrl` 입니다. 예전에는 `metaKey`/`ctrlKey` 를
+ * 각각 적어 같은 단축키를 **두 줄씩** 썼습니다.
  */
 export interface ShortcutDefinition {
   key: string
-  metaKey?: boolean
-  ctrlKey?: boolean
-  shiftKey?: boolean
-  altKey?: boolean
-
-  /**
-   * 부를 커맨드 — 서식은 이쪽입니다.
-   *
-   * 예전에는 전부 이벤트였습니다. 툴바가 커맨드 레지스트리를 직접 부르게
-   * 되면서 단축키도 같은 문으로 들어옵니다 — 같은 일에 길이 둘이면 하나만
-   * 고쳐도 통과하는 검사가 생깁니다.
-   */
-  run?: CommandName
-
-  /** 커맨드가 아닌 것 — 되돌리기처럼 버스가 받는 일 */
-  event?: string
-  data?: unknown
+  run: CommandName
 }
 
-/**
- * Keyboard shortcuts plugin options
- */
 export interface KeyboardShortcutsPluginOptions {
-  /**
-   * Custom shortcuts to add or override
-   */
+  /** 더하거나 덮어쓸 단축키 */
   shortcuts?: ShortcutDefinition[]
 
-  /**
-   * Whether to use default shortcuts
-   * @default true
-   */
+  /** 기본 단축키 사용 여부 @default true */
   useDefaults?: boolean
 }
 
-/**
- * Default keyboard shortcuts
- */
 const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
-  // Text formatting
-  { key: 'b', metaKey: true, run: 'bold' },
-  { key: 'b', ctrlKey: true, run: 'bold' },
-  { key: 'i', metaKey: true, run: 'italic' },
-  { key: 'i', ctrlKey: true, run: 'italic' },
-  { key: 'u', metaKey: true, run: 'underline' },
-  { key: 'u', ctrlKey: true, run: 'underline' },
-
-  // History
-  { key: 'z', metaKey: true, run: 'undo' },
-  { key: 'z', ctrlKey: true, run: 'undo' },
-  { key: 'z', metaKey: true, shiftKey: true, run: 'redo' },
-  { key: 'z', ctrlKey: true, shiftKey: true, run: 'redo' },
-  { key: 'y', metaKey: true, run: 'redo' },
-  { key: 'y', ctrlKey: true, run: 'redo' },
+  { key: 'Mod-b', run: 'bold' },
+  { key: 'Mod-i', run: 'italic' },
+  { key: 'Mod-u', run: 'underline' },
+  { key: 'Mod-z', run: 'undo' },
+  { key: 'Shift-Mod-z', run: 'redo' },
+  { key: 'Mod-y', run: 'redo' },
 ]
 
 /**
- * Check if keyboard event matches shortcut definition
- */
-function matchesShortcut(
-  event: KeyboardEvent,
-  shortcut: ShortcutDefinition
-): boolean {
-  const key = event.key.toLowerCase()
-
-  if (key !== shortcut.key.toLowerCase()) {
-    return false
-  }
-
-  const needsMeta = shortcut.metaKey === true
-  const needsCtrl = shortcut.ctrlKey === true
-  const needsShift = shortcut.shiftKey === true
-  const needsAlt = shortcut.altKey === true
-
-  if (needsMeta && !event.metaKey) return false
-  if (needsCtrl && !event.ctrlKey) return false
-  if (needsShift && !event.shiftKey) return false
-  if (needsAlt && !event.altKey) return false
-
-  if (!needsMeta && !needsCtrl && (event.metaKey || event.ctrlKey)) {
-    return false
-  }
-
-  if (!needsShift && event.shiftKey && (needsMeta || needsCtrl)) {
-    return false
-  }
-
-  return true
-}
-
-/**
- * Create keyboard shortcuts plugin
+ * 키보드 단축키.
  *
- * @example
- * ```typescript
- * const keyboardShortcutsPlugin = createKeyboardShortcutsPlugin({
- *   shortcuts: [
- *     { key: 's', metaKey: true, event: 'SAVE_DOCUMENT' }
- *   ]
- * });
- * ```
+ * ## `prosemirror-keymap` 위로 옮겼습니다
+ *
+ * 예전에는 편집 영역이 `keydown` 을 버스에 실어 보내고, 이 플러그인이 그것을
+ * 받아 `metaKey`/`ctrlKey`/`shiftKey` 를 손으로 맞춰 봤습니다. PM 은 그 자리를
+ * **이미 갖고 있습니다** — 그리고 그쪽이 더 잘합니다.
+ *
+ * | | 버스로 받던 때 | PM 키맵 |
+ * | --- | --- | --- |
+ * | mac/윈도 차이 | `metaKey`·`ctrlKey` 두 줄씩 | `Mod-` 한 줄 |
+ * | 조합 중 | 걸러야 함 | PM 이 안 부름 |
+ * | 다른 키맵과의 순서 | 알 수 없음 | precedence 로 정해짐 |
+ *
+ * `Enter`·`Backspace` 같은 편집 키맵과 **같은 줄에 서는 것**이 특히 중요합니다.
+ * 버스로 받으면 그 둘의 순서를 아무도 모릅니다.
  */
 export function createKeyboardShortcutsPlugin(
   options: KeyboardShortcutsPluginOptions = {}
 ): Plugin {
   const { shortcuts = [], useDefaults = true } = options
+  const all = useDefaults ? [...DEFAULT_SHORTCUTS, ...shortcuts] : shortcuts
 
-  const allShortcuts = useDefaults
-    ? [...DEFAULT_SHORTCUTS, ...shortcuts]
-    : shortcuts
-
-  const unsubscribers: Array<() => void> = []
+  let detach: (() => void) | undefined
 
   return {
     name: 'utility:keyboard-shortcuts',
 
     initialize(context: EditorContext) {
-      const { eventBus } = context
-      const commandRegistry =
+      const area = context.editingAreaManager?.getCurrentArea()
+
+      if (!area?.addPlugin) return
+
+      const registry =
         context.commandRegistry ?? createDefaultCommandRegistry(context)
 
-      const unsubKeydown = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYDOWN, (data?: unknown) => {
-          if (!data || typeof data !== 'object' || !('event' in data)) {
-            return
-          }
+      const bindings: Record<string, () => boolean> = {}
 
-          const event = (data as { event: KeyboardEvent }).event
+      for (const shortcut of all) {
+        bindings[shortcut.key] = () =>
+          runCommand(
+            registry,
+            context.eventBus,
+            shortcut.run as 'bold',
+            ...([] as [])
+          )
+      }
 
-          for (const shortcut of allShortcuts) {
-            if (matchesShortcut(event, shortcut)) {
-              event.preventDefault()
-
-              if (shortcut.run) {
-                runCommand(
-                  commandRegistry,
-                  eventBus,
-                  shortcut.run as 'bold',
-                  ...([] as [])
-                )
-              } else if (shortcut.event) {
-                eventBus.emit(shortcut.event, shortcut.data)
-              }
-
-              return
-            }
-          }
-        }
-      )
-
-      unsubscribers.push(unsubKeydown)
+      detach = area.addPlugin(keymap(bindings))
     },
 
     destroy() {
-      unsubscribers.forEach((unsub) => unsub())
-      unsubscribers.length = 0
+      detach?.()
+      detach = undefined
     },
   }
 }
 
-/**
- * Default keyboard shortcuts plugin instance
- */
 export const KeyboardShortcutsPlugin = createKeyboardShortcutsPlugin()

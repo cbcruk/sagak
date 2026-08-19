@@ -844,6 +844,49 @@ emit(...)` 를 들고 있던 자리입니다.
 코어 소스  9,522줄  (이주 전 대비 약 -4,000)
 ```
 
+### 11-6. 두 번째 이음매를 걷었습니다
+
+`WysiwygEvents` 여덟은 전부 **PM 이 이미 갖고 있는 자리**를 버스로 한 겹
+감싼 것이었습니다.
+
+| 버스로 실어 나르던 것 | PM 의 자리 |
+| --- | --- |
+| `WYSIWYG_KEYDOWN` | `handleKeyDown` |
+| `WYSIWYG_KEYUP`·`BLURRED` | `handleDOMEvents` |
+| `WYSIWYG_PASTE` | `handlePaste` |
+| `WYSIWYG_CONTENT_CHANGED` | `subscribe(state, tr)` |
+| `AREA_SHOWN`·`HIDDEN`·`FOCUSED` | 아무도 안 들음 |
+
+감싼 쪽이 **약했습니다** — 문서 상태를 못 보고, 조합 중에도 불리고, 다른
+키맵과의 순서를 모릅니다. 편집 영역이 `addPlugin(pmPlugin)` 을 내주고 붙는
+쪽이 PM 플러그인을 직접 답니다.
+
+#### 옮기고 나서 드러난 것 다섯
+
+**단축키가 mac/윈도를 두 줄로 적고 있었습니다.** `metaKey` 와 `ctrlKey` 를
+따로 맞춰 보던 것이 `prosemirror-keymap` 의 `'Mod-b'` 한 줄이 됩니다.
+
+**자동 완성이 조합 중에도 돌고 있었습니다.** 버스로 `keydown` 을 받으면
+한글을 조립하는 자모마다 제안을 다시 계산합니다. PM 은 조합 중
+`handleKeyDown` 을 안 부릅니다.
+
+**표 리사이즈가 새로 만든 표를 놓치고 있었습니다.** 편집 영역이 *보일 때*
+한 번 훑었는데, 그 뒤에 만든 표는 안 잡히는데도 아무도 안 봤습니다. 문서가
+바뀔 때 보는 것이 맞습니다.
+
+**자동 저장이 문서를 열자마자 저장하고 있었습니다.** 프로그램이 갈아 끼운
+것과 사용자가 친 것을 구분하지 못했는데, 트랜잭션(`tr`)이 있으면 사용자,
+없으면 프로그램입니다.
+
+**자동 완성이 캐럿을 DOM 에서 읽고 있었습니다** — 모델이 진실인 문서에서.
+낱말과 범위를 `state.selection` 에서 읽고, 화면 좌표만 `coordsAtPos` 로
+묻습니다.
+
+```
+이벤트         33종 → 25종
+getSelection    4건 → 1건   (화면 값 조회 하나만 남음)
+```
+
 ### 11-5. 단계가 남을 이유를 잃었습니다
 
 [`event-bus-refactor.md`](./event-bus-refactor.md) 가 **처음에 잰 것**이

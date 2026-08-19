@@ -21,7 +21,7 @@ import {
 } from 'prosemirror-schema-list'
 import { logger } from '@/core/logger'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
-import { WysiwygEvents, type EventBus } from '@/core'
+import type { EventBus } from '@/core'
 import type { Highlighter, HighlightRange } from '@/core/types'
 import { sagakSchema } from '@/model/schema'
 import { toHtml, parseHtml } from '@/model/storage'
@@ -131,6 +131,7 @@ export class WysiwygArea implements EditingArea {
   private reportError: ErrorReporter
   private unsubscribers: Array<() => void> = []
   private listeners = new Set<ModelListener>()
+  private extraPlugins: PMPlugin[] = []
   private savedSelection?: { anchor: number; head: number }
 
   constructor(config: WysiwygAreaConfig) {
@@ -178,7 +179,6 @@ export class WysiwygArea implements EditingArea {
       }
     )
 
-    this.listenToDomEvents()
 
   }
 
@@ -206,10 +206,6 @@ export class WysiwygArea implements EditingArea {
   async show(): Promise<void> {
     this.element.style.display = 'block'
     this.visible = true
-
-    if (this.eventBus) {
-      this.eventBus.emit(WysiwygEvents.WYSIWYG_AREA_SHOWN)
-    }
   }
 
   /**
@@ -218,10 +214,6 @@ export class WysiwygArea implements EditingArea {
   async hide(): Promise<void> {
     this.element.style.display = 'none'
     this.visible = false
-
-    if (this.eventBus) {
-      this.eventBus.emit(WysiwygEvents.WYSIWYG_AREA_HIDDEN)
-    }
   }
 
   /**
@@ -308,6 +300,41 @@ export class WysiwygArea implements EditingArea {
    * `prosemirror-view` 가 트랜잭션을 안 만들고, 트랜잭션이 왔다는 것은 이미
    * 확정된 상태라는 뜻이며, 이 상태는 애초에 이 에디터의 것입니다.
    */
+  /**
+   * **`prosemirror-view` 의 이음매를 그대로 내줍니다.**
+   *
+   * 예전에는 편집 영역이 DOM 이벤트를 버스로 옮겨 실었습니다 —
+   * `WYSIWYG_KEYDOWN`·`KEYUP`·`PASTE`·`BLURRED`. 그런데 PM 은 그 자리를
+   * **이미 갖고 있습니다**(`handleKeyDown`·`handlePaste`·`handleDOMEvents`).
+   * 그 위에 버스를 얹은 것은 **두 번째 이음매**였고 약한 쪽이었습니다 —
+   * 문서 상태를 못 보고, 조합 중에도 불리고, 다른 키맵과의 순서를 모릅니다.
+   *
+   * 이제 붙는 쪽이 PM 플러그인을 직접 답니다.
+   *
+   * @returns 떼는 함수
+   */
+  addPlugin(plugin: PMPlugin): () => void {
+    this.extraPlugins.push(plugin)
+    this.reconfigure()
+
+    return () => {
+      const at = this.extraPlugins.indexOf(plugin)
+
+      if (at < 0) return
+
+      this.extraPlugins.splice(at, 1)
+      this.reconfigure()
+    }
+  }
+
+  private reconfigure(): void {
+    this.view.updateState(
+      this.view.state.reconfigure({
+        plugins: [...editingPlugins(), ...this.extraPlugins],
+      })
+    )
+  }
+
   subscribe(listener: ModelListener): () => void {
     this.listeners.add(listener)
 
@@ -482,7 +509,10 @@ export class WysiwygArea implements EditingArea {
    * 문서를 통째로 갈아 끼웁니다 — 되돌리기 기록도 새로 시작합니다
    */
   private replaceDocument(doc: PMNode): void {
-    const next = EditorState.create({ doc, plugins: editingPlugins() })
+    const next = EditorState.create({
+      doc,
+      plugins: [...editingPlugins(), ...this.extraPlugins],
+    })
 
     this.view.updateState(next)
 
@@ -512,22 +542,6 @@ export class WysiwygArea implements EditingArea {
       return
     }
 
-    if (tr.docChanged) {
-      /*
-       * `content` 는 **읽을 때** 직렬화합니다.
-       *
-       * 구독자 둘 다(`EditorCore` 의 서식 상태 갱신, 자동 저장) 이 값을 읽지
-       * 않습니다. 게터로 두면 계약은 그대로이고 아무도 안 읽으면 비용이 0 입니다.
-       */
-      const read = () => this.getRawContent()
-
-      this.eventBus.emit(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, {
-        get content(): string {
-          return read()
-        },
-      })
-
-    }
 
   }
 
@@ -545,52 +559,20 @@ export class WysiwygArea implements EditingArea {
    * 들어오므로 따로 소독하지 않습니다. 이미지만 비켜 줍니다.
    */
   private handlePaste(event: ClipboardEvent): boolean {
-    if (this.eventBus) {
-      this.eventBus.emit(WysiwygEvents.WYSIWYG_PASTE, { event })
-    }
-
     if (event.defaultPrevented) {
       return true
     }
 
     const items = Array.from(event.clipboardData?.items ?? [])
 
-    /* 이미지 붙여넣기는 업로드 플러그인의 몫입니다 */
+    /*
+     * 이미지 붙여넣기는 업로드 플러그인의 몫입니다.
+     *
+     * 예전에는 여기서 `WYSIWYG_PASTE` 를 실어 보내 누군가 가로챌 수 있게
+     * 했습니다. 그건 PM 의 `handlePaste` 를 버스로 감싼 것이라, 붙는 쪽은
+     * `addPlugin` 으로 자기 `handlePaste` 를 다는 편이 낫습니다.
+     */
     return items.some((item) => item.type.startsWith('image/'))
-  }
-
-  /**
-   * DOM 이벤트를 버스로 옮깁니다
-   *
-   * 내용과 선택은 여기 없습니다 — 트랜잭션에서 나옵니다.
-   */
-  private listenToDomEvents(): void {
-    const forward = (type: string, event: string) => {
-      const handler = (e: Event) => {
-        this.eventBus?.emit(event, { event: e })
-      }
-
-      this.element.addEventListener(type, handler)
-      this.unsubscribers.push(() =>
-        this.element.removeEventListener(type, handler)
-      )
-    }
-
-    const announce = (type: string, event: string) => {
-      const handler = () => {
-        this.eventBus?.emit(event)
-      }
-
-      this.element.addEventListener(type, handler)
-      this.unsubscribers.push(() =>
-        this.element.removeEventListener(type, handler)
-      )
-    }
-
-    announce('focus', WysiwygEvents.WYSIWYG_FOCUSED)
-    announce('blur', WysiwygEvents.WYSIWYG_BLURRED)
-    forward('keydown', WysiwygEvents.WYSIWYG_KEYDOWN)
-    forward('keyup', WysiwygEvents.WYSIWYG_KEYUP)
   }
 
   /**

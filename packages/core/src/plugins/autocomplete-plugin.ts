@@ -1,5 +1,7 @@
+import { Plugin as PMPlugin } from 'prosemirror-state'
+import type { EditorView } from 'prosemirror-view'
 import type { Plugin, EditorContext } from '@/core'
-import { WysiwygEvents, AutocompleteEvents } from '@/core'
+import { AutocompleteEvents } from '@/core'
 
 /**
  * Autocomplete suggestion data
@@ -101,60 +103,50 @@ function lastWordBefore(text: string): string | null {
 }
 
 /**
- * Get the current word being typed and its position
+ * 캐럿 앞의 낱말과 팝오버를 띄울 자리.
+ *
+ * **DOM 선택이 아니라 문서 상태에서 읽습니다.** 예전에는
+ * `window.getSelection()` 으로 텍스트 노드와 오프셋을 잡았는데, 그러면 편집
+ * 영역이 포커스를 잃었을 때 답이 없어지고 무엇보다 **모델이 진실인 문서에서
+ * DOM 을 물어보는 꼴**이었습니다.
+ *
+ * 화면 좌표만 뷰에 묻습니다 — 그건 문서가 모르는 것이라 맞는 자리입니다.
  */
-function getCurrentWordInfo(element: HTMLElement): {
+function currentWordInfo(view: EditorView): {
   prefix: string
-  range: Range | null
+  from: number
+  to: number
   position: { x: number; y: number }
 } | null {
-  const selection = window.getSelection()
+  const { selection } = view.state
 
-  if (!selection || selection.rangeCount === 0) {
-    return null
-  }
+  if (!selection.empty) return null
 
-  const range = selection.getRangeAt(0)
-
-  if (!range.collapsed) {
-    return null
-  }
-
-  const node = range.startContainer
-
-  if (node.nodeType !== Node.TEXT_NODE) {
-    return null
-  }
-
-  if (!element.contains(node)) {
-    return null
-  }
-
-  const text = node.textContent || ''
-  const offset = range.startOffset
-  const beforeCursor = text.slice(0, offset)
+  const { $from } = selection
+  const before = $from.parent.textBetween(
+    0,
+    $from.parentOffset,
+    undefined,
+    '\ufffc'
+  )
 
   /*
-   * 캐럿 **바로 앞** 에서 끝나는 단어를 찾습니다.
+   * 캐럿 **바로 앞** 에서 끝나는 낱말을 찾습니다.
    *
    * 사전(`extractWords`)과 같은 분절기를 써야 합니다. 예전에는 여기만
    * `[a-zA-Z가-힣]+$` 였고 사전은 `\b…\b` 여서 기준이 서로 달랐습니다.
    */
-  const prefix = lastWordBefore(beforeCursor)
+  const prefix = lastWordBefore(before)
 
-  if (!prefix) {
-    return null
-  }
+  if (!prefix) return null
 
-  const rect = range.getBoundingClientRect()
+  const coords = view.coordsAtPos($from.pos)
 
   return {
     prefix,
-    range,
-    position: {
-      x: rect.left,
-      y: rect.bottom + 4,
-    },
+    from: $from.pos - prefix.length,
+    to: $from.pos,
+    position: { x: coords.left, y: coords.bottom + 4 },
   }
 }
 
@@ -186,43 +178,20 @@ function findSuggestions(
 }
 
 /**
- * Replace the current word prefix with the selected suggestion
+ * 고른 낱말로 갈아 끼웁니다 — **트랜잭션 하나**입니다.
+ *
+ * 예전에는 텍스트 노드의 `textContent` 를 직접 잘라 붙이고 DOM 선택을 다시
+ * 놓았습니다. 편집 영역이 문서 모델을 갖게 된 뒤로 그 길은 모델을 지나지
+ * 않습니다.
  */
 function applyAutocomplete(
-  element: HTMLElement,
-  prefix: string,
+  view: EditorView,
+  from: number,
+  to: number,
   suggestion: string
 ): void {
-  const selection = window.getSelection()
-
-  if (!selection || selection.rangeCount === 0) {
-    return
-  }
-
-  const range = selection.getRangeAt(0)
-  const node = range.startContainer
-
-  if (node.nodeType !== Node.TEXT_NODE || !element.contains(node)) {
-    return
-  }
-
-  const text = node.textContent || ''
-  const offset = range.startOffset
-  const startPos = offset - prefix.length
-
-  if (startPos < 0) {
-    return
-  }
-
-  const before = text.slice(0, startPos)
-  const after = text.slice(offset)
-  node.textContent = before + suggestion + after
-
-  const newRange = document.createRange()
-  newRange.setStart(node, startPos + suggestion.length)
-  newRange.collapse(true)
-  selection.removeAllRanges()
-  selection.addRange(newRange)
+  view.dispatch(view.state.tr.insertText(suggestion, from, to))
+  view.focus()
 }
 
 /**
@@ -237,7 +206,6 @@ export function createAutocompletePlugin(
   let words = new Set<string>()
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   let isAutocompleteVisible = false
-  let currentPrefix = ''
   /** 마지막으로 사전을 만든 원문 — 같으면 다시 만들지 않습니다 */
   let lastText: string | null = null
 
@@ -272,13 +240,21 @@ export function createAutocompletePlugin(
       const hideAutocomplete = (): void => {
         if (isAutocompleteVisible) {
           isAutocompleteVisible = false
-          currentPrefix = ''
+          currentRange = null
           eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_HIDE)
         }
       }
 
+      /** 지금 붙어 있는 뷰 — PM 플러그인 안에서 받습니다 */
+      let view: EditorView | null = null
+      let currentRange: { from: number; to: number } | null = null
+
       const showSuggestions = (): void => {
-        const wordInfo = getCurrentWordInfo(element)
+        const wordInfo = view ? currentWordInfo(view) : null
+
+        currentRange = wordInfo
+          ? { from: wordInfo.from, to: wordInfo.to }
+          : null
 
         if (!wordInfo || wordInfo.prefix.length < minChars) {
           hideAutocomplete()
@@ -297,7 +273,6 @@ export function createAutocompletePlugin(
         }
 
         isAutocompleteVisible = true
-        currentPrefix = wordInfo.prefix
 
         eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_SHOW, {
           suggestions,
@@ -306,59 +281,96 @@ export function createAutocompletePlugin(
         })
       }
 
-      const unsubKeyup = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYUP, (data?: unknown) => {
-          if (!data || typeof data !== 'object' || !('event' in data)) {
-            return
-          }
+      /**
+       * **입력을 `prosemirror-view` 의 이음매로 받습니다.**
+       *
+       * 예전에는 편집 영역이 `keydown`·`keyup`·`blur` 를 버스에 실어 보내고
+       * 여기서 풀어 봤습니다. PM 은 그 자리를 이미 갖고 있고, 그쪽이 더
+       * 잘합니다 — **조합 중에는 `handleKeyDown` 을 안 부릅니다.** 버스로
+       * 받던 때는 한글을 조립하는 중에도 자모마다 제안을 다시 계산했습니다.
+       */
+      const area = context.editingAreaManager?.getCurrentArea()
 
-          const event = (data as { event: KeyboardEvent }).event
+      if (area?.addPlugin) {
+        unsubscribers.push(
+          area.addPlugin(
+            new PMPlugin({
+              view: (editorView) => {
+                view = editorView
 
-          if (
-            ['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(
-              event.key
-            )
-          ) {
-            return
-          }
+                return {
+                  destroy: () => {
+                    view = null
+                  },
+                }
+              },
 
-          if (timeoutId) {
-            clearTimeout(timeoutId)
-          }
+              props: {
+                handleKeyDown: (_view, event) => {
+                  if (!isAutocompleteVisible) return false
 
-          timeoutId = setTimeout(() => {
-            updateWords()
-            showSuggestions()
-          }, delay)
-        }
-      )
+                  if (event.key === 'Escape') {
+                    hideAutocomplete()
+                    return true
+                  }
 
-      const unsubKeydown = eventBus.on(
-        WysiwygEvents.WYSIWYG_KEYDOWN, (data?: unknown) => {
-          if (!isAutocompleteVisible) {
-            return
-          }
+                  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_SELECT, {
+                      direction: event.key === 'ArrowDown' ? 'next' : 'prev',
+                    })
+                    return true
+                  }
 
-          if (!data || typeof data !== 'object' || !('event' in data)) {
-            return
-          }
+                  if (event.key === 'Enter' || event.key === 'Tab') {
+                    eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY)
+                    return true
+                  }
 
-          const event = (data as { event: KeyboardEvent }).event
+                  return false
+                },
 
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            hideAutocomplete()
-          } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault()
-            eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_SELECT, {
-              direction: event.key === 'ArrowDown' ? 'next' : 'prev',
+                handleDOMEvents: {
+                  keyup: (_view, event) => {
+                    const key = (event as KeyboardEvent).key
+
+                    if (
+                      [
+                        'ArrowUp',
+                        'ArrowDown',
+                        'Enter',
+                        'Escape',
+                        'Tab',
+                      ].includes(key)
+                    ) {
+                      return false
+                    }
+
+                    if (timeoutId) clearTimeout(timeoutId)
+
+                    timeoutId = setTimeout(() => {
+                      updateWords()
+                      showSuggestions()
+                    }, delay)
+
+                    return false
+                  },
+
+                  blur: () => {
+                    /* 제안을 누르는 중일 수 있어 한 박자 기다립니다 */
+                    setTimeout(() => {
+                      hideAutocomplete()
+                    }, 150)
+
+                    return false
+                  },
+                },
+              },
             })
-          } else if (event.key === 'Enter' || event.key === 'Tab') {
-            event.preventDefault()
-            eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY)
-          }
-        }
-      )
+          )
+        )
+      }
+
+
 
       const unsubApply = eventBus.on(
         AutocompleteEvents.AUTOCOMPLETE_APPLY, (data?: unknown) => {
@@ -367,20 +379,19 @@ export function createAutocompletePlugin(
           }
 
           const { word } = data as { word: string }
-          applyAutocomplete(element, currentPrefix, word)
+
+          if (view && currentRange) {
+            applyAutocomplete(view, currentRange.from, currentRange.to, word)
+          }
+
           hideAutocomplete()
         }
       )
 
-      const unsubBlur = eventBus.on(WysiwygEvents.WYSIWYG_BLURRED, () => {
-        setTimeout(() => {
-          hideAutocomplete()
-        }, 150)
-      })
 
       updateWords()
 
-      unsubscribers.push(unsubKeyup, unsubKeydown, unsubApply, unsubBlur)
+      unsubscribers.push(unsubApply)
     },
 
     destroy() {

@@ -1,5 +1,6 @@
 import type { Plugin, EditorContext } from '@/core'
-import { WysiwygEvents, CoreEvents } from '@/core'
+import { subscribeToModel } from '@/model/bridge'
+import { CoreEvents } from '@/core'
 
 /**
  * Table resize plugin options
@@ -229,17 +230,20 @@ export function createTableResizePlugin(
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
 
-      const unsubWysiwygShown = eventBus.on(
-        WysiwygEvents.WYSIWYG_AREA_SHOWN, () => {
-          const tables = element.querySelectorAll('table')
-
-          tables.forEach((table) => {
+      /*
+       * 표가 생기면 열 너비를 고정해 둡니다.
+       *
+       * 예전에는 편집 영역이 보일 때(`WYSIWYG_AREA_SHOWN`) 한 번 훑었습니다.
+       * 그러면 그 뒤에 만든 표는 안 잡히는데도 아무도 안 봤습니다 — 문서가
+       * 바뀔 때 보는 것이 맞습니다.
+       */
+      unsubscribers.push(
+        subscribeToModel(context, () => {
+          element.querySelectorAll('table').forEach((table) => {
             table.style.tableLayout = 'fixed'
           })
-        }
+        })
       )
-
-      unsubscribers.push(unsubWysiwygShown)
       unsubscribers.push(() => {
         element.removeEventListener('mousemove', handleMouseMove)
         element.removeEventListener('mousedown', handleMouseDown)

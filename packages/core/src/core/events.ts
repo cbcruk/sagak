@@ -89,17 +89,6 @@ export const EditingAreaEvents = {
 /**
  * `WysiwygArea` 이벤트
  */
-export const WysiwygEvents = {
-  WYSIWYG_AREA_SHOWN: 'WYSIWYG_AREA_SHOWN',
-  WYSIWYG_AREA_HIDDEN: 'WYSIWYG_AREA_HIDDEN',
-  WYSIWYG_CONTENT_CHANGED: 'WYSIWYG_CONTENT_CHANGED',
-  WYSIWYG_FOCUSED: 'WYSIWYG_FOCUSED',
-  WYSIWYG_BLURRED: 'WYSIWYG_BLURRED',
-  WYSIWYG_PASTE: 'WYSIWYG_PASTE',
-  WYSIWYG_KEYDOWN: 'WYSIWYG_KEYDOWN',
-  WYSIWYG_KEYUP: 'WYSIWYG_KEYUP',
-} as const
-
 /**
  * 자동 저장 플러그인 이벤트
  */
@@ -142,7 +131,6 @@ export const EditorEvents = {
   ...FindReplaceEvents,
   ...AutocompleteEvents,
   ...EditingAreaEvents,
-  ...WysiwygEvents,
   ...AutoSaveEvents,
   ...ExportEvents,
   ...ImageResizeEvents,

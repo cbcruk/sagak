@@ -42,7 +42,6 @@ export {
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
-  WysiwygEvents,
   EditorEvents,
 } from './events'
 export type { EditorEventName, CoreEventName, PluginEventName } from './events'

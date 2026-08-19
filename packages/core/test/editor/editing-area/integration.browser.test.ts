@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
 import { EventBus } from '@/core/event-bus'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
@@ -164,68 +164,8 @@ describe('Editing Area 통합', () => {
       expect(events).toEqual(['wysiwyg→html'])
     })
 
-    it('WYSIWYG 전용 이벤트를 발행해야 함', async () => {
-      // Given: WYSIWYG 콘텐츠 변경 핸들러가 등록된 매니저
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
 
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
 
-      await manager.initialize()
-
-      // When: WYSIWYG 영역의 문서가 바뀜
-      const handle = manager.getCurrentArea()!.getStateHandle!()
-      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
-
-      // Then: WYSIWYG_CONTENT_CHANGED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('포커스 이벤트를 발행해야 함', async () => {
-      // Given: WYSIWYG 포커스 핸들러가 등록된 매니저
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_FOCUSED', handler)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
-
-      await manager.initialize()
-
-      // When: WYSIWYG 영역에서 focus 이벤트 발생
-      const element = manager.getCurrentArea()?.getElement()
-      element?.dispatchEvent(new Event('focus', { bubbles: true }))
-
-      // Then: WYSIWYG_FOCUSED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('모든 모드로부터 이벤트를 수신해야 함', async () => {
-      // Given: WYSIWYG 콘텐츠 변경 핸들러가 등록된 매니저
-      const wysiwygHandler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', wysiwygHandler)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
-
-      await manager.initialize()
-
-      // When: WYSIWYG 영역의 문서가 바뀜
-      const handle = manager.getCurrentArea()!.getStateHandle!()
-      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
-
-      // Then: 이벤트 핸들러가 호출됨
-      expect(wysiwygHandler).toHaveBeenCalled()
-    })
   })
 
   describe('선택 영역 (모델이 갖습니다)', () => {

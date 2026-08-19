@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
-import { mountEditor, settle, type MountedEditor } from './harness'
+import { mountEditor, settle, setHtml, type MountedEditor } from './harness'
 
 /**
  * 자동 저장 — 저장과 복원이 **둘 다** 돌아야 뜻이 있습니다.
@@ -53,9 +53,7 @@ describe('자동 저장', () => {
     await settle(4)
     expect(saved()).toBeNull()
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '고친 글'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>고친 글</p>')
     await flushSave()
 
     expect(saved()).toContain('고친 글')
@@ -65,9 +63,7 @@ describe('자동 저장', () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '표시 확인'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>표시 확인</p>')
     await flushSave()
 
     const indicator = ed.root.querySelector('[data-scope="auto-save"]')
@@ -82,9 +78,7 @@ describe('자동 저장', () => {
     // Given: 한 번 쓰고 저장된 상태
     ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '쓰던 글'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>쓰던 글</p>')
     await flushSave()
     expect(saved()).toContain('쓰던 글')
 
@@ -124,9 +118,7 @@ describe('자동 저장', () => {
     // 저장된 것이 없으면 인디케이터 자체가 없습니다
     expect(discard()).toBeNull()
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '초안'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>초안</p>')
     await flushSave()
 
     expect(discard()).not.toBeNull()
@@ -136,9 +128,7 @@ describe('자동 저장', () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '초안'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>초안</p>')
     await flushSave()
     expect(saved()).toContain('초안')
 
@@ -164,17 +154,14 @@ describe('자동 저장', () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '초안'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>초안</p>')
     await flushSave()
 
     ed.context.eventBus.emit('AUTO_SAVE_CLEAR')
     await settle(2)
     expect(saved()).toBeNull()
 
-    p.textContent = '초안 이어서'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>초안 이어서</p>')
     await flushSave()
 
     expect(saved()).toContain('초안 이어서')
@@ -184,9 +171,7 @@ describe('자동 저장', () => {
     ed = await mountEditor('<p>처음</p>', { autoSave: options, showAutoSaveIndicator: true })
     await settle(4)
 
-    const p = ed.editable.querySelector('p')!
-    p.textContent = '지울 글'
-    ed.editable.dispatchEvent(new Event('input', { bubbles: true }))
+    setHtml(ed, '<p>지울 글</p>')
     await flushSave()
     expect(saved()).not.toBeNull()
 

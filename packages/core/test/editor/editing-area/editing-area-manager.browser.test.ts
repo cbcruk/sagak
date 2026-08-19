@@ -625,25 +625,27 @@ describe('EditingAreaManager', () => {
       expect(handle?.getState()?.doc.textContent).toBe('')
     })
 
-    it('EventBus를 영역에 전달해야 함', async () => {
-      // Given: EventBus와 콘텐츠 변경 핸들러가 설정된 config
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
+    /**
+     * Why: 편집 영역이 바뀐 것을 밖에서 알아야 합니다.
+     * How: 예전에는 `WYSIWYG_CONTENT_CHANGED` 를 버스로 실었습니다. 그건
+     *      `prosemirror-view` 의 `dispatchTransaction` 을 한 겹 감싼 것이라
+     *      **두 번째 이음매**였습니다 — 이제 `subscribe` 하나입니다.
+     */
+    it('문서가 바뀌면 구독자를 부르는 영역이어야 함', async () => {
+      manager = new EditingAreaManager({ container })
       await manager.initialize()
 
-      // When: WYSIWYG 영역의 문서가 바뀜
-      const handle = manager.getCurrentArea()!.getStateHandle!()
+      const area = manager.getCurrentArea()!
+      const seen: string[] = []
+
+      area.subscribe!(() => {
+        seen.push(area.getRawContent())
+      })
+
+      const handle = area.getStateHandle!()
       handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
-      // Then: 콘텐츠 변경 핸들러가 호출됨
-      expect(handler).toHaveBeenCalled()
+      expect(seen).toEqual(['<p>가</p>'])
     })
   })
 

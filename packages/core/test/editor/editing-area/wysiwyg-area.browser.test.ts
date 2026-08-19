@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { EventBus } from '@/core/event-bus'
 import { TextSelection } from 'prosemirror-state'
+import { keymap } from 'prosemirror-keymap'
 import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { Node as PMNode } from 'prosemirror-model'
@@ -272,39 +273,7 @@ describe('WysiwygArea', () => {
       expect(div.style.display).toBe('none')
     })
 
-    it('show 시 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 SHOWN 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_SHOWN', handler)
 
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      // When: show 호출
-      await wysiwygArea.show()
-
-      // Then: WYSIWYG_AREA_SHOWN 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('hide 시 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 HIDDEN 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_HIDDEN', handler)
-
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      await wysiwygArea.show()
-
-      // When: hide 호출
-      await wysiwygArea.hide()
-
-      // Then: WYSIWYG_AREA_HIDDEN 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
   })
 
   describe('포커스 관리 (focus 제어)', () => {
@@ -623,121 +592,110 @@ describe('WysiwygArea', () => {
     })
   })
 
-  describe('이벤트 발행 (EventBus 통합)', () => {
+  describe('알림 — 트랜잭션 하나가 신호입니다', () => {
     /**
-     * Why: WYSIWYG 영역의 변경 사항을 다른 컴포넌트에 알려야 함
-     * How: DOM 이벤트 리스너로 이벤트 포착 후 `EventBus`로 발행
+     * Why: 문서가 바뀐 것을 밖에서 알아야 합니다 (자동 저장·문서 저장소).
+     * How: 예전에는 DOM 이벤트를 버스로 옮겨 실었습니다 —
+     *      `WYSIWYG_CONTENT_CHANGED`·`KEYDOWN`·`FOCUSED`. 그건
+     *      `prosemirror-view` 가 이미 갖고 있는 이음매를 한 겹 감싼 것이라
+     *      **두 번째 이음매**였습니다. 이제 `subscribe` 하나입니다.
      */
+    it('문서가 바뀌면 구독자를 부릅니다', () => {
+      wysiwygArea = new WysiwygArea({ container })
 
-    it('콘텐츠 변경 이벤트를 발행해야 함', () => {
-      // Given: EventBus와 CONTENT_CHANGED 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
+      const seen: string[] = []
+      wysiwygArea.subscribe(() => {
+        seen.push(wysiwygArea.getRawContent())
+      })
 
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      /*
-       * **DOM 이벤트가 아니라 트랜잭션이 신호입니다.**
-       *
-       * 예전에는 `input` 을 듣고 "뭔가 바뀌었나 보다" 했습니다. 이제는 문서를
-       * 바꾼 트랜잭션 자신이 무엇이 바뀌었는지 알고 있어 짐작할 일이 없습니다.
-       */
       const handle = wysiwygArea.getStateHandle()
       handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
-      // Then: WYSIWYG_CONTENT_CHANGED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
+      expect(seen).toEqual(['<p>가</p>'])
+    })
+
+    it('구독을 떼면 더 이상 안 부릅니다', () => {
+      wysiwygArea = new WysiwygArea({ container })
+
+      let calls = 0
+      const off = wysiwygArea.subscribe(() => {
+        calls += 1
+      })
+
+      const handle = wysiwygArea.getStateHandle()
+      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
+      off()
+      handle.dispatch(handle.getState()!.tr.insertText('나', 1))
+
+      expect(calls).toBe(1)
     })
 
     /**
-     * Why: 매 키 입력마다 문서 전체를 직렬화하면 문서 크기에 비례해 느려집니다.
-     *      재 보니 2000문단(222 KB)에서 키 하나당 0.925 ms 였고, 정작 구독자
-     *      둘 다(`EditorCore`, 자동 저장) 이 값을 읽지 않았습니다.
-     * How: `innerHTML` 게터를 세어, 페이로드를 읽기 전에는 0 인지 확인
+     * Why: 붙는 쪽이 키맵이나 입력 처리를 달 자리가 있어야 합니다.
+     * How: PM 플러그인을 그대로 받습니다 — 버스로 감싸지 않습니다.
      */
-    it('콘텐츠를 읽기 전에는 직렬화하지 않아야 함', () => {
-      // Given: 내용이 있는 WysiwygArea
-      const eventBus = new EventBus()
-      wysiwygArea = new WysiwygArea({ container, eventBus })
-      wysiwygArea.setRawContent('<p>글자가 좀 있는 문단입니다</p>')
+    it('PM 플러그인을 얹고 뗄 수 있습니다', () => {
+      wysiwygArea = new WysiwygArea({ container })
 
-      let payload: { content: string } | undefined
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', (data) => {
-        payload = data
-      })
+      let pressed = 0
+      const off = wysiwygArea.addPlugin(
+        keymap({
+          'Mod-k': () => {
+            pressed += 1
+            return true
+          },
+        })
+      )
 
-      // When: 입력이 열 번 일어나되 아무도 content 를 읽지 않음
-      const handle = wysiwygArea.getStateHandle()
-      for (let i = 0; i < 10; i += 1) {
-        handle.dispatch(handle.getState()!.tr.insertText('가', 1))
+      const press = (): void => {
+        wysiwygArea
+          .getElement()
+          .dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'k',
+              ctrlKey: true,
+              bubbles: true,
+            })
+          )
       }
 
-      /*
-       * Then: 페이로드에 **값이 아니라 게터**가 들어 있어야 합니다.
-       *
-       * 전에는 `innerHTML` 읽기 횟수를 셌지만 이제 직렬화는 모델에서 일어나
-       * 셀 자리가 없습니다. 대신 계약 자체를 봅니다 — 프로퍼티가 게터라는 것이
-       * 곧 "읽기 전에는 아무 일도 안 한다" 입니다.
-       */
-      const descriptor = Object.getOwnPropertyDescriptor(payload!, 'content')!
-      expect(typeof descriptor.get).toBe('function')
-      expect(descriptor.value).toBeUndefined()
+      press()
+      expect(pressed).toBe(1)
 
-      // 그리고 읽으면 그때 제대로 나와야 합니다 (계약은 그대로)
-      expect(payload?.content).toContain('문단입니다')
+      off()
+      press()
+      expect(pressed).toBe(1)
     })
 
-    it('포커스 이벤트를 발행해야 함', () => {
-      // Given: EventBus와 FOCUSED 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_FOCUSED', handler)
+    /**
+     * Why: 문서를 갈아 끼워도 얹은 플러그인은 살아 있어야 합니다.
+     * How: 상태를 새로 만들 때 얹힌 것들을 다시 넣습니다.
+     */
+    it('문서를 갈아 끼워도 얹은 플러그인이 남습니다', () => {
+      wysiwygArea = new WysiwygArea({ container })
 
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
+      let pressed = 0
+      wysiwygArea.addPlugin(
+        keymap({
+          'Mod-k': () => {
+            pressed += 1
+            return true
+          },
+        })
+      )
 
-      // When: focus 이벤트 발생
-      const div = wysiwygArea.getElement()
-      div.dispatchEvent(new Event('focus', { bubbles: true }))
+      wysiwygArea.setRawContent('<p>다른 문서</p>')
+      wysiwygArea
+        .getElement()
+        .dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'k',
+            ctrlKey: true,
+            bubbles: true,
+          })
+        )
 
-      // Then: WYSIWYG_FOCUSED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('블러 이벤트를 발행해야 함', () => {
-      // Given: EventBus와 BLURRED 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_BLURRED', handler)
-
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      // When: blur 이벤트 발생
-      const div = wysiwygArea.getElement()
-      div.dispatchEvent(new Event('blur', { bubbles: true }))
-
-      // Then: WYSIWYG_BLURRED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('키다운 이벤트를 발행해야 함', () => {
-      // Given: EventBus와 KEYDOWN 핸들러가 설정된 WysiwygArea
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('WYSIWYG_KEYDOWN', handler)
-
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      // When: keydown 이벤트 발생
-      const div = wysiwygArea.getElement()
-      div.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }))
-
-      // Then: WYSIWYG_KEYDOWN 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
+      expect(pressed).toBe(1)
     })
   })
 
