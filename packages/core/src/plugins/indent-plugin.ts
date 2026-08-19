@@ -1,4 +1,4 @@
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createIndentPlugin = definePlugin<IndentPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.INDENT_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('indent')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'indent' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute indent command:')

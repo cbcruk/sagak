@@ -4,7 +4,6 @@ import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
 import { runCommand } from './command-registry'
 import { createDefaultCommandRegistry } from './default-commands'
-import { isBlockedByComposition } from './composition-guard'
 
 /**
  * 플러그인 핸들러 컨텍스트
@@ -110,7 +109,13 @@ export interface PluginInitContext<
  * 기본 플러그인 옵션
  */
 export interface BasePluginOptions {
-  /** IME 입력 중 동작 차단 여부 (기본값: `true`) */
+  /**
+   * IME 입력 중 동작 차단 여부
+   *
+   * @deprecated **아무 효과가 없습니다.** 조합 가드가 플러그인마다 있던 것을
+   * 모델에 닿는 경계 둘(`runCommand`·`runModelCommand`)로 모았습니다. 커맨드
+   * 하나만 조합 중에 통과시킬 이유가 없어서 옵션도 안 남깁니다.
+   */
   checkComposition?: boolean
 }
 
@@ -140,10 +145,7 @@ export interface PluginDefinition<
   /**
    * IME 조합 중 차단될 때 로그에 표시할 이름 (예: `'Bold'`)
    *
-   * 조합 가드는 `checkComposition` 옵션이 켜져 있으면 모든 핸들러 앞에 자동으로
-   * 등록됩니다. 플러그인이 직접 검사할 필요가 없습니다.
-   *
-   * 생략하면 `name`이 쓰입니다.
+   * @deprecated 가드가 경계로 옮겨가면서 로그도 커맨드 이름으로 남습니다.
    */
   compositionLabel?: string
 
@@ -292,21 +294,18 @@ export function definePlugin<
               ? definition.handlers(finalOptions)
               : definition.handlers
 
-          const compositionLabel =
-            definition.compositionLabel ?? definition.name
-
+          /*
+           * **조합 가드가 여기 없습니다.**
+           *
+           * 예전에는 핸들러마다 `before` 단계에 가드를 하나씩 걸었습니다.
+           * 그 가드가 이제 **모델에 닿는 경계**에 있습니다 —
+           * `runCommand`(이름과 값)와 `runModelCommand`(구조 있는 값) 둘입니다.
+           *
+           * 여기 두면 커맨드를 안 부르는 핸들러(다이얼로그 열기 등)까지 막고,
+           * 무엇보다 같은 가드가 스물몇 벌이 됩니다 —
+           * `docs/event-bus-refactor.md` 가 센 그 자리입니다.
+           */
           for (const [eventName, handler] of Object.entries(resolvedHandlers)) {
-            // IME 조합 가드를 `before` 단계에 등록합니다. 플러그인 핸들러(`on`)보다
-            // 먼저 실행되며, 차단 시 `on`이 건너뛰어지고 `emit`이 `false`를 반환합니다.
-            const unsubGuard = eventBus.on(eventName, 'before', () =>
-              !isBlockedByComposition(
-                composition,
-                finalOptions.checkComposition,
-                compositionLabel
-              )
-            )
-            cleanups.push(unsubGuard)
-
             const unsub = eventBus.on(eventName, 'on', (data?: unknown) =>
               handler(createHandlerContext(), data)
             )

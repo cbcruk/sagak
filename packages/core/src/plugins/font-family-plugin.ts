@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -72,7 +72,7 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.FONT_FAMILY_CHANGED]: (
-      { options: opts, emit, reportError, runCommand },
+      { options: opts, reportError, runCommand },
       data?: unknown
     ) => {
       const fontFamily = extractFontFamily(data)
@@ -91,13 +91,6 @@ export const createFontFamilyPlugin = definePlugin<FontFamilyPluginOptions>({
 
       try {
         const result = runCommand('fontName', fontFamily)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'fontFamily',
-            value: fontFamily,
-          })
-        }
 
         return result
       } catch (error) {

@@ -1,4 +1,4 @@
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createOutdentPlugin = definePlugin<OutdentPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.OUTDENT_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('outdent')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'outdent' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute outdent command:')

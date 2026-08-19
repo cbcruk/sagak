@@ -102,7 +102,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발생함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'fontFamily',
+        style: 'fontName',
         value: 'Times New Roman',
       })
 
@@ -293,7 +293,7 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
       // Then: BEFORE 단계에서 차단됨
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Font family blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
@@ -347,9 +347,15 @@ describe('FontFamilyPlugin (글꼴 설정)', () => {
         fontFamily: 'Arial',
       })
 
-      // Then: 차단 없이 실행됨
-      expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalled()
+      /*
+       * Then: **꺼도 막힙니다.**
+       *
+       * 가드가 플러그인마다 있던 것을 모델에 닿는 경계 둘로 모으면서
+       * `checkComposition` 옵션이 뜻을 잃었습니다. 커맨드 하나만 조합 중에
+       * 통과시킬 이유가 없어서 옵션도 안 남깁니다.
+       */
+      expect(result).toBe(false)
+      expect(execCommandSpy).not.toHaveBeenCalled()
 
       execCommandSpy.mockRestore()
       newManager.destroyAll()

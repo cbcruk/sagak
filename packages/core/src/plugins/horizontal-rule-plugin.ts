@@ -1,4 +1,4 @@
-import { definePlugin, ContentEvents, CoreEvents } from '@/core'
+import { definePlugin, ContentEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 export interface HorizontalRulePluginOptions extends BasePluginOptions {
@@ -25,16 +25,11 @@ export const createHorizontalRulePlugin =
 
     handlers: (options) => ({
       [options.eventName ?? ContentEvents.HORIZONTAL_RULE_INSERT]: ({
-        emit,
         reportError,
         runCommand,
       }) => {
         try {
           const result = runCommand('insertHorizontalRule')
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'horizontalRule' })
-          }
 
           return result
         } catch (error) {

@@ -2,6 +2,7 @@ import { undoDepth, redoDepth } from 'prosemirror-history'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorContext } from '@/core/types'
 import { EditingAreaEvents } from '@/core/events'
+import { logger } from '@/core/logger'
 import type { StateHandle } from './register'
 import type { Command } from './commands'
 import {
@@ -39,6 +40,19 @@ export function runModelCommand(
   context: EditorContext,
   command: Command
 ): boolean {
+  /*
+   * **조합 중이면 막습니다.**
+   *
+   * 이름과 값 하나로 끝나는 커맨드는 `runCommand` 가 경계에서 막습니다
+   * (`core/command-registry.ts`). 표·이미지처럼 여러 값을 넘겨야 해서 이쪽으로
+   * 오는 것들도 같은 가드를 지나야 합니다 — **모델에 닿는 모든 길**에 있어야
+   * 가드가 한 개념입니다.
+   */
+  if (context.composition?.isComposing()) {
+    logger.warn('Command blocked: IME composition in progress')
+    return false
+  }
+
   const handle = modelHandle(context)
   const state = handle?.getState()
 

@@ -119,7 +119,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
       expect(styleChangedSpy).toHaveBeenCalledTimes(3)
       expect(styleChangedSpy).toHaveBeenNthCalledWith(1, { style: 'bold' })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(2, { style: 'italic' })
-      expect(styleChangedSpy).toHaveBeenNthCalledWith(3, { style: 'strike' })
+      expect(styleChangedSpy).toHaveBeenNthCalledWith(3, { style: 'strikeThrough' })
 
       vi.restoreAllMocks()
     })

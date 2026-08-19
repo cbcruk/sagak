@@ -1,4 +1,4 @@
-import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createUnderlinePlugin = definePlugin<UnderlinePluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.UNDERLINE_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('underline')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'underline' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute underline command:')

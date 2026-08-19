@@ -1,4 +1,4 @@
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -45,15 +45,11 @@ export const createUnorderedListPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? ParagraphEvents.UNORDERED_LIST_CLICKED]: ({
-        emit,
         reportError,
         runCommand,
       }) => {
         try {
           const result = runCommand('insertUnorderedList')
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, { style: 'unorderedList' })
-          }
           return result
         } catch (error) {
           reportError(error, 'Failed to execute unordered list command:')

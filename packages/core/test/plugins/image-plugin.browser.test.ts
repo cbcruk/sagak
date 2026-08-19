@@ -511,7 +511,7 @@ describe('ImagePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Image insert blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()
@@ -535,7 +535,7 @@ describe('ImagePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Image update blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()
@@ -559,7 +559,7 @@ describe('ImagePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Image delete blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()

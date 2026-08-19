@@ -1,4 +1,4 @@
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createOrderedListPlugin = definePlugin<OrderedListPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.ORDERED_LIST_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('insertOrderedList')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'orderedList' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute ordered list command:')

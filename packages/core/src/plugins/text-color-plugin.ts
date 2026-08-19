@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -106,7 +106,7 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.TEXT_COLOR_CHANGED]: (
-      { options: opts, emit, reportError, runCommand },
+      { options: opts, reportError, runCommand },
       data?: unknown
     ) => {
       const color = extractColor(data)
@@ -129,13 +129,6 @@ export const createTextColorPlugin = definePlugin<TextColorPluginOptions>({
 
       try {
         const result = runCommand('foreColor', color)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'textColor',
-            value: color,
-          })
-        }
 
         return result
       } catch (error) {

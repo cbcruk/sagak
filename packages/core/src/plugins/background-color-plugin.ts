@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -107,7 +107,7 @@ export const createBackgroundColorPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? FontEvents.BACKGROUND_COLOR_CHANGED]: (
-        { options: opts, emit, reportError, runCommand },
+        { options: opts, reportError, runCommand },
         data?: unknown
       ) => {
         const color = extractColor(data)
@@ -134,13 +134,6 @@ export const createBackgroundColorPlugin =
 
         try {
           const result = runCommand('backColor', color)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'backgroundColor',
-              value: color,
-            })
-          }
 
           return result
         } catch (error) {

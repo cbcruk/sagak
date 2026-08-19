@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 export interface LineHeightPluginOptions extends BasePluginOptions {
@@ -47,7 +47,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: (
-      { emit, reportError, runCommand },
+      { reportError, runCommand },
       data?: unknown
     ) => {
       const lineHeight = extractLineHeight(data)
@@ -59,13 +59,6 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
       try {
         const result = runCommand('lineHeight', lineHeight)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'lineHeight',
-            value: lineHeight,
-          })
-        }
 
         return result
       } catch (error) {

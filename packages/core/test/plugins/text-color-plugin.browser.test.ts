@@ -130,7 +130,7 @@ describe('TextColorPlugin (텍스트 색상 설정)', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발생함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'textColor',
+        style: 'foreColor',
         value: '#0000FF',
       })
 
@@ -430,7 +430,7 @@ describe('TextColorPlugin (텍스트 색상 설정)', () => {
       // Then: 명령이 차단됨
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Text color blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
