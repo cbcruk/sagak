@@ -1,7 +1,7 @@
 import type { Readable } from 'svelte/store'
-import { HistoryEvents } from 'sagak-core'
+import { HistoryEvents, historyDepthOf } from 'sagak-core'
 import type { EditorContext } from 'sagak-core'
-import { fromBus } from './from-bus'
+import { fromState } from './from-state'
 
 /**
  * 실행 취소·다시 실행.
@@ -12,16 +12,13 @@ import { fromBus } from './from-bus'
  * 컴포넌트 안에 두면 `editor: EditorContext` 를 받아야 하고, 그러면 서명이
  * "에디터 전부를 달라"가 되어 무엇에 기대는지가 안 보입니다.
  *
- * Toolbar 로 올리지 않는 이유도 같습니다 — 툴바가 구독 여덟 개를 들면 저장소에서
- * 제일 무거운 파일이 됩니다. 상태는 여기, 툴바는 잇기만 합니다.
+ * ## 지금 값이 없던 자리
  *
- * ## 지금 값이 없습니다
+ * 예전에는 버스가 밀어 주는 값을 받았고, 버스에는 **지금 값이 없었습니다.**
+ * 마운트 시점에는 둘 다 꺼짐이 맞으니 문제가 아니라고 적어 뒀지만, 툴바가
+ * 에디터보다 늦게 붙는 구성이 생기면 틀리는 자리이기도 했습니다.
  *
- * `fromBus` 의 `readNow` 를 안 씁니다 — `HistoryManager` 가 히스토리 플러그인의
- * 클로저 안이라 물어볼 길이 없습니다. 마운트 시점에는 둘 다 꺼짐이 맞으므로
- * 지금은 문제가 아니지만, 툴바가 에디터보다 늦게 붙는 구성이 생기면 그때는
- * 코어가 `historyManager` 를 컨텍스트에 내주거나 버스가 마지막 값을 들어야
- * 합니다.
+ * 이제 문서 상태에서 되돌리기 깊이를 바로 읽습니다 — 언제 묻든 지금 값입니다.
  */
 export interface HistoryState {
   canUndo: boolean
@@ -36,11 +33,13 @@ export interface HistoryCommands {
 const NOTHING: HistoryState = { canUndo: false, canRedo: false }
 
 export function historyStore(editor: EditorContext): Readable<HistoryState> {
-  return fromBus(
+  return fromState(
     editor,
-    HistoryEvents.HISTORY_STATE_CHANGED,
-    'after',
-    (state) => ({ canUndo: state.canUndo, canRedo: state.canRedo }),
+    () => {
+      const depth = historyDepthOf(editor)
+
+      return { canUndo: depth.canUndo, canRedo: depth.canRedo }
+    },
     NOTHING
   )
 }

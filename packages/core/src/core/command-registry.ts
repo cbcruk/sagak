@@ -1,6 +1,6 @@
 import { CoreEvents } from './events'
 import type { EventBus } from './event-bus'
-import type { SelectionManager } from './selection-manager'
+import type { CompositionTracker } from './composition'
 
 /**
  * 커맨드 실행 컨텍스트
@@ -9,7 +9,7 @@ import type { SelectionManager } from './selection-manager'
  */
 export interface CommandContext {
   eventBus: EventBus
-  selectionManager?: SelectionManager
+  composition?: CompositionTracker
   element?: HTMLElement
 }
 
@@ -87,7 +87,7 @@ export class CommandRegistry {
   }
 
   /**
-   * 실행 컨텍스트를 교체합니다 (예: `element`/`selectionManager` 변경 시)
+   * 실행 컨텍스트를 교체합니다 (예: `element`/`composition` 변경 시)
    */
   setContext(context: CommandContext): void {
     this.context = context

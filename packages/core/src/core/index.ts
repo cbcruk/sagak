@@ -14,7 +14,6 @@ export type {
   BasePluginOptions,
 } from './define-plugin'
 
-export { SelectionManager } from './selection-manager'
 
 /**
  * 브라우저 안의 파일 시스템(OPFS) 위에 놓인 문서 저장소 —
@@ -24,21 +23,6 @@ export {
   createDocumentStore,
   isDocumentStorageAvailable,
 } from './document-store'
-export type { DocumentStore, DocumentMeta } from './document-store'
-
-/**
- * DOM 좌표를 정수 위치로. `SelectionManager` 가 못 하는 일 —
- * `innerHTML` 교체를 견디는 위치입니다.
- */
-export {
-  nodeSize,
-  contentSize,
-  domToPos,
-  posToDom,
-  readSelectionPositions,
-  writeSelectionPositions,
-} from './dom-position'
-export type { DomPoint, PositionRange } from './dom-position'
 
 export { logger, setLogLevel, getLogLevel } from './logger'
 export type { LogLevel, Logger } from './logger'
@@ -57,14 +41,6 @@ export {
   registerDefaultCommands,
   createDefaultCommandRegistry,
 } from './default-commands'
-export type { DefaultCommandsOptions } from './default-commands'
-export {
-  registerComputedQueries,
-  COMPUTED_PRECEDENCE,
-} from './commands/computed-query'
-
-export { HistoryManager } from './history-manager'
-export type { HistoryState, HistoryManagerOptions } from './history-manager'
 
 export { EditorCore, AppStatus } from './editor-core'
 export type { EditorCoreConfig } from './editor-core'

@@ -4,7 +4,8 @@ import { toHtml, parseHtml, toJSON, fromJSON } from '@/model/storage'
 import type { DocumentJSON } from '@/model/storage'
 import { EventBus } from './event-bus'
 import { PluginManager } from './plugin-manager'
-import { SelectionManager } from './selection-manager'
+import { trackComposition } from './composition'
+import type { CompositionTracker } from './composition'
 import { CoreEvents } from './events'
 import type {
   Plugin,
@@ -12,18 +13,12 @@ import type {
   EditorConfig,
   EditingAreaManager,
   EditingMode,
-  FormattingState,
 } from './types'
 import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
 import { setLogLevel, type LogLevel } from './logger'
-import {
-  createErrorReporter,
-  type ErrorReporter,
-  type EditorErrorData,
-} from './errors'
+import { type EditorErrorData } from './errors'
 import { CommandRegistry } from './command-registry'
 import { registerModelCommands } from '@/model/register'
-import { subscribeToModel } from '@/model/bridge'
 import { registerDefaultCommands } from './default-commands'
 
 /**
@@ -134,15 +129,13 @@ export interface EditorCoreConfig extends EditorConfig {
 export class EditorCore {
   private eventBus: EventBus
   private pluginManager: PluginManager
-  private selectionManager?: SelectionManager
+  private composition?: CompositionTracker
   private editingAreaManager?: EditingAreaManager
   private context: EditorContext
   private config: EditorCoreConfig
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
-  private formattingStateCleanup?: () => void
   private focusRequestUnsub?: () => void
-  private selectionErrorReporter: ErrorReporter
   private onErrorUnsub?: () => void
   private commandRegistry: CommandRegistry
   private unregisterModelCommands?: () => void
@@ -161,10 +154,6 @@ export class EditorCore {
 
     this.eventBus = new EventBus()
 
-    this.selectionErrorReporter = createErrorReporter(
-      this.eventBus,
-      'selection-manager'
-    )
 
     if (config.onError) {
       const { onError } = config
@@ -222,12 +211,8 @@ export class EditorCore {
     })
 
     if (config.element) {
-      this.selectionManager = new SelectionManager(
-        config.element,
-        this.selectionErrorReporter
-      )
-      this.context.selectionManager = this.selectionManager
-      this.setupFormattingStateTracking()
+      this.composition = trackComposition(config.element)
+      this.context.composition = this.composition
     }
 
     this.pluginManager = new PluginManager(this.context)
@@ -295,13 +280,9 @@ export class EditorCore {
       const currentArea = this.editingAreaManager.getCurrentArea()
       if (currentArea) {
         this.context.element = currentArea.getElement()
-        this.selectionManager = new SelectionManager(
-          this.context.element,
-          this.selectionErrorReporter
-        )
-        this.context.selectionManager = this.selectionManager
-        this.setupFormattingStateTracking()
-      }
+        this.composition = trackComposition(this.context.element)
+        this.context.composition = this.composition
+        }
     }
 
     for (const plugin of this.pendingPlugins) {
@@ -421,10 +402,10 @@ export class EditorCore {
   }
 
   /**
-   * `SelectionManager` 인스턴스를 가져옵니다
+   * IME 조합 상태를 보는 창구를 가져옵니다
    */
-  getSelectionManager(): SelectionManager | undefined {
-    return this.selectionManager
+  getCompositionTracker(): CompositionTracker | undefined {
+    return this.composition
   }
 
   /**
@@ -556,85 +537,10 @@ export class EditorCore {
   }
 
   /**
-   * 서식 상태 추적 — **상태가 바뀔 때 다시 셉니다.**
-   *
-   * ## 가드 셋이 통째로 없어졌습니다
-   *
-   * 예전에는 `document` 의 `selectionchange` 를 듣고, 그 신호가 믿을 만한지
-   * 세 겹으로 걸렀습니다.
-   *
-   * | 가드 | 왜 있었나 | 왜 없어졌나 |
-   * | --- | --- | --- |
-   * | IME 조합 중 무시 | 조합 중 값은 의미가 없음 | 조합 중에는 트랜잭션이 안 옴 |
-   * | 다음 프레임까지 지연 | 브라우저가 선택을 확정하기 전 | 트랜잭션은 이미 확정된 상태 |
-   * | 선택이 에디터 밖이면 건너뜀 | 툴바를 누르면 선택이 떠남 | 상태가 애초에 이 에디터의 것 |
-   *
-   * ## 빈 문서를 손보던 것도 없어졌습니다
-   *
-   * 내용이 비면 `element.innerHTML = '<p><br></p>'` 로 되돌려 놓고 있었습니다.
-   * 남아 있던 서식 껍데기를 털어 내려는 것이었는데, 이제 편집 영역의 DOM 은
-   * `prosemirror-view` 의 것이라 **밖에서 건드리면 안 됩니다.** 빈 문서는
-   * 모델에서 이미 문단 하나이고, 보류 서식은 `storedMarks` 가 다음 입력까지만
-   * 들고 있습니다.
-   */
-  private setupFormattingStateTracking(): void {
-    // 재호출(생성자 → run) 시 이전 리스너를 먼저 정리해 중복 등록을 막습니다
-    this.formattingStateCleanup?.()
-
-    let last: FormattingState | null = null
-
-    const same = (a: FormattingState, b: FormattingState | null): boolean =>
-      !!b &&
-      a.isBold === b.isBold &&
-      a.isItalic === b.isItalic &&
-      a.isUnderline === b.isUnderline &&
-      a.isStrikeThrough === b.isStrikeThrough &&
-      a.isSubscript === b.isSubscript &&
-      a.isSuperscript === b.isSuperscript
-
-    const update = (): void => {
-      const next: FormattingState = {
-        isBold: this.commandRegistry.queryState('bold'),
-        isItalic: this.commandRegistry.queryState('italic'),
-        isUnderline: this.commandRegistry.queryState('underline'),
-        isStrikeThrough: this.commandRegistry.queryState('strikeThrough'),
-        isSubscript: this.commandRegistry.queryState('subscript'),
-        isSuperscript: this.commandRegistry.queryState('superscript'),
-      }
-
-      if (same(next, last)) return
-
-      last = next
-      this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, next)
-    }
-
-    const unsubModel = subscribeToModel(this.context, update)
-
-    /*
-     * 모델이 없는 모드(소스·텍스트)에서는 위 구독이 아무것도 안 흘립니다.
-     * 그때도 커맨드는 아래 층이 처리하므로 그쪽 신호는 남겨 둡니다.
-     */
-    const unsubStyle = this.eventBus.on(
-      CoreEvents.STYLE_CHANGED,
-      'after',
-      update
-    )
-
-    update()
-
-    this.formattingStateCleanup = () => {
-      unsubModel()
-      unsubStyle()
-      this.formattingStateCleanup = undefined
-    }
-  }
-
-  /**
    * 애플리케이션을 정리합니다
    * 모든 플러그인과 이벤트 리스너를 정리합니다
    */
   destroy(): void {
-    this.formattingStateCleanup?.()
     this.onErrorUnsub?.()
     this.onErrorUnsub = undefined
     this.focusRequestUnsub?.()

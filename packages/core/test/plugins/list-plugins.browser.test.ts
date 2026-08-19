@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import {
   createOrderedListPlugin,
   OrderedListPlugin,
@@ -18,13 +18,13 @@ describe('OrderedListPlugin', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -122,7 +122,7 @@ describe('OrderedListPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 목록 생성으로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
      */
 
     beforeEach(async () => {
@@ -135,7 +135,7 @@ describe('OrderedListPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -159,7 +159,7 @@ describe('OrderedListPlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -272,13 +272,13 @@ describe('UnorderedListPlugin', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -376,7 +376,7 @@ describe('UnorderedListPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 목록 생성으로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
      */
 
     beforeEach(async () => {
@@ -389,7 +389,7 @@ describe('UnorderedListPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('UNORDERED_LIST_CLICKED')
@@ -413,7 +413,7 @@ describe('UnorderedListPlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('UNORDERED_LIST_CLICKED')

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { HeadingPlugin } from '@/plugins/heading-plugin'
@@ -16,7 +16,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -27,7 +27,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -172,7 +172,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 여러 문단 명령 시도
       eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -196,7 +196,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 모든 문단 명령 실행
       eventBus.emit('HEADING_CHANGED', { level: 2 })

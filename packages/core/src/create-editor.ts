@@ -26,7 +26,6 @@ import { createLinkPlugin } from './plugins/link-plugin'
 import { createTablePlugin } from './plugins/table-plugin'
 import { createImagePlugin } from './plugins/image-plugin'
 import { createFindReplacePlugin } from './plugins/find-replace-plugin'
-import { createHistoryPlugin } from './plugins/history-plugin'
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
 import { createHorizontalRulePlugin } from './plugins/horizontal-rule-plugin'
 import { createLineHeightPlugin } from './plugins/line-height-plugin'
@@ -67,7 +66,6 @@ const defaultPlugins: Plugin[] = [
   createTablePlugin(),
   createImagePlugin(),
   createFindReplacePlugin(),
-  createHistoryPlugin(),
   createKeyboardShortcutsPlugin(),
   createHorizontalRulePlugin(),
   createLineHeightPlugin(),

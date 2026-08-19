@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { createIndentPlugin, IndentPlugin } from '@/plugins/indent-plugin'
 import { createOutdentPlugin, OutdentPlugin } from '@/plugins/outdent-plugin'
 import type { EditorContext } from '@/core/types'
@@ -12,13 +12,13 @@ describe('IndentPlugin', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -118,7 +118,7 @@ describe('IndentPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 들여쓰기로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 들여쓰기 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 들여쓰기 차단
      */
 
     beforeEach(async () => {
@@ -131,7 +131,7 @@ describe('IndentPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 들여쓰기 시도
       const result = eventBus.emit('INDENT_CLICKED')
@@ -155,7 +155,7 @@ describe('IndentPlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 들여쓰기 시도
       const result = eventBus.emit('INDENT_CLICKED')
@@ -268,13 +268,13 @@ describe('OutdentPlugin', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -376,7 +376,7 @@ describe('OutdentPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 내어쓰기로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 내어쓰기 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 내어쓰기 차단
      */
 
     beforeEach(async () => {
@@ -389,7 +389,7 @@ describe('OutdentPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 내어쓰기 시도
       const result = eventBus.emit('OUTDENT_CLICKED')
@@ -413,7 +413,7 @@ describe('OutdentPlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 내어쓰기 시도
       const result = eventBus.emit('OUTDENT_CLICKED')

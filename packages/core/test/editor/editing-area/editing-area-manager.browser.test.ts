@@ -89,26 +89,6 @@ describe('EditingAreaManager', () => {
       expect(manager.getCurrentMode()).toBe('text')
     })
 
-    it('초기화 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 이벤트 핸들러가 설정된 config
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('EDITING_AREA_INITIALIZED', 'on', handler)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
-
-      // When: 초기화 실행
-      await manager.initialize()
-
-      // Then: EDITING_AREA_INITIALIZED 이벤트가 모드 정보와 함께 발행됨
-      expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ mode: 'wysiwyg' })
-      )
-    })
 
     it('초기 편집 영역을 표시해야 함', async () => {
       // Given: 기본 config
@@ -204,32 +184,6 @@ describe('EditingAreaManager', () => {
       expect(manager.getCurrentMode()).toBe(modeBefore)
     })
 
-    it('모드 변경 중 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 MODE_CHANGING 핸들러가 설정된 새 매니저
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('EDITING_AREA_MODE_CHANGING', 'on', handler)
-
-      manager.destroy()
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
-      await manager.initialize()
-
-      // When: HTML 모드로 전환
-      await manager.switchMode('html')
-
-      // Then: MODE_CHANGING 이벤트가 from/to 정보와 함께 발행됨
-      expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          from: 'wysiwyg',
-          to: 'html',
-        })
-      )
-    })
 
     it('모드 변경 완료 이벤트를 발행해야 함', async () => {
       // Given: EventBus와 MODE_CHANGED 핸들러가 설정된 새 매니저
@@ -655,7 +609,7 @@ describe('EditingAreaManager', () => {
     })
 
     /**
-     * Why: WYSIWYG 영역은 이제 `state.selection` 을 갖고 있어 `SelectionManager`
+     * Why: WYSIWYG 영역은 이제 `state.selection` 을 갖고 있어 `CompositionTracker`
      *      를 안 받습니다. 넘겨 주던 배선이 통째로 없어졌습니다.
      * How: 영역이 자기 상태 창구를 내주는지로 확인합니다
      */
@@ -767,25 +721,6 @@ describe('EditingAreaManager', () => {
       expect(manager.isAreaLoaded('text')).toBe(false)
     })
 
-    it('파기 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 파기 핸들러가 설정된 매니저
-      const eventBus = new EventBus()
-      const handler = vi.fn()
-      eventBus.on('EDITING_AREA_DESTROYED', 'on', handler)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
-      await manager.initialize()
-
-      // When: 매니저 파기
-      manager.destroy()
-
-      // Then: EDITING_AREA_DESTROYED 이벤트가 발행됨
-      expect(handler).toHaveBeenCalled()
-    })
 
     it('컨테이너에서 모든 요소를 제거해야 함', async () => {
       // Given: 모든 영역이 로드된 매니저

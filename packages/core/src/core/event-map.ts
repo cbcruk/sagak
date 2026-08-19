@@ -133,9 +133,7 @@ export interface AutocompleteShowPayload {
 export interface EditorEventMap {
   // --- 코어 ---
   [CoreEvents.APP_READY]: void
-  [CoreEvents.FORMATTING_STATE_CHANGED]: FormattingStatePayload
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
-  [CoreEvents.CONTENT_RESTORED]: { action: 'undo' | 'redo' } | void
   [CoreEvents.CAPTURE_SNAPSHOT]: void
   [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
@@ -186,12 +184,6 @@ export interface EditorEventMap {
   // --- 히스토리 ---
   [HistoryEvents.UNDO]: void
   [HistoryEvents.REDO]: void
-  [HistoryEvents.HISTORY_STATE_CHANGED]: {
-    canUndo: boolean
-    canRedo: boolean
-    undoSize: number
-    redoSize: number
-  }
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: FindPayload
@@ -212,16 +204,10 @@ export interface EditorEventMap {
   [AutocompleteEvents.AUTOCOMPLETE_APPLY]: { word: string } | void
 
   // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_INITIALIZED]: { mode: EditingMode }
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGING]: {
-    from: EditingMode
-    to: EditingMode
-  }
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: {
     from: EditingMode
     to: EditingMode
   }
-  [EditingAreaEvents.EDITING_AREA_DESTROYED]: void
 
   // --- WYSIWYG 영역 ---
   [WysiwygEvents.WYSIWYG_AREA_SHOWN]: void
@@ -229,11 +215,9 @@ export interface EditorEventMap {
   [WysiwygEvents.WYSIWYG_CONTENT_CHANGED]: { content: string }
   [WysiwygEvents.WYSIWYG_FOCUSED]: void
   [WysiwygEvents.WYSIWYG_BLURRED]: void
-  [WysiwygEvents.WYSIWYG_SELECTION_CHANGED]: void
   [WysiwygEvents.WYSIWYG_PASTE]: { event: ClipboardEvent }
   [WysiwygEvents.WYSIWYG_KEYDOWN]: { event: KeyboardEvent }
   [WysiwygEvents.WYSIWYG_KEYUP]: { event: KeyboardEvent }
-  [WysiwygEvents.WYSIWYG_RESIZED]: { width: number; height: number }
 
   // --- 자동 저장 ---
   [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: AutoSaveEventData
@@ -306,9 +290,7 @@ export type EventKind = 'request' | 'notify'
 export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
   [CoreEvents.APP_READY]: 'notify',
-  [CoreEvents.FORMATTING_STATE_CHANGED]: 'notify',
   [CoreEvents.STYLE_CHANGED]: 'notify',
-  [CoreEvents.CONTENT_RESTORED]: 'notify',
   [CoreEvents.CAPTURE_SNAPSHOT]: 'request',
   [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
@@ -356,7 +338,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 히스토리 ---
   [HistoryEvents.UNDO]: 'request',
   [HistoryEvents.REDO]: 'request',
-  [HistoryEvents.HISTORY_STATE_CHANGED]: 'notify',
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: 'request',
@@ -373,10 +354,7 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   [AutocompleteEvents.AUTOCOMPLETE_APPLY]: 'request',
 
   // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_INITIALIZED]: 'notify',
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGING]: 'notify',
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
-  [EditingAreaEvents.EDITING_AREA_DESTROYED]: 'notify',
 
   // --- WYSIWYG 영역 (전부 일어난 일의 보고) ---
   [WysiwygEvents.WYSIWYG_AREA_SHOWN]: 'notify',
@@ -384,11 +362,9 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   [WysiwygEvents.WYSIWYG_CONTENT_CHANGED]: 'notify',
   [WysiwygEvents.WYSIWYG_FOCUSED]: 'notify',
   [WysiwygEvents.WYSIWYG_BLURRED]: 'notify',
-  [WysiwygEvents.WYSIWYG_SELECTION_CHANGED]: 'notify',
   [WysiwygEvents.WYSIWYG_PASTE]: 'notify',
   [WysiwygEvents.WYSIWYG_KEYDOWN]: 'notify',
   [WysiwygEvents.WYSIWYG_KEYUP]: 'notify',
-  [WysiwygEvents.WYSIWYG_RESIZED]: 'notify',
 
   // --- 자동 저장 ---
   [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: 'notify',

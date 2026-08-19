@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { BoldPlugin } from '@/plugins/bold-plugin'
@@ -14,7 +14,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -25,7 +25,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -163,7 +163,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 모든 스타일 명령 시도
       const boldResult = eventBus.emit('BOLD_CLICKED')
@@ -192,7 +192,7 @@ describe('텍스트 스타일 플러그인 통합 (복합 스타일 적용)', ()
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 모든 스타일 명령 실행
       const boldResult = eventBus.emit('BOLD_CLICKED')

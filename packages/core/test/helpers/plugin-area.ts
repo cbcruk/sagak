@@ -1,7 +1,8 @@
 import { CommandRegistry } from '@/core/command-registry'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
+import type { CompositionTracker } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { registerDefaultCommands } from '@/core/default-commands'
 import { registerModelCommands } from '@/model/register'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
@@ -31,7 +32,7 @@ export interface PluginArea {
   eventBus: EventBus
   context: EditorContext
   pluginManager: PluginManager
-  selectionManager: SelectionManager
+  composition: CompositionTracker
   registry: CommandRegistry
   area: WysiwygArea
   /** PM 이 그린 편집 요소 — 예전 검사의 `element` 자리입니다 */
@@ -58,11 +59,11 @@ export function mountPluginArea(initial = '<p>Hello World</p>'): PluginArea {
   const eventBus = new EventBus()
   const area = new WysiwygArea({ container, eventBus })
   const element = area.getElement()
-  const selectionManager = new SelectionManager(element)
+  const composition = trackComposition(element)
 
   const context: EditorContext = {
     eventBus,
-    selectionManager,
+    composition,
     config: {},
     element,
     editingAreaManager: {
@@ -119,7 +120,7 @@ export function mountPluginArea(initial = '<p>Hello World</p>'): PluginArea {
     eventBus,
     context,
     pluginManager,
-    selectionManager,
+    composition,
     registry,
     area,
     element,

@@ -7,8 +7,7 @@ import {
   fromJSON,
   toHtml,
   isDocumentStorageAvailable,
-  CoreEvents,
-  WysiwygEvents,
+  subscribeToModel,
   type DocumentMeta,
   type EditorContext,
   type DocumentJSON,
@@ -162,16 +161,15 @@ export function attachDocument(context: EditorContext): void {
   attached.add(context)
 
   /*
-   * 내용이 바뀌는 길은 셋입니다 — 타이핑, 서식 커맨드, 프로그램적 교체
-   * (열기·되돌리기). 셋 다 같은 자리로 모읍니다.
+   * 내용이 바뀌는 길은 셋이었습니다 — 타이핑, 서식 커맨드, 프로그램적 교체
+   * (열기·되돌리기). 셋을 세 이벤트로 듣고 같은 자리로 모았습니다.
+   *
+   * **이제 길이 하나입니다.** 셋 다 결국 문서를 고치는 일이고, 문서를 고치는
+   * 것은 트랜잭션 하나입니다. 무엇이 바뀌었는지 짐작할 필요가 없어졌습니다.
    */
-  const sync = (): void => {
+  subscribeToModel(context, () => {
     void readJSON(context).then((content) => set({ content }))
-  }
-
-  context.eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, 'after', sync)
-  context.eventBus.on(CoreEvents.STYLE_CHANGED, 'after', sync)
-  context.eventBus.on(CoreEvents.CONTENT_RESTORED, 'on', sync)
+  })
 }
 
 export async function refresh(): Promise<void> {
@@ -196,7 +194,20 @@ async function load(
     : sagakSchema.topNodeType.createAndFill()!
 
   await context.editingAreaManager?.setContent(doc)
-  set({ name, saved: content, content })
+
+  /*
+   * **넣은 문자열이 아니라 모델이 내놓는 것**을 기준으로 삼습니다.
+   *
+   * 빈 문서를 `''` 로 넣어 놓고 그것을 저장된 상태로 삼으면, 모델은 빈 문단
+   * 하나짜리 JSON 을 내놓으므로 열자마자 "고쳤음" 이 됩니다. 예전에는 연 뒤에
+   * 아무도 다시 안 읽어서 안 드러났을 뿐입니다.
+   *
+   * 저장물의 글자와 모델의 직렬화가 달라도(키 순서·공백) 같은 뜻이면 같다고
+   * 봐야 하는데, 그 판정도 여기서 함께 얻습니다.
+   */
+  const actual = await readJSON(context)
+
+  set({ name, saved: actual, content: actual })
 }
 
 /** 빈 문서로 시작합니다 */

@@ -2,7 +2,7 @@ import type { Node as PMNode } from 'prosemirror-model'
 import type { StateHandle } from '@/model/register'
 import type { ModelListener } from '@/model/bridge'
 import type { EventBus } from './event-bus'
-import type { SelectionManager } from './selection-manager'
+import type { CompositionTracker } from './composition'
 import type { CommandRegistry } from './command-registry'
 
 /**
@@ -68,6 +68,12 @@ export interface EditingArea {
 
   /** 편집 영역이 표시되고 있는지 확인합니다 */
   isVisible(): boolean
+
+  /** 지금 문서를 HTML 로 — 밖에 내놓는 꼴입니다 */
+  getRawContent(): string
+
+  /** HTML 로 문서를 설정합니다 — 스키마를 지나 모델이 됩니다 */
+  setRawContent(content: string): void
 
   /**
    * 이 영역이 **자기 문서를 소유할 때만** 있습니다.
@@ -140,7 +146,7 @@ export interface EditorContext {
   pluginManager?: PluginManager
 
   /** `WYSIWYG` 편집을 위한 선택 영역 관리자 */
-  selectionManager?: SelectionManager
+  composition?: CompositionTracker
 
   /** 모드 전환을 위한 편집 영역 관리자 */
   editingAreaManager?: EditingAreaManager

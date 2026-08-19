@@ -74,18 +74,6 @@ export type {
   ImageAlignment,
 } from './image-plugin'
 
-export {
-  createFindReplacePlugin,
-  FindReplacePlugin,
-} from './find-replace-plugin'
-export type {
-  FindReplaceOptions,
-  FindData,
-  ReplaceData,
-} from './find-replace-plugin'
-
-export { createHistoryPlugin } from './history-plugin'
-export type { HistoryPluginOptions } from './history-plugin'
 
 export {
   createKeyboardShortcutsPlugin,

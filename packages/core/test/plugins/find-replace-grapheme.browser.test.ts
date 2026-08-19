@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { FindReplacePlugin } from '@/plugins/find-replace-plugin'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { EditorContext, EditingAreaManager } from '@/core/types'
@@ -41,7 +41,7 @@ describe('찾기 — 문자소 클러스터', () => {
 
     context = {
       eventBus,
-      selectionManager: new SelectionManager(element),
+      composition: trackComposition(element),
       config: { element },
       editingAreaManager: {
         getCurrentArea: () => area,

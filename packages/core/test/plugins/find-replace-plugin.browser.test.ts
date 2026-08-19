@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
+import type { CompositionTracker } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import {
   createFindReplacePlugin,
   FindReplacePlugin,
@@ -24,7 +25,7 @@ import type { FindData, ReplaceData } from '@/plugins/find-replace-plugin'
 describe('FindReplacePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let container: HTMLDivElement
   let area: WysiwygArea
   let element: HTMLElement
@@ -38,11 +39,11 @@ describe('FindReplacePlugin', () => {
     area = new WysiwygArea({ container, eventBus })
     area.setRawContent('<p>Hello World. Hello everyone. This is a test.</p>')
     element = area.getElement()
-    selectionManager = new SelectionManager(element)
+    composition = trackComposition(element)
 
     context = {
       eventBus,
-      selectionManager,
+      composition,
       config: { element },
       editingAreaManager: {
         getCurrentArea: () => area,
@@ -647,7 +648,7 @@ describe('FindReplacePlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글, 일본어 등 조합 문자 입력 중 검색/치환을 방지해야 함
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태를 확인하고 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태를 확인하고 차단
      */
 
     beforeEach(async () => {
@@ -660,7 +661,7 @@ describe('FindReplacePlugin', () => {
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 FIND 이벤트 발행
       const result = eventBus.emit('FIND', { query: 'test' })
@@ -722,7 +723,7 @@ describe('FindReplacePlugin', () => {
       // Given: IME 조합 시작 후 종료
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 FIND 이벤트 발행
       const result = eventBus.emit('FIND', { query: 'Hello' })

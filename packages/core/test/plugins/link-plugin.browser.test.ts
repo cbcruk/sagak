@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { createLinkPlugin, LinkPlugin } from '@/plugins/link-plugin'
@@ -11,7 +11,7 @@ describe('LinkPlugin', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -22,7 +22,7 @@ describe('LinkPlugin', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -425,7 +425,7 @@ describe('LinkPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글, 일본어 등 조합 문자 입력 중 링크 생성/삭제를 방지해야 함
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태를 확인하고 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태를 확인하고 차단
      */
 
     beforeEach(async () => {
@@ -439,7 +439,7 @@ describe('LinkPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 LINK_CHANGED 이벤트 발행
       const result = eventBus.emit('LINK_CHANGED', {
@@ -463,7 +463,7 @@ describe('LinkPlugin', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 LINK_REMOVED 이벤트 발행
       const result = eventBus.emit('LINK_REMOVED')
@@ -487,7 +487,7 @@ describe('LinkPlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 LINK_CHANGED 이벤트 발행
       const result = eventBus.emit('LINK_CHANGED', {

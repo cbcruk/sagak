@@ -163,7 +163,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:table')
-      const selectionManager = context.selectionManager
+      const composition = context.composition
 
       /** 지금 캐럿이 표 안인가 — 행·열 명령의 전제입니다 */
       const inTable = (): boolean => {
@@ -179,7 +179,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
        * 이 DOM 을 거슬러 올라가며 `<td>` 를 찾았습니다.
        */
       const guard = (label: string) => (): boolean => {
-        if (isBlockedByComposition(selectionManager, checkComposition, label)) {
+        if (isBlockedByComposition(composition, checkComposition, label)) {
           return false
         }
 
@@ -228,7 +228,7 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         (data?: unknown) => {
           if (
             isBlockedByComposition(
-              selectionManager,
+              composition,
               checkComposition,
               'Table create'
             )

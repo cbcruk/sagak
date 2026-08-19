@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import {
@@ -14,7 +14,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -25,7 +25,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -418,7 +418,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글, 일본어, 중국어 입력 중 배경 색상 변경이 발생하면 조합이 깨질 수 있습니다
-     * How: `SelectionManager.getIsComposing()`으로 IME 상태를 확인하고, 조합 중에는 명령을 차단합니다
+     * How: `CompositionTracker.isComposing()`으로 IME 상태를 확인하고, 조합 중에는 명령을 차단합니다
      */
 
     beforeEach(async () => {
@@ -432,7 +432,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중에 배경 색상 변경 시도
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {
@@ -458,7 +458,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 배경 색상 변경 시도
       const result = eventBus.emit('BACKGROUND_COLOR_CHANGED', {

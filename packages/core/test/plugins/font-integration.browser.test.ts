@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { FontFamilyPlugin } from '@/plugins/font-family-plugin'
@@ -12,7 +12,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -23,7 +23,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -146,7 +146,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 글꼴 변경 시도
       const familyResult = eventBus.emit('FONT_FAMILY_CHANGED', {
@@ -172,7 +172,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 글꼴 변경
       const familyResult = eventBus.emit('FONT_FAMILY_CHANGED', {

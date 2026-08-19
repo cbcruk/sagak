@@ -1,3 +1,4 @@
+import { undoDepth, redoDepth } from 'prosemirror-history'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorContext } from '@/core/types'
 import { EditingAreaEvents } from '@/core/events'
@@ -147,3 +148,30 @@ export const linkOf = (context: EditorContext): LinkFacts | null =>
 
 export const imageOf = (context: EditorContext): ImageFacts | null =>
   selectionFacts(context).image
+
+/**
+ * 되돌릴 것이 남아 있는가 — **문서 상태에서 바로 읽습니다.**
+ *
+ * 예전에는 편집 영역이 `HISTORY_STATE_CHANGED` 를 쏘고 툴바가 받았습니다.
+ * 버스에는 "지금 값" 이 없어서 툴바가 늦게 붙으면 둘 다 꺼진 채로 시작했고,
+ * 그걸 메우려고 각자 처음 값을 따로 물어야 했습니다.
+ *
+ * 깊이는 상태 안에 있습니다. 언제 묻든 지금 값입니다.
+ */
+export function historyDepthOf(context: EditorContext): {
+  canUndo: boolean
+  canRedo: boolean
+  undoSize: number
+  redoSize: number
+} {
+  const state = modelState(context)
+
+  if (!state) {
+    return { canUndo: false, canRedo: false, undoSize: 0, redoSize: 0 }
+  }
+
+  const undoSize = undoDepth(state)
+  const redoSize = redoDepth(state)
+
+  return { canUndo: undoSize > 0, canRedo: redoSize > 0, undoSize, redoSize }
+}

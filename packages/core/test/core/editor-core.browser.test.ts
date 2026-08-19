@@ -54,22 +54,22 @@ describe('EditorCore', () => {
       expect(core.isReady()).toBe(false)
     })
 
-    it('element를 제공하면 SelectionManager가 생성되어야 함', () => {
+    it('element를 제공하면 CompositionTracker가 생성되어야 함', () => {
       // Given: editable element가 제공됨
       // When: element와 함께 EditorCore 생성
       const core = new EditorCore({ element })
 
-      // Then: SelectionManager가 생성되어야 함
-      expect(core.getSelectionManager()).toBeDefined()
+      // Then: CompositionTracker가 생성되어야 함
+      expect(core.getCompositionTracker()).toBeDefined()
     })
 
-    it('element 없이 생성하면 SelectionManager가 없어야 함', () => {
+    it('element 없이 생성하면 CompositionTracker가 없어야 함', () => {
       // Given: element가 제공되지 않음
       // When: EditorCore 생성
       const core = new EditorCore()
 
-      // Then: SelectionManager가 생성되지 않아야 함
-      expect(core.getSelectionManager()).toBeUndefined()
+      // Then: CompositionTracker가 생성되지 않아야 함
+      expect(core.getCompositionTracker()).toBeUndefined()
     })
 
     it('모든 코어 컴포넌트에 접근할 수 있어야 함', () => {
@@ -79,16 +79,16 @@ describe('EditorCore', () => {
       // When: 각 컴포넌트 getter 호출
       const eventBus = core.getEventBus()
       const pluginManager = core.getPluginManager()
-      const selectionManager = core.getSelectionManager()
+      const composition = core.getCompositionTracker()
       const context = core.getContext()
 
       // Then: 모든 컴포넌트가 정의되어 있어야 함
       expect(eventBus).toBeDefined()
       expect(pluginManager).toBeDefined()
-      expect(selectionManager).toBeDefined()
+      expect(composition).toBeDefined()
       expect(context).toBeDefined()
       expect(context.eventBus).toBe(eventBus)
-      expect(context.selectionManager).toBe(selectionManager)
+      expect(context.composition).toBe(composition)
     })
   })
 
@@ -507,7 +507,7 @@ describe('EditorCore', () => {
       expect(handler).toHaveBeenCalled()
     })
 
-    it('플러그인이 SelectionManager에 접근할 수 있어야 함', async () => {
+    it('플러그인이 CompositionTracker에 접근할 수 있어야 함', async () => {
       // Given: element가 있는 EditorCore
       const core = new EditorCore({ element })
 
@@ -517,8 +517,8 @@ describe('EditorCore', () => {
         name: 'test-plugin',
 
         initialize(context) {
-          // 플러그인에서 SelectionManager 접근
-          selectionManagerFromPlugin = context.selectionManager
+          // 플러그인에서 CompositionTracker 접근
+          selectionManagerFromPlugin = context.composition
         },
       }
 
@@ -526,9 +526,9 @@ describe('EditorCore', () => {
       await core.registerPlugin(testPlugin)
       await core.run()
 
-      // Then: 플러그인이 SelectionManager에 접근할 수 있어야 함
+      // Then: 플러그인이 CompositionTracker에 접근할 수 있어야 함
       expect(selectionManagerFromPlugin).toBeDefined()
-      expect(selectionManagerFromPlugin).toBe(core.getSelectionManager())
+      expect(selectionManagerFromPlugin).toBe(core.getCompositionTracker())
     })
 
     it('플러그인이 config에 접근할 수 있어야 함', async () => {
@@ -573,44 +573,6 @@ describe('EditorCore', () => {
       // Then: NOT_READY 상태로 변경
       expect(core.getStatus()).toBe(AppStatus.NOT_READY)
       expect(core.isReady()).toBe(false)
-    })
-
-    /**
-     * Why: 서식 추적은 생성자와 `run()` 에서 **두 번** 설정됩니다. 앞의 것을
-     *      안 끊으면 구독이 겹쳐 한 번 고칠 때 두 번 계산·발행됩니다.
-     * How: 예전에는 `document.removeEventListener('selectionchange', …)` 가
-     *      불렸는지로 봤습니다. 그 리스너는 이제 없습니다 — 서식은 편집 영역의
-     *      상태 구독에서 나옵니다. 그래서 결과로 봅니다: 한 번 고치면 한 번만
-     *      발행되어야 합니다.
-     */
-    it('서식 상태 추적이 겹쳐 등록되지 않아야 함 (메모리 릭 방지)', async () => {
-      // Given: 편집 영역이 붙어 추적이 두 번 설정된 EditorCore
-      const container = document.createElement('div')
-      document.body.appendChild(container)
-
-      const core = new EditorCore({ editingAreaContainer: container })
-      await core.run()
-
-      const seen = vi.fn()
-      core.getEventBus().on('FORMATTING_STATE_CHANGED', 'on', seen)
-
-      // When: 굵게가 걸리도록 문서를 고침
-      const handle = core
-        .getEditingAreaManager()
-        ?.getCurrentArea()
-        ?.getStateHandle?.()
-      expect(handle).toBeDefined()
-
-      const state = handle!.getState()!
-      handle!.dispatch(
-        state.tr.addStoredMark(state.schema.marks.strong.create())
-      )
-
-      // Then: 한 번만 발행되어야 함
-      expect(seen).toHaveBeenCalledTimes(1)
-
-      core.destroy()
-      container.remove()
     })
 
     it('destroy() 호출 시 EventBus의 모든 핸들러를 정리해야 함', async () => {
@@ -689,7 +651,7 @@ describe('EditorCore', () => {
         initialize(context) {
           // BEFORE: IME 입력 중이면 취소
           context.eventBus.on('BOLD_CLICKED', 'before', () => {
-            if (context.selectionManager?.getIsComposing()) {
+            if (context.composition?.isComposing()) {
               return false // 취소
             }
             return true
@@ -772,7 +734,7 @@ describe('EditorCore', () => {
         initialize(context) {
           context.eventBus.on('BOLD_CLICKED', 'before', () => {
             // IME 입력 중이면 차단
-            if (context.selectionManager?.getIsComposing()) {
+            if (context.composition?.isComposing()) {
               return false
             }
             return true
@@ -788,8 +750,8 @@ describe('EditorCore', () => {
       await core.run()
 
       // When: IME 입력 시작 시뮬레이션
-      const selectionManager = core.getSelectionManager()
-      if (selectionManager) {
+      const composition = core.getCompositionTracker()
+      if (composition) {
         // compositionstart 이벤트 발생
         element.dispatchEvent(new CompositionEvent('compositionstart'))
 

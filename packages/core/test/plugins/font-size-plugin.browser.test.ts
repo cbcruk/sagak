@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import {
@@ -14,7 +14,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -25,7 +25,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -319,7 +319,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글 등 조합 문자 입력 중 글자 크기 변경 시 입력이 깨질 수 있음
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태 확인 후 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태 확인 후 차단
      */
 
     beforeEach(async () => {
@@ -332,7 +332,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 글자 크기 변경 시도
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })
@@ -356,7 +356,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 글자 크기 변경 실행
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })
@@ -385,7 +385,7 @@ describe('FontSizePlugin (글자 크기 설정)', () => {
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: IME 조합 중에도 글자 크기 변경 실행
       const result = eventBus.emit('FONT_SIZE_CHANGED', { fontSize: 3 })

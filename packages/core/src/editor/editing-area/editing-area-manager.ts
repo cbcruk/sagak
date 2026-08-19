@@ -108,11 +108,6 @@ export class EditingAreaManager {
       await currentArea.show()
     }
 
-    if (this.eventBus) {
-      this.eventBus.emit(EditingAreaEvents.EDITING_AREA_INITIALIZED, {
-        mode: this.currentMode,
-      })
-    }
   }
 
   /**
@@ -125,12 +120,6 @@ export class EditingAreaManager {
 
     const oldMode = this.currentMode
 
-    if (this.eventBus) {
-      this.eventBus.emit(EditingAreaEvents.EDITING_AREA_MODE_CHANGING, {
-        from: oldMode,
-        to: newMode,
-      })
-    }
 
     const currentArea = this.areas.get(this.currentMode)
     if (currentArea) {
@@ -339,8 +328,5 @@ export class EditingAreaManager {
 
     this.areas.clear()
 
-    if (this.eventBus) {
-      this.eventBus.emit(EditingAreaEvents.EDITING_AREA_DESTROYED)
-    }
   }
 }

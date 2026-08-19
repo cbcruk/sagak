@@ -8,7 +8,7 @@
 
 ## 요약 (결론 먼저)
 
-> **진행**: 0·1·2a·2b-1·2b-2·3·4 끝. 남은 것은 5단계(버스 철거)와 2c 잔여입니다.
+> **진행**: 0단계부터 5단계까지 끝났습니다.
 
 1. **버스는 구속조건이 아니었습니다.** 명령 전달은 `commandRegistry` 가 precedence
    체인까지 갖춘 채 이미 있고, 알림은 `subscribe(state, tr)` 하나로 대체됩니다.
@@ -115,18 +115,21 @@
 [`spike-to-product.md`](./spike-to-product.md) 가 "DOM 을 진실로 삼는 표면" 으로 센
 두 숫자를 다시 쟀습니다.
 
-| | 그때 | 2b-1 | 2b-2 | 4단계 | 3단계 뒤 |
-| --- | --- | --- | --- | --- | --- |
-| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | 5 / 4 | 5 / 4 | **1건 / 1파일** |
-| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | 39 / 20 | 29 / 11 | **20건 / 5파일** |
-| ↳ 그중 **UI** | — | 6건 / 6파일 | 6 / 6 | **0** | **0** |
+| | 그때 | 2b-1 | 2b-2 | 4단계 | 3단계 | 5단계 뒤 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | 5 / 4 | 5 / 4 | 1 / 1 | **1건 / 1파일** |
+| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | 39 / 20 | 29 / 11 | 20 / 5 | **4건 / 3파일** |
+| ↳ 그중 **UI** | — | 6건 / 6파일 | 6 / 6 | **0** | **0** | **0** |
 
-**UI 가 0 이고 `execCommand` 가 1 입니다.** 남은 하나는 `WysiwygArea` 의
-`@deprecated` 탈출구뿐입니다.
+**43 → 4 입니다.** 남은 넷은 자리가 분명합니다.
 
-남은 `getSelection` 20건의 자리도 좁아졌습니다 — `SelectionManager` 14,
-자동 완성 2, `dom-position` 2(스냅샷 히스토리 전용), 링크 1, 화면 값 조회 1.
-앞의 셋은 5단계에서 같이 정리됩니다. `execCommand` 는
+| | |
+| --- | --- |
+| `computed-query.ts` 1 | 화면에 그려진 글꼴·크기 — 모델이 못 답합니다 (3단계) |
+| `autocomplete-plugin.ts` 2 | 캐럿 앞 낱말과 팝오버 위치 |
+| `link-plugin.ts` 1 | 주소 검증 전 선택 확인 |
+
+`execCommand` 1건은 `WysiwygArea` 의 `@deprecated` 탈출구입니다. `execCommand` 는
 [`legacy-exec-command.ts`](../packages/core/src/core/legacy-exec-command.ts) 의 최하위
 precedence 뒤로 격리됐습니다. 반면 선택 영역은 19개 파일이 `window.getSelection()` 을
 직접 봅니다. `state.selection` 이 진실이 되면 그 44곳이 전부 바뀝니다.
@@ -392,10 +395,56 @@ execCommand 호출        0
 생겼습니다 — 벗기기가 **캐럿만 얹혀 있어도** 되면서 다이얼로그가 DOM 선택을
 링크 위로 넓히던 부수효과가 없어졌습니다.
 
-### 5단계 — 버스 철거 (남음)
+### 5단계 — 버스의 알림 절반 ✔
 
-[`event-bus-refactor.md`](./event-bus-refactor.md) 가 센 알림 26종 중 구독자 0인 16종을
-지우고, 남는 것을 `subscribe(state, tr)` 로 옮깁니다.
+[`event-bus-refactor.md`](./event-bus-refactor.md) 가 센 알림 26종 중 **구독자 0이
+16종**이었습니다. 앱을 통째로 띄우고 세어 그대로 확인했습니다.
+
+#### 세는 것만으로는 안 됐습니다
+
+"구독자가 0이면 지운다" 로 가면 **동작하는 확장점까지 지웁니다.** 붙여넣기
+가로채기(`WYSIWYG_PASTE`)는 아무도 안 듣지만, 들으면 `event.preventDefault()`
+로 PM 의 붙여넣기를 대신할 수 있습니다. 이미지 업로드 진행도 마찬가지입니다 —
+그 값은 문서에도 DOM 에도 없습니다.
+
+그래서 기준을 하나 더 뒀습니다.
+
+> **모델이나 DOM 에서 얻을 수 없는 것을 실어 나르는가.**
+>
+> 그렇다면 확장점입니다. 아니면 중복이고, 지웁니다.
+
+이 기준으로 여덟을 지웠습니다.
+
+| 지운 것 | 왜 |
+| --- | --- |
+| `FORMATTING_STATE_CHANGED` | 툴바가 당겨 오게 되면서 개념 자체가 사라짐 |
+| `WYSIWYG_SELECTION_CHANGED` | `subscribe(state, tr)` 가 대신함 |
+| `HISTORY_STATE_CHANGED` | 되돌리기 깊이는 상태 안에 있음 |
+| `CONTENT_RESTORED` | 되돌리기도 트랜잭션 하나 |
+| `EDITING_AREA_INITIALIZED`·`DESTROYED`·`MODE_CHANGING` | `MODE_CHANGED` 하나로 충분 |
+| `WYSIWYG_RESIZED` | 아무도 안 듣고 실어 나를 것도 없음 |
+
+남은 확장점들은 [검사가 목록으로 못 박습니다](../packages/ui/test/event-contract.browser.test.ts) —
+그 밖에 안 들리는 알림이 생기면 실패합니다.
+
+#### 딸려 온 것 — 세 덩어리가 같이 죽었습니다
+
+| | 줄 | 왜 |
+| --- | --- | --- |
+| `SelectionManager` | 494 | 실제로 불리는 것이 `getIsComposing()` **하나**였습니다 |
+| `history-plugin` + `HistoryManager` | 566 | `innerHTML` 스냅샷 — PM 이 오면서 늘 손을 뗐습니다 |
+| `dom-position` | 176 | 그 스냅샷의 캐럿 복원 전용 |
+
+`SelectionManager` 는 선택을 저장·복원하고 HTML 을 꽂는 열아홉 가지를 갖고
+있었는데, 선택이 상태의 일부가 되면서 열여덟이 쓰이지 않게 됐습니다. 남은
+하나만 [`composition.ts`](../packages/core/src/core/composition.ts) 40줄로
+옮겼습니다.
+
+#### 자동 저장이 아직 `innerHTML` 을 쓰고 있었습니다
+
+되살리기가 `element.innerHTML = savedContent` 로 문서를 갈아 끼우고
+있었습니다 — 표·이미지·찾기와 같은 부류인데 2b-2 에서 못 찾았던 자리입니다.
+편집 영역의 `setRawContent` 로 옮겼습니다.
 
 ## 6. UI 층은 이 결정에 안 걸립니다
 
@@ -567,11 +616,11 @@ HTML 은 다시 스키마를 통과합니다. 스키마 밖의 손질은 반영�
   | 스키마 넣기 전 | 233KB | 73KB |
   | 스키마만 (2b-1) | 306KB | 95KB |
   | 초기 청크 (2b-2) | 360KB | 113KB |
-  | 초기 청크 (3단계 뒤) | **345KB** | **109KB** |
-  | `wysiwyg-area` 청크 | **114KB** | **36KB** |
+  | 초기 청크 (지금) | **346KB** | **109KB** |
+  | `wysiwyg-area` 청크 (지금) | **104KB** | **33KB** |
 
   편집 영역은 지연 로드라 갈라졌지만, 실제로는 곧바로 불러오므로 합해서
-  **459KB (gzip 145KB)** 로 보는 것이 맞습니다. `prosemirror-tables`·`commands` 가
+  **450KB (gzip 143KB)** 로 보는 것이 맞습니다. `prosemirror-tables`·`commands` 가
   플러그인을 통해 초기 청크로 끌려 들어간 것도 여기 섞여 있습니다 — 하위
   경로(`sagak-core/model`)로 갈라 놓는 선택지는 그대로 남아 있습니다
 - **학습 목표와의 관계.** 이 저장소는 "배움의 도구" 라는 합의가 있습니다

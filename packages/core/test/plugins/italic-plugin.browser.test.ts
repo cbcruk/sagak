@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 import { createItalicPlugin, ItalicPlugin } from '@/plugins/italic-plugin'
@@ -11,7 +11,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
   let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let element: HTMLElement
   let context: EditorContext
 
@@ -22,7 +22,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
      * 세웁니다 (`test/helpers/plugin-area.ts`).
      */
     ed = mountPluginArea()
-    ;({ eventBus, pluginManager, selectionManager, element, context } = ed)
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
@@ -119,7 +119,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글 등 조합 문자 입력 중 스타일 변경 시 입력이 깨질 수 있음
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태 확인 후 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태 확인 후 차단
      */
 
     beforeEach(async () => {
@@ -132,7 +132,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
       const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 기울임 명령 시도
       const result = eventBus.emit('ITALIC_CLICKED')
@@ -152,7 +152,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
       // Given: IME 조합이 종료된 상태
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       ed.select(1, 6)  /* 'Hello' 만 */
 
@@ -181,7 +181,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: IME 조합 중에도 기울임 명령 실행
       const result = eventBus.emit('ITALIC_CLICKED')
@@ -365,7 +365,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
 
       const newContext = {
         eventBus: new EventBus(),
-        selectionManager,
+        composition,
         config: {},
       }
       const newManager = new PluginManager(newContext)
@@ -380,10 +380,10 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
     })
   })
 
-  describe('SelectionManager 통합 (선택 영역 연동)', () => {
+  describe('CompositionTracker 통합 (선택 영역 연동)', () => {
     /**
      * Why: 저장/복원된 선택 영역에서도 스타일이 적용되어야 함
-     * How: `SelectionManager`와 연동하여 선택 영역 관리
+     * How: `CompositionTracker`와 연동하여 선택 영역 관리
      */
 
     beforeEach(async () => {
@@ -398,7 +398,7 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
 
       /*
        * 선택은 문서 상태의 일부라 저장·복원이 **다른 자리**로 옮겨갔습니다 —
-       * `SelectionManager` 가 아니라 편집 영역입니다. 캐럿만 남겨 두었다가
+       * `CompositionTracker` 가 아니라 편집 영역입니다. 캐럿만 남겨 두었다가
        * 되돌려도 서식이 그대로 걸려야 합니다.
        */
       ed.area.saveSelection()
@@ -414,11 +414,11 @@ describe('ItalicPlugin (기울임 텍스트 스타일 적용)', () => {
       vi.restoreAllMocks()
     })
 
-    it('context에 SelectionManager가 없어도 실행해야 함', async () => {
-      // Given: SelectionManager 없는 컨텍스트
+    it('context에 CompositionTracker가 없어도 실행해야 함', async () => {
+      // Given: CompositionTracker 없는 컨텍스트
       pluginManager.destroyAll()
 
-      const contextWithoutSM = { ...context, selectionManager: undefined }
+      const contextWithoutSM = { ...context, composition: undefined }
       const managerWithoutSM = new PluginManager(contextWithoutSM)
       await managerWithoutSM.register(ItalicPlugin)
 

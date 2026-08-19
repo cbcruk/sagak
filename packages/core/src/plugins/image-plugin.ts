@@ -229,7 +229,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:image')
-      const selectionManager = context.selectionManager
+      const composition = context.composition
 
       const unsubInsertBefore = eventBus.on(
         insertEventName,
@@ -239,7 +239,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
           if (
             isBlockedByComposition(
-              selectionManager,
+              composition,
               checkComposition,
               'Image insert'
             )
@@ -340,7 +340,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
           if (
             isBlockedByComposition(
-              selectionManager,
+              composition,
               checkComposition,
               'Image update'
             )
@@ -429,7 +429,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
       const unsubDeleteBefore = eventBus.on(deleteEventName, 'before', () => {
         if (
           isBlockedByComposition(
-            selectionManager,
+            composition,
             checkComposition,
             'Image delete'
           )

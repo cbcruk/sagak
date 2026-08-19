@@ -218,7 +218,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:link')
-      const selectionManager = context.selectionManager
+      const composition = context.composition
 
       const commandRegistry =
         context.commandRegistry ?? createDefaultCommandRegistry(context)
@@ -227,7 +227,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
         if (
-          isBlockedByComposition(selectionManager, checkComposition, 'Link')
+          isBlockedByComposition(composition, checkComposition, 'Link')
         ) {
           return false
         }
@@ -300,7 +300,7 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
 
       const unsubUnlinkBefore = eventBus.on(unlinkEventName, 'before', () => {
         if (
-          isBlockedByComposition(selectionManager, checkComposition, 'Unlink')
+          isBlockedByComposition(composition, checkComposition, 'Unlink')
         ) {
           return false
         }

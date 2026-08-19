@@ -30,8 +30,45 @@ export function fromState<T>(
   initial: T
 ): Readable<T> {
   return readable(initial, (set) => {
-    set(read())
+    let last = read()
+    set(last)
 
-    return subscribeToModel(editor, () => set(read()))
+    return subscribeToModel(editor, () => {
+      const next = read()
+
+      /*
+       * **같으면 안 알립니다.**
+       *
+       * 밀어 주던 시절에는 코어가 값을 비교해 바뀔 때만 쐈습니다
+       * (`FORMATTING_STATE_CHANGED`). 당겨 오는 지금은 트랜잭션마다 다시
+       * 읽으므로 그 비교가 여기로 옵니다 — 안 하면 글자 하나 칠 때마다
+       * 툴바가 통째로 다시 그려집니다. 값이 객체라 참조 비교로는 늘 다릅니다.
+       */
+      if (same(last, next)) return
+
+      last = next
+      set(next)
+    })
   })
+}
+
+/** 한 겹만 봅니다 — 여기 오는 값은 원시값이거나 평평한 객체입니다 */
+function same<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true
+
+  if (
+    typeof a !== 'object' ||
+    typeof b !== 'object' ||
+    a === null ||
+    b === null
+  ) {
+    return false
+  }
+
+  const keys = Object.keys(a) as Array<keyof T>
+
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.is(a[key], b[key]))
+  )
 }
