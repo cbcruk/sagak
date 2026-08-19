@@ -7,7 +7,6 @@ import type { Node } from 'prosemirror-model'
 import type { StateHandle } from '@/model/register'
 import type { ModelListener } from '@/model/bridge'
 import type { Highlighter } from '@/core/types'
-import type { SanitizeOption } from './sanitizer'
 
 /**
  * 에디터가 지원하는 편집 모드
@@ -56,17 +55,6 @@ export interface EditingAreaConfig {
    */
   spellCheck?: boolean
 
-  /**
-   * 붙여넣기 및 `setContent` 시 HTML 정화 옵션
-   *
-   * @deprecated **지금은 아무 데도 안 쓰입니다.** 소독은 스키마가 합니다 —
-   * WYSIWYG 는 `prosemirror-view` 가, 소스 모드는 `parseHtml` 이 모델을 거치므로
-   * 스키마 밖의 것(`<script>`·`onerror`·`javascript:` 주소)은 애초에 문서에
-   * 존재할 수 없습니다. `false` 를 줘도 정화가 꺼지지 않고, 사용자 정의 설정도
-   * 반영되지 않습니다. 옵션을 없앨지는 따로 정합니다
-   * (`docs/prosemirror-migration.md` §10).
-   */
-  sanitize?: SanitizeOption
 }
 
 /**

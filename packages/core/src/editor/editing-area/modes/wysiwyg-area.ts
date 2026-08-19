@@ -48,8 +48,8 @@ import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
  *
  * ## 소독은 어디로 갔나
  *
- * `sanitize` 옵션을 안 봅니다. 예전에는 HTML 문자열을 `innerHTML` 에 넣는
- * 경계가 있어 거기서 걸렀지만, 이제 **HTML 이 DOM 으로 바로 가는 길이
+ * 소독기(DOMPurify)가 통째로 없어졌습니다. 예전에는 HTML 문자열을 `innerHTML`
+ * 에 넣는 경계가 있어 거기서 걸렀지만, 이제 **HTML 이 DOM 으로 바로 가는 길이
  * 없습니다.** 들어오는 모든 것은 스키마를 지나며, 스키마에 없는 것(`<script>`·
  * `onerror`·`javascript:` 주소)은 모델에 존재할 수 없습니다.
  *

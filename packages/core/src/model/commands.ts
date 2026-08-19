@@ -257,6 +257,8 @@ export interface ImageAttrs {
   alt?: string | null
   width?: string | null
   height?: string | null
+  /** `'left'` · `'center'` · `'right'` · `'none'` */
+  align?: string | null
 }
 
 /**
@@ -391,6 +393,7 @@ export function insertImage(attrs: ImageAttrs): Command {
             alt: attrs.alt ?? null,
             width: attrs.width ?? null,
             height: attrs.height ?? null,
+            align: attrs.align ?? null,
           })
         )
       )

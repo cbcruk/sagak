@@ -105,6 +105,13 @@ const horizontalRule: NodeSpec = {
   toDOM: () => ['hr'],
 }
 
+/**
+ * 이미지.
+ *
+ * `align` 이 있는 이유는 **문단에도 있기 때문**입니다 — 정렬은 글이 어디에
+ * 놓이는가라는 문서의 뜻이고, 그래서 모델이 압니다. 반대로 테두리는 생김새라
+ * 스타일시트의 몫입니다 (`docs/prosemirror-migration.md` §10).
+ */
 const image: NodeSpec = {
   group: 'inline',
   inline: true,
@@ -114,6 +121,7 @@ const image: NodeSpec = {
     alt: { default: null },
     width: { default: null },
     height: { default: null },
+    align: { default: null as string | null },
   },
   parseDOM: [
     {
@@ -129,6 +137,7 @@ const image: NodeSpec = {
           alt: el.getAttribute('alt'),
           width: el.getAttribute('width') ?? (el.style.width || null),
           height: el.getAttribute('height') ?? (el.style.height || null),
+          align: readImageAlign(el),
         }
       },
     },
@@ -142,13 +151,14 @@ const image: NodeSpec = {
    * 그대로 통과합니다.
    */
   toDOM: (node) => {
-    const { src, alt, width, height } = node.attrs as Record<
+    const { src, alt, width, height, align } = node.attrs as Record<
       string,
       string | null
     >
     const style = [
       width && `width: ${withUnit(width)}`,
       height && `height: ${withUnit(height)}`,
+      ...imageAlignStyle(align),
     ]
       .filter(Boolean)
       .join('; ')
@@ -167,6 +177,38 @@ const image: NodeSpec = {
 /** `'200'` 처럼 단위 없는 값은 픽셀로 봅니다 — HTML 속성이 그 뜻입니다 */
 function withUnit(value: string): string {
   return /^\d+(\.\d+)?$/.test(value) ? `${value}px` : value
+}
+
+/**
+ * 이미지 정렬은 **여백으로** 그립니다.
+ *
+ * `text-align` 은 인라인 요소인 이미지에 안 통해서, 블록으로 만들고 좌우 여백을
+ * `auto` 로 미는 방식입니다. 예전 `applyImageAlignment` 이 하던 것과 같은 꼴이라
+ * 그때 만들어진 문서도 그대로 읽힙니다.
+ */
+function imageAlignStyle(align: string | null): string[] {
+  if (!align || align === 'none') return []
+
+  const margins: Record<string, string> = {
+    left: 'margin-right: auto',
+    right: 'margin-left: auto',
+    center: 'margin-left: auto; margin-right: auto',
+  }
+
+  return margins[align] ? ['display: block', margins[align]] : []
+}
+
+function readImageAlign(el: HTMLElement): string | null {
+  if (el.style.display !== 'block') return null
+
+  const left = el.style.marginLeft === 'auto'
+  const right = el.style.marginRight === 'auto'
+
+  if (left && right) return 'center'
+  if (left) return 'right'
+  if (right) return 'left'
+
+  return null
 }
 
 const text: NodeSpec = { group: 'inline' }

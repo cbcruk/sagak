@@ -16,9 +16,8 @@ import type { ImageData } from '@/plugins/image-plugin'
  * 때는 DOM 선택에서 `<img>` 를 거슬러 찾았습니다. 이제 넣는 것은 트랜잭션이고
  * 찾는 것은 `NodeSelection` 이나 캐럿 옆의 노드입니다.
  *
- * **정렬과 테두리는 안 붙습니다.** 스키마의 이미지가 갖는 것은 주소·대체글·
- * 너비·높이 넷입니다. 제품의 다이얼로그도 그 넷만 보내므로 잃는 기능은
- * 없지만, 이벤트로 직접 부르면 나머지는 조용히 빠집니다.
+ * **테두리만 안 붙습니다.** 생김새는 스타일시트의 몫입니다. 정렬은 문단의
+ * 정렬과 같은 자리라 모델이 압니다 (`docs/prosemirror-migration.md` §10).
  */
 describe('ImagePlugin', () => {
   let eventBus: EventBus
@@ -203,25 +202,35 @@ describe('ImagePlugin', () => {
     })
 
     /**
-     * Why: 예전에는 `border`·`alignment` 를 `<img>` 에 인라인 스타일로 박았습니다.
-     * How: 스키마의 이미지에는 그 자리가 없어 **넘겨도 안 붙습니다.** 지금
-     *      제품의 다이얼로그도 이 둘을 보내지 않습니다
-     *      (`docs/prosemirror-migration.md` §10).
+     * Why: 정렬은 **글이 어디에 놓이는가**라 문서의 뜻입니다 — 문단의 정렬과
+     *      같은 자리이므로 모델이 압니다.
+     * How: 인라인 요소라 `text-align` 이 안 통해서 블록으로 만들고 좌우 여백을
+     *      `auto` 로 밉니다. 예전 `applyImageAlignment` 과 같은 꼴이라 그때
+     *      만들어진 문서도 그대로 읽힙니다.
      */
-    it('테두리·정렬은 더 이상 문서에 안 붙습니다', () => {
-      // When: 예전 옵션을 그대로 넘겨 봅니다
+    it('정렬은 문서에 붙습니다', () => {
       eventBus.emit('IMAGE_INSERT', {
         src: 'https://example.com/image.jpg',
-        border: '2px solid red',
         alignment: 'center',
       })
 
-      // Then: 이미지는 들어가되 그 둘은 없습니다
       const img = image()
-      expect(img).toBeTruthy()
-      expect(img!.style.border).toBe('')
-      expect(img!.style.display).toBe('')
-      expect(img!.style.marginLeft).toBe('')
+      expect(img?.style.display).toBe('block')
+      expect(img?.style.marginLeft).toBe('auto')
+      expect(img?.style.marginRight).toBe('auto')
+    })
+
+    /**
+     * Why: 테두리는 **생김새**라 스타일시트의 몫입니다.
+     * How: 스키마에 자리가 없어 넘겨도 안 붙습니다.
+     */
+    it('테두리는 문서에 안 붙습니다', () => {
+      eventBus.emit('IMAGE_INSERT', {
+        src: 'https://example.com/image.jpg',
+        border: '2px solid red',
+      })
+
+      expect(image()?.style.border).toBe('')
     })
 
     it('should reject image without src', () => {
@@ -354,18 +363,17 @@ describe('ImagePlugin', () => {
       expect(image()?.alt).toBe('Updated alt')
     })
 
-    /** 정렬은 문서에 자리가 없습니다 — 넘겨도 그대로입니다 */
-    it('정렬은 고쳐도 안 붙습니다', () => {
+    it('정렬을 고칠 수 있습니다', () => {
       // Given: 이미지 선택
       selectImage()
 
       // When: IMAGE_UPDATE 이벤트 발행
       eventBus.emit('IMAGE_UPDATE', { alignment: 'center' })
 
-      // Then: 아무것도 안 붙습니다
-      expect(image()?.style.display).toBe('')
-      expect(image()?.style.marginLeft).toBe('')
-      expect(image()?.style.marginRight).toBe('')
+      // Then: 가운데 정렬이 붙습니다
+      expect(image()?.style.display).toBe('block')
+      expect(image()?.style.marginLeft).toBe('auto')
+      expect(image()?.style.marginRight).toBe('auto')
     })
 
     it('should fail when no image is selected', () => {
@@ -675,13 +683,13 @@ describe('ImagePlugin', () => {
         border: '1px solid #ccc',
       })
 
-      // Then: 스키마가 아는 넷만 적용되어야 함
+      // Then: 스키마가 아는 다섯이 적용되고 테두리만 빠집니다
       const img = image()
       expect(img?.src).toBe('https://example.com/image.jpg')
       expect(img?.style.width).toBe('400px')
       expect(img?.style.height).toBe('300px')
       expect(img?.alt).toBe('Full featured image')
-      expect(img?.style.display).toBe('')
+      expect(img?.style.marginLeft).toBe('auto')
       expect(img?.style.border).toBe('')
     })
   })

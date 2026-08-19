@@ -4,7 +4,6 @@ import type { WysiwygArea } from './modes/wysiwyg-area'
 import type { HtmlSourceArea } from './modes/html-source-area'
 import type { TextArea } from './modes/text-area'
 import { EditingAreaEvents, type EventBus } from '@/core'
-import type { SanitizeOption } from './sanitizer'
 
 export interface EditingAreaManagerConfig {
   /**
@@ -46,10 +45,6 @@ export interface EditingAreaManagerConfig {
    */
   spellCheck?: boolean
 
-  /**
-   * 붙여넣기 및 `setContent` 시 HTML 정화 옵션 (기본값: 활성화)
-   */
-  sanitize?: SanitizeOption
 }
 
 export class EditingAreaManager {
@@ -79,7 +74,6 @@ export class EditingAreaManager {
       minHeight: config.minHeight,
       autoResize: config.autoResize,
       spellCheck: config.spellCheck,
-      sanitize: config.sanitize,
     }
   }
 
@@ -93,7 +87,6 @@ export class EditingAreaManager {
     minHeight?: number
     autoResize?: boolean
     spellCheck?: boolean
-    sanitize?: SanitizeOption
   }
 
   /**
@@ -255,7 +248,6 @@ export class EditingAreaManager {
           minHeight: this.config.minHeight,
           autoResize: this.config.autoResize,
           spellCheck: this.config.spellCheck,
-          sanitize: this.config.sanitize,
           eventBus: this.eventBus,
         })
 

@@ -118,9 +118,6 @@ importers:
 
   packages/core:
     dependencies:
-      dompurify:
-        specifier: ^3.4.11
-        version: 3.4.11
       prosemirror-commands:
         specifier: ^1.7.2
         version: 1.7.2
@@ -1130,9 +1127,6 @@ packages:
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
-
-  dompurify@3.4.11:
-    resolution: {integrity: sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw==}
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
@@ -2877,10 +2871,6 @@ snapshots:
   devalue@5.9.0: {}
 
   dom-accessibility-api@0.5.16: {}
-
-  dompurify@3.4.11:
-    optionalDependencies:
-      '@types/trusted-types': 2.0.7
 
   eastasianwidth@0.2.0: {}
 

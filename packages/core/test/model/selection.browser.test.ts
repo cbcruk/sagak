@@ -156,3 +156,50 @@ describe('선택이 무엇 위에 있는가', () => {
     })
   })
 })
+
+/**
+ * **구조·의미는 모델, 생김새는 스타일시트.**
+ *
+ * 이 경계가 §10 의 미결들을 가른 기준입니다. 정렬은 글이 어디에 놓이는가라는
+ * 문서의 뜻이라 모델이 알고, 테두리는 그리는 방식이라 모릅니다.
+ */
+describe('이미지 정렬 — 모델이 아는 것', () => {
+  const html = (state: EditorState) => toHtml(state.doc, sagakSchema, document)
+
+  it('가운데 정렬이 왕복합니다', () => {
+    const source =
+      '<p><img src="https://a.example/a.png" ' +
+      'style="display: block; margin-left: auto; margin-right: auto"></p>'
+    const state = stateOf(source)
+
+    /* 예전 `applyImageAlignment` 이 만든 꼴을 그대로 읽습니다 */
+    expect(imageFactsAt(caret(state, 2))).toBeTruthy()
+    expect(html(state)).toContain('margin-left: auto')
+    expect(html(state)).toContain('margin-right: auto')
+  })
+
+  it('왼쪽·오른쪽도 갈립니다', () => {
+    const left = stateOf(
+      '<p><img src="https://a.example/a.png" ' +
+        'style="display: block; margin-right: auto"></p>'
+    )
+    const right = stateOf(
+      '<p><img src="https://a.example/a.png" ' +
+        'style="display: block; margin-left: auto"></p>'
+    )
+
+    expect(html(left)).toContain('margin-right: auto')
+    expect(html(left)).not.toContain('margin-left: auto')
+    expect(html(right)).toContain('margin-left: auto')
+    expect(html(right)).not.toContain('margin-right: auto')
+  })
+
+  /** 테두리는 생김새라 모델을 안 지납니다 */
+  it('테두리는 안 남습니다', () => {
+    const state = stateOf(
+      '<p><img src="https://a.example/a.png" style="border: 2px solid red"></p>'
+    )
+
+    expect(html(state)).not.toContain('border')
+  })
+})
