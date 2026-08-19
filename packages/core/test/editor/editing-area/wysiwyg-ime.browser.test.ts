@@ -4,7 +4,6 @@ import { TextSelection } from 'prosemirror-state'
 import { undo, redo } from 'prosemirror-history'
 import { EventBus } from '@/core/event-bus'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
-import { WysiwygEvents } from '@/core/events'
 
 /**
  * **한글이 이 이주의 관문입니다.**
@@ -124,10 +123,10 @@ describe('한글 조합 — 제품의 편집 영역에서', () => {
    * 내용 변경은 트랜잭션에서 나오므로 조합 중에도 나갑니다. 중요한 것은
    * **조합이 끝났을 때 실려 나가는 내용이 맞는가**입니다.
    */
-  it('내용 변경 알림이 조합 결과를 싣습니다', async () => {
+  it('내용 변경 구독이 조합 결과를 봅니다', async () => {
     const seen: string[] = []
-    eventBus.on(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, (data) => {
-      seen.push(data.content)
+    area.subscribe(() => {
+      seen.push(area.getRawContent())
     })
 
     caretToEnd()
@@ -222,15 +221,4 @@ describe('붙여넣기 — PM 의 클립보드 경로', () => {
     expect(html).not.toContain('javascript:')
   })
 
-  it('붙여넣기 알림이 나갑니다', () => {
-    let seen = false
-    eventBus.on(WysiwygEvents.WYSIWYG_PASTE, () => {
-      seen = true
-    })
-
-    caretToEnd()
-    paste('<p>알림</p>')
-
-    expect(seen).toBe(true)
-  })
 })

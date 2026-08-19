@@ -1,4 +1,5 @@
 import type { Node as PMNode } from 'prosemirror-model'
+import type { Plugin as PMPlugin } from 'prosemirror-state'
 import type { StateHandle } from '@/model/register'
 import type { ModelListener } from '@/model/bridge'
 import type { EventBus } from './event-bus'
@@ -91,6 +92,14 @@ export interface EditingArea {
    * 되돌리기 기록을 여기서 끊습니다 — 커맨드 경계가 부릅니다
    */
   closeHistoryGroup?(): void
+
+  /**
+   * `prosemirror-view` 의 이음매 — 플러그인이 키맵·입력 처리를 직접 답니다.
+   *
+   * 예전에는 DOM 이벤트를 버스로 옮겨 실었는데, PM 이 그 자리를 이미 갖고
+   * 있어서 **두 번째 이음매**였습니다.
+   */
+  addPlugin?(plugin: PMPlugin): () => void
 
   /**
    * 상태가 바뀔 때마다 알립니다 — 자기 문서를 소유하는 영역만 있습니다.

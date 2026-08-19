@@ -85,7 +85,6 @@ export {
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
-  WysiwygEvents,
   EditorEvents,
 } from './core/events'
 export type {

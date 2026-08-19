@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
-import { trackComposition } from '@/core/composition'
-import { PluginManager } from '@/core/plugin-manager'
 import { createAutocompletePlugin } from '@/plugins/autocomplete-plugin'
-import type { EditorContext } from '@/core/types'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 
 /**
  * 자동 완성이 어떤 글자에서 동작하는가.
@@ -24,49 +23,42 @@ import type { EditorContext } from '@/core/types'
  * 검색이 0개를 돌려주던 것과 같은 원인입니다.
  */
 describe('자동 완성 — 언어 범위', () => {
+  let ed: PluginArea
   let eventBus: EventBus
-  let element: HTMLDivElement
+  let element: HTMLElement
 
   beforeEach(async () => {
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    const context: EditorContext = {
-      eventBus,
-      composition: trackComposition(element),
-      element,
-      config: { element },
-    }
-    await new PluginManager(context).register(createAutocompletePlugin())
+    ed = mountPluginArea()
+    eventBus = ed.eventBus
+    element = ed.element
+    await ed.pluginManager.register(createAutocompletePlugin())
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
-  /** 캐럿을 마지막 문단 끝에 두고 키업을 흘려 제안을 받습니다 */
+  /**
+   * 캐럿을 마지막 문단 끝에 두고 `keyup` 을 흘려 제안을 받습니다.
+   *
+   * 예전에는 버스에 `WYSIWYG_KEYUP` 을 쏘면 됐습니다. 이제 자동 완성이
+   * `prosemirror-view` 의 `handleDOMEvents` 로 받으므로 **진짜 DOM 이벤트**를
+   * 편집 영역에 흘립니다 — 재는 대상이 한 겹 가까워졌습니다.
+   */
   const suggest = async (html: string): Promise<string[] | null> => {
-    element.innerHTML = html
+    ed.load(html)
 
-    const paragraphs = element.querySelectorAll('p')
-    const target = paragraphs[paragraphs.length - 1].firstChild!
-    const range = document.createRange()
-    range.setStart(target, target.textContent!.length)
-    range.collapse(true)
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
+    const state = ed.area.getStateHandle().getState()!
+    ed.collapse(state.doc.content.size - 1)
 
     let shown: string[] | null = null
     const unsub = eventBus.on('AUTOCOMPLETE_SHOW', (data: unknown) => {
       shown = (data as { suggestions: string[] }).suggestions
     })
 
-    eventBus.emit('WYSIWYG_KEYUP', {
-      event: new KeyboardEvent('keyup', { key: 'x' }),
-    })
+    element.dispatchEvent(
+      new KeyboardEvent('keyup', { key: 'x', bubbles: true })
+    )
     // 플러그인 기본 디바운스(100ms)를 넘겨 기다립니다
     await new Promise((resolve) => setTimeout(resolve, 250))
     unsub()

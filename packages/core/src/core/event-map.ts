@@ -3,7 +3,6 @@ import {
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
-  WysiwygEvents,
   AutoSaveEvents,
   ExportEvents,
   ImageResizeEvents,
@@ -131,14 +130,6 @@ export interface EditorEventMap {
   }
 
   // --- WYSIWYG 영역 ---
-  [WysiwygEvents.WYSIWYG_AREA_SHOWN]: void
-  [WysiwygEvents.WYSIWYG_AREA_HIDDEN]: void
-  [WysiwygEvents.WYSIWYG_CONTENT_CHANGED]: { content: string }
-  [WysiwygEvents.WYSIWYG_FOCUSED]: void
-  [WysiwygEvents.WYSIWYG_BLURRED]: void
-  [WysiwygEvents.WYSIWYG_PASTE]: { event: ClipboardEvent }
-  [WysiwygEvents.WYSIWYG_KEYDOWN]: { event: KeyboardEvent }
-  [WysiwygEvents.WYSIWYG_KEYUP]: { event: KeyboardEvent }
 
   // --- 자동 저장 ---
   [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: AutoSaveEventData
@@ -242,14 +233,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
 
   // --- WYSIWYG 영역 (전부 일어난 일의 보고) ---
-  [WysiwygEvents.WYSIWYG_AREA_SHOWN]: 'notify',
-  [WysiwygEvents.WYSIWYG_AREA_HIDDEN]: 'notify',
-  [WysiwygEvents.WYSIWYG_CONTENT_CHANGED]: 'notify',
-  [WysiwygEvents.WYSIWYG_FOCUSED]: 'notify',
-  [WysiwygEvents.WYSIWYG_BLURRED]: 'notify',
-  [WysiwygEvents.WYSIWYG_PASTE]: 'notify',
-  [WysiwygEvents.WYSIWYG_KEYDOWN]: 'notify',
-  [WysiwygEvents.WYSIWYG_KEYUP]: 'notify',
 
   // --- 자동 저장 ---
   [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: 'notify',

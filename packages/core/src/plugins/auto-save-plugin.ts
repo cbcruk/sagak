@@ -1,6 +1,7 @@
+import { subscribeToModel } from '@/model/bridge'
 import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from '@/core'
-import { WysiwygEvents, CoreEvents } from '@/core'
+import { CoreEvents } from '@/core'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 
 
@@ -205,12 +206,25 @@ export function createAutoSavePlugin(
         }, debounceMs)
       }
 
-      const unsubContentChanged = eventBus.on(
-        WysiwygEvents.WYSIWYG_CONTENT_CHANGED, () => {
+      /*
+       * **문서가 바뀌면 저장 예약** — 트랜잭션 하나가 신호입니다.
+       *
+       * 예전에는 편집 영역이 `WYSIWYG_CONTENT_CHANGED` 를 실어 보냈습니다.
+       * 그건 `dispatchTransaction` 을 버스로 감싼 것이라, 같은 것을 두 번
+       * 거치는 셈이었습니다.
+       */
+      const unsubContent = subscribeToModel(context, (_state, tr) => {
+        /*
+         * **프로그램이 갈아 끼운 것은 사용자가 친 것이 아닙니다.**
+         *
+         * `tr` 이 `null` 이면 문서를 통째로 바꾼 것입니다 — 문서를 열거나
+         * 초안을 되살린 것. 그걸 저장 신호로 치면 열자마자 저장됩니다.
+         */
+        if (!tr) return
+
           scheduleSave()
-        }
-      )
-      unsubscribers.push(unsubContentChanged)
+      })
+      unsubscribers.push(unsubContent)
 
       const unsubStyleChanged = eventBus.on(
         CoreEvents.STYLE_CHANGED, () => {
