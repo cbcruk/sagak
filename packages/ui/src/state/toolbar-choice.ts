@@ -26,7 +26,7 @@ import type { EditorContext } from 'sagak-core'
  *
  * 검사가 잡았습니다 — 앞 테스트가 고른 값이 다음 테스트로 넘어왔습니다.
  *
- * 그래서 `EditorContext` 로 칸을 나눕니다. `subscribeToSelection` 이 추적기를
+ * 그래서 `EditorContext` 로 칸을 나눕니다. `subscribeToModel` 이 구독을
  * 에디터마다 두는 것과 같은 방식이고, `WeakMap` 이라 에디터가 사라지면 같이
  * 사라집니다.
  *

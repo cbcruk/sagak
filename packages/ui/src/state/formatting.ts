@@ -1,28 +1,22 @@
 import type { Readable } from 'svelte/store'
-import { CoreEvents, TextStyleEvents } from 'sagak-core'
+import { TextStyleEvents } from 'sagak-core'
 import type { EditorContext } from 'sagak-core'
-import { fromBus } from './from-bus'
-import { isSelectionInside } from './selection'
+import { fromState } from './from-state'
 
 /**
  * 굵게·기울임·밑줄·취소선의 켜짐 상태.
  *
- * ## 지금 값을 코어에 물어봅니다
+ * ## 밀어 주던 것을 이제 당겨 옵니다
  *
- * 예전에는 넷 다 `false` 로 시작해 구독만 걸었습니다. 버스에 **지금 값이
- * 없어서**, 코어가 다음 `FORMATTING_STATE_CHANGED` 를 쏘기 전까지는 이미 굵은
- * 글 위에 캐럿이 있어도 툴바가 꺼짐으로 보였습니다.
+ * 예전에는 코어가 `FORMATTING_STATE_CHANGED` 를 쏘고 여기서 받았습니다. 버스에
+ * **지금 값이 없어서** 첫 렌더에 쓸 값을 따로 물어야 했고(`readNow`), 그러려면
+ * "선택이 에디터 안인가" 가드도 여기 한 벌 더 있어야 했습니다 —
+ * `document.queryCommandState` 가 에디터 밖에서 엉뚱한 값을 주기 때문입니다.
  *
- * 코어가 그 값을 계산하는 방법이 `commandRegistry.queryState(...)` 라 여기서도
- * 그대로 물어봅니다 (`EditorCore.setupFormattingStateTracking`). 묻는 시점은
- * store 를 만들 때가 아니라 **첫 구독자가 붙을 때**입니다 (`fromBus` 의
- * `readNow`) — 툴바가 뜨는 순간이 아니라 실제로 보기 시작하는 순간의 값이라야
- * 맞습니다.
+ * 상태를 당겨 오면 그 둘이 함께 없어집니다. 언제 읽든 지금 값이고, 답하는 것은
+ * 모델이라 선택이 어디 있든 그 에디터의 사실입니다.
  *
- * 선택이 에디터 밖이면 묻지 않습니다 — `document.queryCommandState` 는 그때
- * 엉뚱한 값을 주므로, 코어와 같은 판정(`isSelectionInside`)을 먼저 통과시킵니다.
- *
- * ## 코어가 여섯을 보내지만 넷만 씁니다
+ * ## 코어가 여섯을 세지만 넷만 씁니다
  *
  * `isSubscript`·`isSuperscript` 는 툴바에 버튼이 없습니다. 쓰는 만큼만 내놓고,
  * 필요해지면 그때 늘립니다.
@@ -57,9 +51,10 @@ const TOGGLES = {
   strikeThrough: TextStyleEvents.STRIKE_CLICKED,
 } as const
 
-function readNow(editor: EditorContext): FormattingState {
+function read(editor: EditorContext): FormattingState {
   const registry = editor.commandRegistry
-  if (!registry || !isSelectionInside(editor)) return NOTHING
+
+  if (!registry) return NOTHING
 
   return {
     isBold: registry.queryState('bold'),
@@ -72,19 +67,7 @@ function readNow(editor: EditorContext): FormattingState {
 export function formattingStore(
   editor: EditorContext
 ): Readable<FormattingState> {
-  return fromBus(
-    editor,
-    CoreEvents.FORMATTING_STATE_CHANGED,
-    'on',
-    (next) => ({
-      isBold: next.isBold,
-      isItalic: next.isItalic,
-      isUnderline: next.isUnderline,
-      isStrikeThrough: next.isStrikeThrough,
-    }),
-    NOTHING,
-    () => readNow(editor)
-  )
+  return fromState(editor, () => read(editor), NOTHING)
 }
 
 /** 토글은 상태가 아니라 명령이라 store 밖입니다 (`historyCommands` 와 같습니다) */

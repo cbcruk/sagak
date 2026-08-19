@@ -48,10 +48,10 @@
    * 보는 자리가 여기뿐입니다. 각각의 구독은 `state/font-family.ts` 와
    * `state/local-fonts.ts` 가 갖습니다.
    *
-   * 가드는 새로 만들지 않았습니다. 선택 쪽 바닥은 여전히
-   * `subscribeToSelection` 이라 IME 조합 중 무시·다음 프레임까지 지연·에디터
-   * 밖이면 건너뜀을 그대로 지납니다 — 렌더러를 네 번 갈아타는 동안 한 번도 안
-   * 바뀐 가드입니다.
+   * 가드는 이제 없습니다. 바닥이 `subscribeToModel` 이라 문서 상태가 바뀔
+   * 때만 흐르고, 그 상태는 애초에 이 에디터의 것입니다 — 예전에 필요했던
+   * 셋(IME 조합 중 무시·다음 프레임까지 지연·에디터 밖이면 건너뜀)이 전부
+   * "DOM 이 지금 믿을 만한가" 를 묻는 것이었습니다.
    */
 
   interface Props {
@@ -109,9 +109,16 @@
     value = matched ? matched.value : FALLBACK_FONTS[0].value
   })
 
-  const save = (): void => {
-    editor.selectionManager?.saveSelection()
-  }
+  /*
+   * **선택을 저장할 필요가 없어졌습니다.**
+   *
+   * 툴바를 누르면 포커스가 에디터를 떠나 브라우저 선택이 풀립니다. 그래서
+   * `mousedown`·`focus` 에서 DOM 범위를 저장해 두고 적용 직전에 되돌렸습니다.
+   *
+   * 이제 선택은 문서 상태의 일부라 포커스와 무관하게 그대로 있습니다. 커맨드는
+   * `state.selection` 위에서 돌고, 성공하면 `runCommand` 가 포커스를
+   * 되돌려 줍니다 (`FOCUS_REQUESTED`).
+   */
 </script>
 
 <select
@@ -120,15 +127,12 @@
   aria-label="Font Family"
   style="width: {FIXED_WIDTH}px; text-overflow: ellipsis"
   bind:value
-  onmousedown={save}
-  onfocus={save}
   onchange={() => {
     if (value === LOAD_SYSTEM_FONTS_VALUE) {
       /* 사용자 제스처 안이라야 권한 요청이 통합니다 */
       loadLocalFonts()
       return
     }
-    editor.selectionManager?.restoreSelection()
     editor.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: value })
   }}
 >

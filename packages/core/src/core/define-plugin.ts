@@ -17,6 +17,13 @@ export interface PluginHandlerContext<
 > {
   /** 이벤트 버스 */
   eventBus: EventBus
+  /**
+   * 에디터 컨텍스트.
+   *
+   * 모델을 건드려야 하는 핸들러가 씁니다 (`runModelCommand(context, …)`).
+   * 이름과 문자열 값 하나로 안 끝나는 일 — 표·이미지·특수문자 — 이 그렇습니다.
+   */
+  context: EditorContext
   /** 선택 영역 관리자 */
   selectionManager?: SelectionManager
   /** 플러그인 옵션 */
@@ -268,6 +275,7 @@ export function definePlugin<
           TState
         > => ({
           eventBus,
+          context,
           selectionManager,
           options: finalOptions,
           state,

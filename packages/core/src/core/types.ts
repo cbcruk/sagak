@@ -1,5 +1,6 @@
 import type { Node as PMNode } from 'prosemirror-model'
 import type { StateHandle } from '@/model/register'
+import type { ModelListener } from '@/model/bridge'
 import type { EventBus } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { CommandRegistry } from './command-registry'
@@ -79,6 +80,14 @@ export interface EditingArea {
 
   /** 문서를 건드리지 않는 표시 — 찾기 강조가 씁니다 */
   getHighlighter?(): Highlighter
+
+  /**
+   * 상태가 바뀔 때마다 알립니다 — 자기 문서를 소유하는 영역만 있습니다.
+   *
+   * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이라, 구독하는 쪽이 DOM 이벤트를
+   * 종류별로 듣고 짐작할 필요가 없습니다.
+   */
+  subscribe?(listener: ModelListener): () => void
 
   /** 리소스를 정리합니다 */
   destroy(): void

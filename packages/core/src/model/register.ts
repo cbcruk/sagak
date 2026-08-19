@@ -3,11 +3,14 @@ import type { CommandRegistry } from '@/core/command-registry'
 import { sagakSchema } from './schema'
 import {
   commands,
+  createLink,
+  removeLink,
   isMarkActive,
   markValue,
   blockAttr,
   type Command,
 } from './commands'
+import { linkAt } from './selection'
 
 /**
  * 2a 의 커맨드를 **커맨드 레지스트리에 얹는 자리**입니다.
@@ -45,6 +48,7 @@ const WITH_VALUE: Record<string, (value: string) => Command> = {
   backColor: commands.backColor,
   letterSpacing: commands.letterSpacing,
   lineHeight: commands.lineHeight,
+  createLink,
 }
 
 const PLAIN: Record<string, Command> = {
@@ -63,6 +67,7 @@ const PLAIN: Record<string, Command> = {
   insertUnorderedList: commands.insertUnorderedList,
   insertOrderedList: commands.insertOrderedList,
   insertHorizontalRule: commands.insertHorizontalRule,
+  unlink: removeLink,
 }
 
 /** 툴바의 눌림 표시가 보는 것들 */
@@ -77,6 +82,7 @@ const STATE_QUERIES: Record<string, (state: EditorState) => boolean> = {
   justifyCenter: (state) => blockAttr(state, 'align') === 'center',
   justifyRight: (state) => blockAttr(state, 'align') === 'right',
   justifyFull: (state) => blockAttr(state, 'align') === 'justify',
+  createLink: (state) => !!linkAt(state),
 }
 
 /** 툴바의 셀렉트가 보는 것들 */

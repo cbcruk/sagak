@@ -575,22 +575,42 @@ describe('EditorCore', () => {
       expect(core.isReady()).toBe(false)
     })
 
-    it('destroy() 호출 시 서식 상태 추적 리스너를 정리해야 함 (메모리 릭 방지)', async () => {
-      // Given: element가 있어 서식 상태 추적 리스너가 등록된 EditorCore
-      const removeSpy = vi.spyOn(document, 'removeEventListener')
-      const core = new EditorCore({ element })
+    /**
+     * Why: 서식 추적은 생성자와 `run()` 에서 **두 번** 설정됩니다. 앞의 것을
+     *      안 끊으면 구독이 겹쳐 한 번 고칠 때 두 번 계산·발행됩니다.
+     * How: 예전에는 `document.removeEventListener('selectionchange', …)` 가
+     *      불렸는지로 봤습니다. 그 리스너는 이제 없습니다 — 서식은 편집 영역의
+     *      상태 구독에서 나옵니다. 그래서 결과로 봅니다: 한 번 고치면 한 번만
+     *      발행되어야 합니다.
+     */
+    it('서식 상태 추적이 겹쳐 등록되지 않아야 함 (메모리 릭 방지)', async () => {
+      // Given: 편집 영역이 붙어 추적이 두 번 설정된 EditorCore
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+
+      const core = new EditorCore({ editingAreaContainer: container })
       await core.run()
 
-      // When: destroy() 호출
-      core.destroy()
+      const seen = vi.fn()
+      core.getEventBus().on('FORMATTING_STATE_CHANGED', 'on', seen)
 
-      // Then: document의 selectionchange 리스너가 제거되어야 함
-      expect(removeSpy).toHaveBeenCalledWith(
-        'selectionchange',
-        expect.any(Function)
+      // When: 굵게가 걸리도록 문서를 고침
+      const handle = core
+        .getEditingAreaManager()
+        ?.getCurrentArea()
+        ?.getStateHandle?.()
+      expect(handle).toBeDefined()
+
+      const state = handle!.getState()!
+      handle!.dispatch(
+        state.tr.addStoredMark(state.schema.marks.strong.create())
       )
 
-      removeSpy.mockRestore()
+      // Then: 한 번만 발행되어야 함
+      expect(seen).toHaveBeenCalledTimes(1)
+
+      core.destroy()
+      container.remove()
     })
 
     it('destroy() 호출 시 EventBus의 모든 핸들러를 정리해야 함', async () => {

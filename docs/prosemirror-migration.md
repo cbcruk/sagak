@@ -8,7 +8,7 @@
 
 ## 요약 (결론 먼저)
 
-> **진행**: 0·1·2a·2b-1·2b-2 끝. 다음은 2c/4단계(선택 영역)입니다.
+> **진행**: 0·1·2a·2b-1·2b-2·4 끝. 다음은 3단계(죽은 커맨드 층 걷어내기)입니다.
 
 1. **버스는 구속조건이 아니었습니다.** 명령 전달은 `commandRegistry` 가 precedence
    체인까지 갖춘 채 이미 있고, 알림은 `subscribe(state, tr)` 하나로 대체됩니다.
@@ -115,16 +115,16 @@
 [`spike-to-product.md`](./spike-to-product.md) 가 "DOM 을 진실로 삼는 표면" 으로 센
 두 숫자를 다시 쟀습니다.
 
-| | 그때 | 2b-1 | 2b-2 뒤 |
-| --- | --- | --- | --- |
-| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | **5건 / 4파일** |
-| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | **39건 / 20파일** |
+| | 그때 | 2b-1 | 2b-2 | 4단계 뒤 |
+| --- | --- | --- | --- | --- |
+| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | 5건 / 4파일 | **5건 / 4파일** |
+| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | 39건 / 20파일 | **29건 / 11파일** |
+| ↳ 그중 **UI** | — | 6건 / 6파일 | 6건 / 6파일 | **0** |
 
-뷰를 갈아 끼워도 읽기 경로는 거의 안 줄었습니다. 줄어든 다섯은 편집 영역
-자신과 줄간격·자간·가로줄 플러그인이 쓰던 것이고, 나머지는 **툴바 쪽 20파일**에
-그대로 있습니다. 4단계가 여전히 제일 큰 덩어리입니다.
-
-**쓰기 경로는 정리됐고 읽기 경로는 그대로입니다.** `execCommand` 는
+**UI 가 0 입니다.** 툴바·다이얼로그가 `window.getSelection()` 을 한 번도 안
+부릅니다. 이게 4단계의 요지입니다 — 남은 29건은 전부 코어 안쪽이고, 그중
+10건은 모델이 항상 먼저 잡는 바람에 **아무도 안 부르는 커맨드 층**입니다
+(3단계에서 걷어냅니다). `execCommand` 는
 [`legacy-exec-command.ts`](../packages/core/src/core/legacy-exec-command.ts) 의 최하위
 precedence 뒤로 격리됐습니다. 반면 선택 영역은 19개 파일이 `window.getSelection()` 을
 직접 봅니다. `state.selection` 이 진실이 되면 그 44곳이 전부 바뀝니다.
@@ -298,15 +298,56 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 붙여넣기는 **따로 잽니다.** PM 은 자기 경로(`clipboardParser`)로 처리하므로 §2 의
 `DOMParser` 왕복 결과가 그대로 적용된다고 볼 수 없습니다.
 
-### 3단계 — 커맨드·플러그인 34개 이전
+### 3단계 — 죽은 커맨드 층 걷어내기 (남음)
 
-`commandRegistry` 의 precedence 체인이 이미 PM 의 명령 모델과 같은 꼴이라, 등록 방식은
-유지하고 핸들러 속만 트랜잭션으로 바꿉니다. `execCommand` 5건이 여기서 사라집니다.
+원래 계획은 "커맨드·플러그인 34개 이전" 이었는데, **2b-1·2b-2 가 거의 다 흡수했습니다.**
+모델 커맨드가 precedence 100 에 있고 편집 영역이 늘 상태를 내주므로, 그 아래
+네이티브(0)·레거시(-100) 층은 WYSIWYG 에서 **한 번도 안 잡힙니다.**
 
-### 4단계 — 선택 영역 44곳
+남은 일은 옮기는 것이 아니라 **지우는 것**입니다 — `core/commands/` 의 열 곳과
+`legacy-exec-command.ts` 가 대상이고 `execCommand` 5건이 거기서 사라집니다.
+지우기 전에 **정말 안 잡히는지 재야 합니다** — 소스·텍스트 모드에서는 모델이
+없어 아래 층이 여전히 답합니다.
 
-`window.getSelection()` → `state.selection`. [`selection.ts`](../packages/ui/src/state/selection.ts)
-의 가드 셋(IME·rAF·에디터 범위)은 **통째로 없어집니다** — `prosemirror-view` 의 일입니다.
+### 4단계 — 선택 영역 ✔
+
+`window.getSelection()` → `state.selection`. **UI 가 0 이 됐습니다** (§3).
+
+없어진 것이 코드보다 개념 쪽에서 큽니다. 예전 `selection.ts` 의 가드 셋은 전부
+**"DOM 이 지금 믿을 만한가"** 를 묻는 것이었습니다.
+
+| 가드 | 왜 있었나 | 왜 없어졌나 |
+| --- | --- | --- |
+| IME 조합 중 무시 | 조합 중 값은 의미가 없음 | 조합 중에는 트랜잭션이 안 옴 |
+| 다음 프레임까지 지연 | 브라우저가 선택을 확정하기 전 | 트랜잭션은 이미 확정된 상태 |
+| 선택이 에디터 밖이면 건너뜀 | 툴바를 누르면 선택이 떠남 | 상태가 애초에 이 에디터의 것 |
+
+같은 이유로 **선택 저장·복원 여섯 쌍**도 없어졌습니다. 다이얼로그와 드롭다운이
+`mousedown`·`focus` 에서 DOM 범위를 저장해 뒀다가 적용 직전에 되돌리던 것인데,
+선택이 문서 상태의 일부가 되면서 포커스와 무관하게 그대로 있습니다.
+
+지운 것: `state/selection.ts` · `state/from-selection.ts` · `.shared.ts` 넷
+(정렬·목록·표·링크) · `image-dialog.shared.ts` 의 `getSelectedImage`.
+새로 온 것: [`model/selection.ts`](../packages/core/src/model/selection.ts)(문서에
+묻는 답들) · [`state/from-state.ts`](../packages/ui/src/state/from-state.ts).
+
+**잰 것** — 캐럿을 열 번 옮기며 `window.getSelection()` 호출을 셉니다.
+
+```
+통합 전            21 회 / 이벤트
+상태 층 통합 뒤    18 회 / 이벤트
+지금                0 회
+```
+
+18 이 남아 있던 이유는 코어의 서식 추적이 `selectionchange` 마다 `queryState`
+여섯을 돌렸고 그 바닥이 `document.queryCommandState` 였기 때문입니다. 조회가
+모델로 옮겨가면서 통째로 없어졌습니다.
+([`selection-tracking.browser.test.ts`](../packages/ui/test/selection-tracking.browser.test.ts))
+
+**딸려 온 것**: 특수문자 삽입이 DOM 범위에 텍스트 노드를 꽂던 것을 모델
+커맨드로 옮겼고(가로줄과 같은 부류), 링크 걸기·벗기기에 모델 커맨드가
+생겼습니다 — 벗기기가 **캐럿만 얹혀 있어도** 되면서 다이얼로그가 DOM 선택을
+링크 위로 넓히던 부수효과가 없어졌습니다.
 
 ### 5단계 — 버스 철거
 
@@ -322,10 +363,10 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 | 덤 컴포넌트 (`HistoryButtons`·`FormatToggles`·`AlignmentButtons`·`ListButtons`) | **한 줄도 안 바뀜** |
 | `editor-state.ts` 묶음 | 개념 유지, `derived(state, …)` 로 구현 교체 |
 | 도메인 store 들 | 껍데기 유지, push → **pull** |
-| `fromBus` | **죽음** — 버스가 없습니다 |
-| `fromSelection` · `selection.ts` | **죽음** — `prosemirror-view` 의 일입니다 |
+| `fromBus` | **죽음** — 버스가 없습니다 (`AutoSaveIndicator` 하나 남음) |
+| ~~`fromSelection` · `selection.ts`~~ | **죽었습니다** (4단계) — `from-state.ts` 가 대신합니다 |
 | 검사 harness 의 `selectAll`·`placeCaret` | **포커스를 먼저 줍니다** (2b-2 에서 이미 고침) |
-| `toolbar-choice.ts` | **없어질 가능성** — 줄간격·자간이 노드 속성이 되면 읽힙니다 |
+| `toolbar-choice.ts` | **없어질 가능성** — 줄간격은 이제 문단 속성이고 자간은 마크입니다. 둘 다 읽을 수 있어졌습니다 |
 
 그래서 남은 컴포넌트(`AutoSaveIndicator`·`FindReplaceDialog`)를 `fromBus` 로 옮기는
 작업은 **접습니다.** 버려질 코드를 쓰는 일입니다.
@@ -334,6 +375,11 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 `prosemirror-view` 는 **포커스가 없는 동안의 DOM 선택을 무시합니다**(에디터 밖에서
 일어난 선택까지 문서 선택으로 받으면 안 되니까). harness 는 포커스 없이 범위만
 놓고 있었는데, 사람이 하는 순서는 원래 "편집 영역을 누르고 끄는" 것입니다.
+
+4단계에서는 UI 를 고쳤지만 **경계는 예고대로 살아남았습니다.** 덤 컴포넌트는 한
+줄도 안 바뀌었고, 도메인 store 들은 껍데기만 남아 안이 push 에서 pull 로
+바뀌었습니다. 이 표는 세워 둔 층이 이주를 견딜지 미리 적어 둔 것이었고,
+그대로 됐습니다.
 
 ## 7. 정한 것 — 스키마 결정 둘 (측정)
 

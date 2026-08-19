@@ -1,6 +1,19 @@
+import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorContext } from '@/core/types'
+import { EditingAreaEvents } from '@/core/events'
 import type { StateHandle } from './register'
 import type { Command } from './commands'
+import {
+  alignmentAt,
+  imageFactsAt,
+  isCaretInTable,
+  linkAt,
+  listKindAt,
+  type Alignment,
+  type ImageFacts,
+  type LinkFacts,
+  type ListKind,
+} from './selection'
 
 /**
  * 플러그인이 **모델에 닿는 하나뿐인 문**입니다.
@@ -39,3 +52,98 @@ export function runModelCommand(
 export function modelState(context: EditorContext) {
   return modelHandle(context)?.getState() ?? null
 }
+
+/**
+ * 상태가 바뀔 때 부릅니다.
+ *
+ * `tr` 이 `null` 인 경우가 있습니다 — 문서를 통째로 갈아 끼워 트랜잭션이
+ * 아니라 새 상태가 들어온 것입니다 (문서를 열거나 모드를 오간 것).
+ */
+export type ModelListener = (state: EditorState, tr: Transaction | null) => void
+
+/**
+ * 편집 영역의 상태 변화를 구독합니다 — **모드가 바뀌어도 끊기지 않습니다.**
+ *
+ * 영역은 모드마다 다른 물건이고, 소스·텍스트 모드에는 모델이 아예 없습니다.
+ * 부르는 쪽이 그 사정을 알 필요가 없도록 여기서 다시 붙입니다.
+ *
+ * 모델이 없는 모드에서는 아무 일도 안 일어납니다 — 구독은 살아 있고, WYSIWYG
+ * 로 돌아오면 다시 흐릅니다.
+ */
+export function subscribeToModel(
+  context: EditorContext,
+  listener: ModelListener
+): () => void {
+  let detach: (() => void) | undefined
+
+  const attach = (): void => {
+    detach?.()
+    detach = context.editingAreaManager
+      ?.getCurrentArea()
+      ?.subscribe?.(listener)
+  }
+
+  attach()
+
+  const unsubMode = context.eventBus.on(
+    EditingAreaEvents.EDITING_AREA_MODE_CHANGED,
+    'after',
+    attach
+  )
+
+  return () => {
+    detach?.()
+    detach = undefined
+    unsubMode()
+  }
+}
+
+/**
+ * 툴바가 묻는 것들 — **모델이 없으면 기본값**입니다.
+ *
+ * 소스·텍스트 모드에서는 물을 문서가 없습니다. 그때 던지거나 `undefined` 를
+ * 주는 대신 "아무것도 아님" 을 돌려줍니다 — 툴바는 계속 그려져야 합니다.
+ */
+export function selectionFacts(context: EditorContext): {
+  alignment: Alignment
+  list: ListKind
+  inTable: boolean
+  link: LinkFacts | null
+  image: ImageFacts | null
+} {
+  const state = modelState(context)
+
+  if (!state) {
+    return {
+      alignment: 'left',
+      list: 'none',
+      inTable: false,
+      link: null,
+      image: null,
+    }
+  }
+
+  return {
+    alignment: alignmentAt(state),
+    list: listKindAt(state),
+    inTable: isCaretInTable(state),
+    link: linkAt(state),
+    image: imageFactsAt(state),
+  }
+}
+
+/** 낱개로 묻는 자리들 — 위 묶음과 같은 답을 줍니다 */
+export const alignmentOf = (context: EditorContext): Alignment =>
+  selectionFacts(context).alignment
+
+export const listKindOf = (context: EditorContext): ListKind =>
+  selectionFacts(context).list
+
+export const isInTableOf = (context: EditorContext): boolean =>
+  selectionFacts(context).inTable
+
+export const linkOf = (context: EditorContext): LinkFacts | null =>
+  selectionFacts(context).link
+
+export const imageOf = (context: EditorContext): ImageFacts | null =>
+  selectionFacts(context).image

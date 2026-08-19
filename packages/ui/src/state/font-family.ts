@@ -1,6 +1,6 @@
 import type { Readable } from 'svelte/store'
 import type { EditorContext } from 'sagak-core'
-import { fromSelection } from './from-selection'
+import { fromState } from './from-state'
 
 /**
  * 캐럿이 놓인 자리의 글꼴 이름 — 코어가 답하는 **날것 그대로**입니다.
@@ -10,15 +10,12 @@ import { fromSelection } from './from-selection'
  * (`local-fonts.ts`). 두 소스를 합치는 일은 둘 다 보는 자리, 즉 컴포넌트가
  * 합니다.
  *
- * `commandRegistry` 가 없으면 `document.queryCommandValue` 로 떨어집니다 —
- * 옮겨 오기 전 컴포넌트가 하던 순서 그대로입니다.
+ * `queryValue` 는 커맨드 레지스트리를 지나 모델의 마크를 읽습니다.
  */
 export function fontFamilyStore(editor: EditorContext): Readable<string> {
-  return fromSelection(
+  return fromState(
     editor,
-    () =>
-      editor.commandRegistry?.queryValue('fontName') ??
-      document.queryCommandValue('fontName'),
+    () => editor.commandRegistry?.queryValue('fontName') ?? '',
     ''
   )
 }

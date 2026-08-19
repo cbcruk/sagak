@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EditorContext } from 'sagak-core'
-  import { fromSelection } from '../state/from-selection'
+  import { fromState } from '../state/from-state'
   import { choiceStore } from '../state/toolbar-choice'
   import type { ToolbarSelectSpec } from './toolbar-select.specs'
 
@@ -18,9 +18,9 @@
    * | 따라가는 것 | 글자 크기 | 선택 영역에서 매번 읽습니다 |
    * | 안 따라가는 것 | 줄 간격·자간·문단 | `spec.chosen` 저장소 |
    *
-   * 따라가는 쪽만 선택 구독을 씁니다(`fromSelection`). IME 조합 중 무시 같은
-   * 가드가 거기 들어 있고, 이 구독은 렌더러를 네 번 갈아타는 동안 한 번도
-   * 안 바뀌었습니다.
+   * 따라가는 쪽만 상태 구독을 씁니다(`fromState`). 예전에는 `selectionchange`
+   * 를 듣고 DOM 을 다시 걸었고 그래서 가드가 셋 필요했는데, 문서 상태를 보는
+   * 지금은 셋 다 없습니다.
    *
    * ## 안 따라가는 값은 이 컴포넌트 것이 아닙니다
    *
@@ -52,7 +52,7 @@
    * 그 spec 하나라 여기서 만드는 것이 맞습니다.
    */
   // svelte-ignore state_referenced_locally
-  const queried = fromSelection(editor, () => spec.query?.(editor), undefined)
+  const queried = fromState(editor, () => spec.query?.(editor), undefined)
 
   const store = $derived(
     spec.initialValue === undefined
@@ -98,9 +98,16 @@
     value = spec.fallbackValue ?? spec.options[0].value
   })
 
-  const save = (): void => {
-    editor.selectionManager?.saveSelection()
-  }
+  /*
+   * **선택을 저장할 필요가 없어졌습니다.**
+   *
+   * 툴바를 누르면 포커스가 에디터를 떠나 브라우저 선택이 풀립니다. 그래서
+   * `mousedown`·`focus` 에서 DOM 범위를 저장해 두고 적용 직전에 되돌렸습니다.
+   *
+   * 이제 선택은 문서 상태의 일부라 포커스와 무관하게 그대로 있습니다. 커맨드는
+   * `state.selection` 위에서 돌고, 성공하면 `runCommand` 가 포커스를
+   * 되돌려 줍니다 (`FOCUS_REQUESTED`).
+   */
 </script>
 
 <select
@@ -108,11 +115,8 @@
   title={spec.title}
   aria-label={spec.title}
   bind:value
-  onmousedown={save}
-  onfocus={save}
   onchange={() => {
     store?.set(value)
-    editor.selectionManager?.restoreSelection()
     spec.apply(editor, value)
   }}
 >

@@ -33,6 +33,7 @@ import type { Highlighter, HighlightRange } from '@/core/types'
 import { sagakSchema } from '@/model/schema'
 import { toHtml, parseHtml } from '@/model/storage'
 import type { StateHandle } from '@/model/register'
+import type { ModelListener } from '@/model/bridge'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
 
 /**
@@ -137,6 +138,7 @@ export class WysiwygArea implements EditingArea {
   private resizeObserver?: ResizeObserver
   private reportError: ErrorReporter
   private unsubscribers: Array<() => void> = []
+  private listeners = new Set<ModelListener>()
   private savedSelection?: { anchor: number; head: number }
 
   constructor(config: WysiwygAreaConfig) {
@@ -307,6 +309,26 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
+   * **상태가 바뀔 때마다** 알립니다.
+   *
+   * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이므로 거르지 않고 전부
+   * 흘려보냅니다. 문서도 선택도 안 바뀌고 `storedMarks` 만 바뀌는 경우가
+   * 있는데(캐럿만 둔 채 굵게를 누른 것) 툴바는 그것도 봐야 합니다.
+   *
+   * 예전에 구독하는 쪽이 들고 있던 가드 셋(IME 조합 중 무시 · 다음 프레임까지
+   * 지연 · 선택이 에디터 밖이면 건너뜀)은 **여기 없습니다.** 조합 중에는
+   * `prosemirror-view` 가 트랜잭션을 안 만들고, 트랜잭션이 왔다는 것은 이미
+   * 확정된 상태라는 뜻이며, 이 상태는 애초에 이 에디터의 것입니다.
+   */
+  subscribe(listener: ModelListener): () => void {
+    this.listeners.add(listener)
+
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  /**
    * 문서를 건드리지 않는 표시 — 찾기 강조가 씁니다
    */
   getHighlighter(): Highlighter {
@@ -472,9 +494,14 @@ export class WysiwygArea implements EditingArea {
    * 문서를 통째로 갈아 끼웁니다 — 되돌리기 기록도 새로 시작합니다
    */
   private replaceDocument(doc: PMNode): void {
-    this.view.updateState(
-      EditorState.create({ doc, plugins: editingPlugins() })
-    )
+    const next = EditorState.create({ doc, plugins: editingPlugins() })
+
+    this.view.updateState(next)
+
+    for (const listener of this.listeners) {
+      listener(next, null)
+    }
+
     this.emitHistoryState()
   }
 
@@ -489,6 +516,10 @@ export class WysiwygArea implements EditingArea {
     const next = previous.apply(tr)
 
     this.view.updateState(next)
+
+    for (const listener of this.listeners) {
+      listener(next, tr)
+    }
 
     if (!this.eventBus) {
       return
@@ -671,6 +702,7 @@ export class WysiwygArea implements EditingArea {
       unsubscribe()
     }
     this.unsubscribers = []
+    this.listeners.clear()
 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()

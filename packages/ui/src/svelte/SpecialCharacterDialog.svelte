@@ -45,7 +45,6 @@
   let activeCategory = $state(0)
 
   export function open(): void {
-    editor.selectionManager?.saveSelection()
     dialogEl.showModal()
   }
 
@@ -53,7 +52,6 @@
   function insert(character: string): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor.selectionManager?.restoreSelection()
       editor.eventBus.emit(ContentEvents.SPECIAL_CHARACTER_INSERT, {
         character,
       })

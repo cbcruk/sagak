@@ -11,8 +11,8 @@ import type { ListCommands } from './list'
 import { linkStore } from './link'
 import { tableStore } from './table'
 import { fontFamilyStore } from './font-family'
-import type { AlignmentType } from '../components/alignment-buttons/alignment-buttons.shared'
-import type { ListType } from '../components/list-buttons/list-buttons.shared'
+import type { AlignmentType } from './alignment'
+import type { ListType } from './list'
 
 /**
  * 에디터 하나가 갖는 store 를 **한 자리에** 모읍니다.

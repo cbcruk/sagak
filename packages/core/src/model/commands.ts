@@ -14,6 +14,7 @@ import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { MarkType, Node as PMNode, NodeType } from 'prosemirror-model'
 import { sagakSchema } from './schema'
+import { linkRangeAt } from './selection'
 
 /**
  * 툴바가 부르는 일들을 **`EditorState` 위에서** 하는 커맨드로 옮깁니다.
@@ -304,6 +305,59 @@ export const deleteImage: Command = (state, dispatch) => {
 
   if (dispatch) {
     dispatch(state.tr.delete(found.pos, found.pos + found.node.nodeSize))
+  }
+
+  return true
+}
+
+/** 고른 자리에 글자를 넣습니다 — 고른 범위가 있으면 덮어씁니다 */
+export function insertText(text: string): Command {
+  return (state, dispatch) => {
+    if (dispatch) {
+      dispatch(state.tr.insertText(text).scrollIntoView())
+    }
+
+    return true
+  }
+}
+
+/**
+ * 고른 글을 링크로 만듭니다.
+ *
+ * 캐럿만 있으면 아무것도 안 합니다 — 링크는 범위가 있어야 하는 마크입니다.
+ */
+export function createLink(href: string): Command {
+  return (state, dispatch) => {
+    const { from, to, empty } = state.selection
+
+    if (empty) return false
+
+    if (dispatch) {
+      dispatch(
+        state.tr
+          .removeMark(from, to, marks.link)
+          .addMark(from, to, marks.link.create({ href, title: null }))
+      )
+    }
+
+    return true
+  }
+}
+
+/**
+ * 링크를 벗깁니다 — **캐럿만 얹혀 있어도 됩니다.**
+ *
+ * 링크가 차지한 범위를 스스로 찾습니다. 예전에는 부르는 쪽(다이얼로그)이
+ * DOM 선택을 링크 전체로 넓혀 놓아야 했고, 그 넓힌 선택이 사용자에게도
+ * 보였습니다.
+ */
+export const removeLink: Command = (state, dispatch) => {
+  const range = linkRangeAt(state)
+
+  if (!range) return false
+
+  if (dispatch) {
+    dispatch(state.tr.removeMark(range.from, range.to, marks.link))
   }
 
   return true

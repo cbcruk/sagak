@@ -11,11 +11,10 @@
    * 표 밖이면 "만들기"(행·열 개수), 표 안이면 "고치기"(행·열 추가/삭제).
    * 제목과 `aria-label` 까지 갈립니다.
    *
-   * 그 판정이 **선택 영역에서 나옵니다.** 캐럿이 표 안에 있는지 매번 봐야 하고,
-   * 그 구독은 `state/table.ts` 가 갖습니다 — 바닥은 여전히
-   * `subscribeToSelection` 이라 IME 조합 중 무시·다음 프레임까지 지연·에디터
-   * 밖이면 건너뜀 가드를 그대로 지납니다. nanotags 때 만든 그 가드가 렌더러를
-   * 두 번, 상태 층을 한 번 바꾸고도 그대로 쓰입니다.
+   * 그 판정이 **문서에서 나옵니다.** 캐럿이 표 안에 있는지 매번 봐야 하고,
+   * 그 구독은 `state/table.ts` 가 갖습니다 — `prosemirror-tables` 의
+   * `isInTable` 이 답합니다. 예전에는 캐럿에서 `parentNode` 를 타고 올라가며
+   * `TABLE` 태그를 찾았고, 그 짐작이 믿을 만한지 보려고 가드가 셋 필요했습니다.
    *
    * ## 관문이 이미 있었습니다
    *
@@ -51,17 +50,22 @@
   const { table: hasTable } = editorState(editor)
 
   export function open(): void {
-    editor.selectionManager?.saveSelection()
     rows = '3'
     cols = '3'
     dialogEl.showModal()
   }
 
-  /** 닫은 다음 프레임에 선택을 되돌리고 적용합니다 */
+  /**
+   * 닫은 **다음 프레임**에 적용합니다.
+   *
+   * 예전에는 여기서 선택 영역도 되돌렸습니다 — 다이얼로그가 포커스를 가져가면
+   * 브라우저 선택이 풀렸기 때문입니다. 이제 선택은 문서 상태의 일부라 그럴
+   * 필요가 없지만, **닫고 나서 적용한다** 는 순서는 남습니다. 다이얼로그가 아직
+   * 열려 있는 동안 커맨드를 돌리면 포커스 되돌리기가 그 위에서 일어납니다.
+   */
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor.selectionManager?.restoreSelection()
       action()
     })
   }

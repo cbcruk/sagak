@@ -5,13 +5,14 @@ import type { DocumentJSON } from '@/model/storage'
 import { EventBus } from './event-bus'
 import { PluginManager } from './plugin-manager'
 import { SelectionManager } from './selection-manager'
-import { CoreEvents, WysiwygEvents } from './events'
+import { CoreEvents } from './events'
 import type {
   Plugin,
   EditorContext,
   EditorConfig,
   EditingAreaManager,
   EditingMode,
+  FormattingState,
 } from './types'
 import type { SanitizeOption } from '@/editor/editing-area/sanitizer'
 import { setLogLevel, type LogLevel } from './logger'
@@ -22,6 +23,7 @@ import {
 } from './errors'
 import { CommandRegistry } from './command-registry'
 import { registerModelCommands } from '@/model/register'
+import { subscribeToModel } from '@/model/bridge'
 import { registerDefaultCommands } from './default-commands'
 
 /**
@@ -554,164 +556,44 @@ export class EditorCore {
   }
 
   /**
-   * 서식 상태 추적을 설정합니다
-   * 선택 영역 변경을 감지하고 서식 상태 업데이트를 발행합니다
+   * 서식 상태 추적 — **상태가 바뀔 때 다시 셉니다.**
+   *
+   * ## 가드 셋이 통째로 없어졌습니다
+   *
+   * 예전에는 `document` 의 `selectionchange` 를 듣고, 그 신호가 믿을 만한지
+   * 세 겹으로 걸렀습니다.
+   *
+   * | 가드 | 왜 있었나 | 왜 없어졌나 |
+   * | --- | --- | --- |
+   * | IME 조합 중 무시 | 조합 중 값은 의미가 없음 | 조합 중에는 트랜잭션이 안 옴 |
+   * | 다음 프레임까지 지연 | 브라우저가 선택을 확정하기 전 | 트랜잭션은 이미 확정된 상태 |
+   * | 선택이 에디터 밖이면 건너뜀 | 툴바를 누르면 선택이 떠남 | 상태가 애초에 이 에디터의 것 |
+   *
+   * ## 빈 문서를 손보던 것도 없어졌습니다
+   *
+   * 내용이 비면 `element.innerHTML = '<p><br></p>'` 로 되돌려 놓고 있었습니다.
+   * 남아 있던 서식 껍데기를 털어 내려는 것이었는데, 이제 편집 영역의 DOM 은
+   * `prosemirror-view` 의 것이라 **밖에서 건드리면 안 됩니다.** 빈 문서는
+   * 모델에서 이미 문단 하나이고, 보류 서식은 `storedMarks` 가 다음 입력까지만
+   * 들고 있습니다.
    */
   private setupFormattingStateTracking(): void {
     // 재호출(생성자 → run) 시 이전 리스너를 먼저 정리해 중복 등록을 막습니다
     this.formattingStateCleanup?.()
 
-    let rafId: number | null = null
-    let lastFormattingState: {
-      isBold: boolean
-      isItalic: boolean
-      isUnderline: boolean
-      isStrikeThrough: boolean
-      isSubscript: boolean
-      isSuperscript: boolean
-    } | null = null
+    let last: FormattingState | null = null
 
-    const emptyFormattingState = {
-      isBold: false,
-      isItalic: false,
-      isUnderline: false,
-      isStrikeThrough: false,
-      isSubscript: false,
-      isSuperscript: false,
-    }
+    const same = (a: FormattingState, b: FormattingState | null): boolean =>
+      !!b &&
+      a.isBold === b.isBold &&
+      a.isItalic === b.isItalic &&
+      a.isUnderline === b.isUnderline &&
+      a.isStrikeThrough === b.isStrikeThrough &&
+      a.isSubscript === b.isSubscript &&
+      a.isSuperscript === b.isSuperscript
 
-    const isStateEqual = (
-      a: typeof emptyFormattingState,
-      b: typeof emptyFormattingState | null
-    ): boolean => {
-      if (!b) return false
-      return (
-        a.isBold === b.isBold &&
-        a.isItalic === b.isItalic &&
-        a.isUnderline === b.isUnderline &&
-        a.isStrikeThrough === b.isStrikeThrough &&
-        a.isSubscript === b.isSubscript &&
-        a.isSuperscript === b.isSuperscript
-      )
-    }
-
-    const isContentEmpty = (): boolean => {
-      const element = this.context.element
-      if (!element) return true
-
-      const textContent = element.textContent || ''
-      return textContent.trim().length === 0
-    }
-
-    const cleanupEmptyFormatting = (): void => {
-      const element = this.context.element
-      if (!element) return
-
-      element.innerHTML = '<p><br></p>'
-
-      const selection = window.getSelection()
-      if (selection) {
-        const p = element.querySelector('p')
-        if (p) {
-          const range = document.createRange()
-          range.setStart(p, 0)
-          range.collapse(true)
-          selection.removeAllRanges()
-          selection.addRange(range)
-        }
-      }
-    }
-
-    const isSelectionInEditor = (): boolean => {
-      const element = this.context.element
-      if (!element) return false
-
-      const selection = window.getSelection()
-      if (!selection || selection.rangeCount === 0) return false
-
-      const anchorNode = selection.anchorNode
-      if (!anchorNode) return false
-
-      return element.contains(anchorNode)
-    }
-
-    /**
-     * 서식 상태를 **지금** 계산해 발행합니다.
-     *
-     * undo 처럼 한 번에 끝나는 동작이 여기로 옵니다. 프레임을 기다리면
-     * 그 사이에 화면이 문서와 어긋난 채로 한 번 그려집니다 —
-     *
-     * ```
-     * CONTENT_RESTORED          문서는 이미 되돌아감
-     * HISTORY_STATE_CHANGED     동기 → canUndo 신호 변경
-     * 커밋 [HistoryButton]      화면=굵게 문서=보통   ← 어긋남
-     * FORMATTING_STATE_CHANGED  rAF 뒤
-     * 커밋 [FormatToggle]       교정
-     * ```
-     *
-     * 히스토리는 동기인데 서식만 rAF 뒤라서 커밋이 갈립니다. 같은 틱에
-     * 발행하면 preact 가 한 플러시로 묶습니다.
-     */
-    const flushFormattingState = () => {
-      if (this.selectionManager?.getIsComposing()) {
-        return
-      }
-
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-        rafId = null
-      }
-
-      if (!isSelectionInEditor()) {
-        return
-      }
-
-      computeAndEmitFormattingState()
-    }
-
-    /**
-     * 프레임 하나로 접습니다.
-     *
-     * `selectionchange` 는 캐럿을 한 번 옮겨도 여러 번 오고, 타이핑도 매 입력
-     * 들어옵니다. 이쪽은 폭주가 정상이라 계속 묶습니다
-     * (`selection-tracking.browser.test.tsx` 가 훑는 횟수를 지킵니다).
-     */
-    const updateFormattingState = () => {
-      if (this.selectionManager?.getIsComposing()) {
-        return
-      }
-
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-      }
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null
-
-        // Skip update if selection is outside editor (e.g., in dropdown)
-        if (!isSelectionInEditor()) {
-          return
-        }
-
-        computeAndEmitFormattingState()
-      })
-    }
-
-    /** 두 경로가 공유하는 계산·발행 */
-    const computeAndEmitFormattingState = () => {
-      if (isContentEmpty()) {
-        cleanupEmptyFormatting()
-        if (!isStateEqual(emptyFormattingState, lastFormattingState)) {
-          lastFormattingState = emptyFormattingState
-          this.eventBus.emit(
-            CoreEvents.FORMATTING_STATE_CHANGED,
-            emptyFormattingState
-          )
-        }
-        return
-      }
-
-      const formattingState = {
+    const update = (): void => {
+      const next: FormattingState = {
         isBold: this.commandRegistry.queryState('bold'),
         isItalic: this.commandRegistry.queryState('italic'),
         isUnderline: this.commandRegistry.queryState('underline'),
@@ -720,40 +602,29 @@ export class EditorCore {
         isSuperscript: this.commandRegistry.queryState('superscript'),
       }
 
-      if (!isStateEqual(formattingState, lastFormattingState)) {
-        lastFormattingState = formattingState
-        this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, formattingState)
-      }
+      if (same(next, last)) return
+
+      last = next
+      this.eventBus.emit(CoreEvents.FORMATTING_STATE_CHANGED, next)
     }
 
-    document.addEventListener('selectionchange', updateFormattingState)
+    const unsubModel = subscribeToModel(this.context, update)
+
+    /*
+     * 모델이 없는 모드(소스·텍스트)에서는 위 구독이 아무것도 안 흘립니다.
+     * 그때도 커맨드는 아래 층이 처리하므로 그쪽 신호는 남겨 둡니다.
+     */
     const unsubStyle = this.eventBus.on(
       CoreEvents.STYLE_CHANGED,
       'after',
-      updateFormattingState
+      update
     )
-    // undo/redo 는 한 번에 끝나는 동작이라 프레임을 기다리지 않습니다
-    const unsubRestored = this.eventBus.on(
-      CoreEvents.CONTENT_RESTORED,
-      'after',
-      flushFormattingState
-    )
-    const unsubContent = this.eventBus.on(
-      WysiwygEvents.WYSIWYG_CONTENT_CHANGED,
-      'after',
-      updateFormattingState
-    )
-    updateFormattingState()
+
+    update()
 
     this.formattingStateCleanup = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-        rafId = null
-      }
-      document.removeEventListener('selectionchange', updateFormattingState)
+      unsubModel()
       unsubStyle()
-      unsubRestored()
-      unsubContent()
       this.formattingStateCleanup = undefined
     }
   }
