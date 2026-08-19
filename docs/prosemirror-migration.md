@@ -8,7 +8,7 @@
 
 ## 요약 (결론 먼저)
 
-> **진행**: 0·1·2a·2b-1·2b-2·4 끝. 다음은 3단계(죽은 커맨드 층 걷어내기)입니다.
+> **진행**: 0단계부터 5단계까지 끝났습니다.
 
 1. **버스는 구속조건이 아니었습니다.** 명령 전달은 `commandRegistry` 가 precedence
    체인까지 갖춘 채 이미 있고, 알림은 `subscribe(state, tr)` 하나로 대체됩니다.
@@ -115,16 +115,21 @@
 [`spike-to-product.md`](./spike-to-product.md) 가 "DOM 을 진실로 삼는 표면" 으로 센
 두 숫자를 다시 쟀습니다.
 
-| | 그때 | 2b-1 | 2b-2 | 4단계 뒤 |
-| --- | --- | --- | --- | --- |
-| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | 5건 / 4파일 | **5건 / 4파일** |
-| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | 39건 / 20파일 | **29건 / 11파일** |
-| ↳ 그중 **UI** | — | 6건 / 6파일 | 6건 / 6파일 | **0** |
+| | 그때 | 2b-1 | 2b-2 | 4단계 | 3단계 | 5단계 뒤 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | 5 / 4 | 5 / 4 | 1 / 1 | **1건 / 1파일** |
+| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | 39 / 20 | 29 / 11 | 20 / 5 | **4건 / 3파일** |
+| ↳ 그중 **UI** | — | 6건 / 6파일 | 6 / 6 | **0** | **0** | **0** |
 
-**UI 가 0 입니다.** 툴바·다이얼로그가 `window.getSelection()` 을 한 번도 안
-부릅니다. 이게 4단계의 요지입니다 — 남은 29건은 전부 코어 안쪽이고, 그중
-10건은 모델이 항상 먼저 잡는 바람에 **아무도 안 부르는 커맨드 층**입니다
-(3단계에서 걷어냅니다). `execCommand` 는
+**43 → 4 입니다.** 남은 넷은 자리가 분명합니다.
+
+| | |
+| --- | --- |
+| `computed-query.ts` 1 | 화면에 그려진 글꼴·크기 — 모델이 못 답합니다 (3단계) |
+| `autocomplete-plugin.ts` 2 | 캐럿 앞 낱말과 팝오버 위치 |
+| `link-plugin.ts` 1 | 주소 검증 전 선택 확인 |
+
+`execCommand` 1건은 `WysiwygArea` 의 `@deprecated` 탈출구입니다. `execCommand` 는
 [`legacy-exec-command.ts`](../packages/core/src/core/legacy-exec-command.ts) 의 최하위
 precedence 뒤로 격리됐습니다. 반면 선택 영역은 19개 파일이 `window.getSelection()` 을
 직접 봅니다. `state.selection` 이 진실이 되면 그 44곳이 전부 바뀝니다.
@@ -298,16 +303,57 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 붙여넣기는 **따로 잽니다.** PM 은 자기 경로(`clipboardParser`)로 처리하므로 §2 의
 `DOMParser` 왕복 결과가 그대로 적용된다고 볼 수 없습니다.
 
-### 3단계 — 죽은 커맨드 층 걷어내기 (남음)
+### 3단계 — 죽은 커맨드 층 걷어내기 ✔
 
 원래 계획은 "커맨드·플러그인 34개 이전" 이었는데, **2b-1·2b-2 가 거의 다 흡수했습니다.**
-모델 커맨드가 precedence 100 에 있고 편집 영역이 늘 상태를 내주므로, 그 아래
-네이티브(0)·레거시(-100) 층은 WYSIWYG 에서 **한 번도 안 잡힙니다.**
+남은 일은 옮기는 것이 아니라 **지우는 것**이었습니다.
 
-남은 일은 옮기는 것이 아니라 **지우는 것**입니다 — `core/commands/` 의 열 곳과
-`legacy-exec-command.ts` 가 대상이고 `execCommand` 5건이 거기서 사라집니다.
-지우기 전에 **정말 안 잡히는지 재야 합니다** — 소스·텍스트 모드에서는 모델이
-없어 아래 층이 여전히 답합니다.
+**먼저 쟀습니다.** 진짜 에디터를 띄우고 툴바 커맨드 24종·조회 13종을 전부
+돌리면서 `document.execCommand` 호출을 셉니다
+([`command-layers.browser.test.ts`](../packages/core/test/model/command-layers.browser.test.ts)).
+
+```
+execCommand 호출        0
+아무도 처리 못 한 커맨드  0
+```
+
+재고 나서 지웠습니다 — `legacy-exec-command.ts` 와 `core/commands/` 의 열세
+모듈, 합쳐서 **2,215줄**입니다.
+
+#### 재면서 찾은 것 — 제목이 새고 있었습니다
+
+측정의 값이 여기 있었습니다. `formatBlock` 이 모델에 등록돼 있지 않아
+**제목만 아래 층으로 새어 나가고 있었습니다.** 2b-2 를 마쳤을 때 "툴바 커맨드는
+전부 모델을 지난다" 고 적었는데, 그게 사실이 아니었던 것입니다. 눈으로는 안
+보였습니다 — `execCommand('formatBlock')` 이 만든 `<h2>` 를 PM 이 다시 읽어
+들여 화면이 맞았기 때문입니다.
+
+#### 남긴 하나 — 화면 값 조회
+
+전부 지운 것은 아닙니다. **문서에 없고 화면에만 있는 값**은 모델이 못 답합니다.
+
+```
+<p>서식 없는 글</p>
+  모델  → 없음        (마크가 안 걸려 있음)
+  화면  → 15px        (스타일시트)
+```
+
+여기서 빈 값을 주면 툴바가 기본값을 가리켜 **가장 흔한 경우가 가장 크게
+틀립니다.** 그래서 모델 조회가 `undefined` 를 주고 precedence 체인이
+[`computed-query.ts`](../packages/core/src/core/commands/computed-query.ts) 로
+넘어갑니다 — precedence 체인이 폴백이 아니라 **역할 분담**으로 쓰이는 자리입니다.
+
+#### 딸려 온 것
+
+- `fontSize` 가 1–7 스케일도 계속 받습니다. 이벤트 계약이 두 꼴을 다 받는데
+  그 변환이 지워진 층에 있었습니다 — 모델 커맨드로 옮겼습니다
+- `unlink` 의 답이 바뀝니다. `execCommand` 는 벗길 링크가 없어도 성공이라
+  답했지만, 모델 커맨드는 "할 수 있었는가" 를 답하므로 **false** 입니다
+- 플러그인 검사 19파일이 이 층 위에 서 있었습니다(`execCommand` 스파이 250여
+  개). 검사 harness([`plugin-area.ts`](../packages/core/test/helpers/plugin-area.ts))를
+  두고 **제품과 같은 바닥** 위로 옮겼습니다 — 확인은 여전히 DOM 에서 합니다.
+  PM 이 모델을 그 요소에 그리므로 `querySelector('strong')` 같은 검사는 그대로
+  통합니다
 
 ### 4단계 — 선택 영역 ✔
 
@@ -349,10 +395,56 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 생겼습니다 — 벗기기가 **캐럿만 얹혀 있어도** 되면서 다이얼로그가 DOM 선택을
 링크 위로 넓히던 부수효과가 없어졌습니다.
 
-### 5단계 — 버스 철거
+### 5단계 — 버스의 알림 절반 ✔
 
-[`event-bus-refactor.md`](./event-bus-refactor.md) 가 센 알림 26종 중 구독자 0인 16종을
-지우고, 남는 것을 `subscribe(state, tr)` 로 옮깁니다.
+[`event-bus-refactor.md`](./event-bus-refactor.md) 가 센 알림 26종 중 **구독자 0이
+16종**이었습니다. 앱을 통째로 띄우고 세어 그대로 확인했습니다.
+
+#### 세는 것만으로는 안 됐습니다
+
+"구독자가 0이면 지운다" 로 가면 **동작하는 확장점까지 지웁니다.** 붙여넣기
+가로채기(`WYSIWYG_PASTE`)는 아무도 안 듣지만, 들으면 `event.preventDefault()`
+로 PM 의 붙여넣기를 대신할 수 있습니다. 이미지 업로드 진행도 마찬가지입니다 —
+그 값은 문서에도 DOM 에도 없습니다.
+
+그래서 기준을 하나 더 뒀습니다.
+
+> **모델이나 DOM 에서 얻을 수 없는 것을 실어 나르는가.**
+>
+> 그렇다면 확장점입니다. 아니면 중복이고, 지웁니다.
+
+이 기준으로 여덟을 지웠습니다.
+
+| 지운 것 | 왜 |
+| --- | --- |
+| `FORMATTING_STATE_CHANGED` | 툴바가 당겨 오게 되면서 개념 자체가 사라짐 |
+| `WYSIWYG_SELECTION_CHANGED` | `subscribe(state, tr)` 가 대신함 |
+| `HISTORY_STATE_CHANGED` | 되돌리기 깊이는 상태 안에 있음 |
+| `CONTENT_RESTORED` | 되돌리기도 트랜잭션 하나 |
+| `EDITING_AREA_INITIALIZED`·`DESTROYED`·`MODE_CHANGING` | `MODE_CHANGED` 하나로 충분 |
+| `WYSIWYG_RESIZED` | 아무도 안 듣고 실어 나를 것도 없음 |
+
+남은 확장점들은 [검사가 목록으로 못 박습니다](../packages/ui/test/event-contract.browser.test.ts) —
+그 밖에 안 들리는 알림이 생기면 실패합니다.
+
+#### 딸려 온 것 — 세 덩어리가 같이 죽었습니다
+
+| | 줄 | 왜 |
+| --- | --- | --- |
+| `SelectionManager` | 494 | 실제로 불리는 것이 `getIsComposing()` **하나**였습니다 |
+| `history-plugin` + `HistoryManager` | 566 | `innerHTML` 스냅샷 — PM 이 오면서 늘 손을 뗐습니다 |
+| `dom-position` | 176 | 그 스냅샷의 캐럿 복원 전용 |
+
+`SelectionManager` 는 선택을 저장·복원하고 HTML 을 꽂는 열아홉 가지를 갖고
+있었는데, 선택이 상태의 일부가 되면서 열여덟이 쓰이지 않게 됐습니다. 남은
+하나만 [`composition.ts`](../packages/core/src/core/composition.ts) 40줄로
+옮겼습니다.
+
+#### 자동 저장이 아직 `innerHTML` 을 쓰고 있었습니다
+
+되살리기가 `element.innerHTML = savedContent` 로 문서를 갈아 끼우고
+있었습니다 — 표·이미지·찾기와 같은 부류인데 2b-2 에서 못 찾았던 자리입니다.
+편집 영역의 `setRawContent` 로 옮겼습니다.
 
 ## 6. UI 층은 이 결정에 안 걸립니다
 
@@ -523,11 +615,12 @@ HTML 은 다시 스키마를 통과합니다. 스키마 밖의 손질은 반영�
   | --- | --- | --- |
   | 스키마 넣기 전 | 233KB | 73KB |
   | 스키마만 (2b-1) | 306KB | 95KB |
-  | 초기 청크 (지금) | **360KB** | **113KB** |
-  | `wysiwyg-area` 청크 (지금) | **114KB** | **36KB** |
+  | 초기 청크 (2b-2) | 360KB | 113KB |
+  | 초기 청크 (지금) | **346KB** | **109KB** |
+  | `wysiwyg-area` 청크 (지금) | **104KB** | **33KB** |
 
   편집 영역은 지연 로드라 갈라졌지만, 실제로는 곧바로 불러오므로 합해서
-  **474KB (gzip 149KB)** 로 보는 것이 맞습니다. `prosemirror-tables`·`commands` 가
+  **450KB (gzip 143KB)** 로 보는 것이 맞습니다. `prosemirror-tables`·`commands` 가
   플러그인을 통해 초기 청크로 끌려 들어간 것도 여기 섞여 있습니다 — 하위
   경로(`sagak-core/model`)로 갈라 놓는 선택지는 그대로 남아 있습니다
 - **학습 목표와의 관계.** 이 저장소는 "배움의 도구" 라는 합의가 있습니다

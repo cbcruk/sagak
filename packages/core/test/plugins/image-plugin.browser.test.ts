@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
+import type { CompositionTracker } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { createImagePlugin, ImagePlugin } from '@/plugins/image-plugin'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { NodeSelection, TextSelection } from 'prosemirror-state'
@@ -22,7 +23,7 @@ import type { ImageData } from '@/plugins/image-plugin'
 describe('ImagePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let container: HTMLDivElement
   let area: WysiwygArea
   let element: HTMLElement
@@ -74,11 +75,11 @@ describe('ImagePlugin', () => {
     area = new WysiwygArea({ container, eventBus })
     area.setRawContent('<p>Hello World</p>')
     element = area.getElement()
-    selectionManager = new SelectionManager(element)
+    composition = trackComposition(element)
 
     context = {
       eventBus,
-      selectionManager,
+      composition,
       config: {},
       editingAreaManager: {
         getCurrentArea: () => area,
@@ -479,7 +480,7 @@ describe('ImagePlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글, 일본어 등 조합 문자 입력 중 이미지 조작을 방지해야 함
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태를 확인하고 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태를 확인하고 차단
      */
 
     beforeEach(async () => {
@@ -492,7 +493,7 @@ describe('ImagePlugin', () => {
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 IMAGE_INSERT 이벤트 발행
       const result = eventBus.emit('IMAGE_INSERT', {
@@ -560,7 +561,7 @@ describe('ImagePlugin', () => {
       // Given: IME 조합 시작 후 종료
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 IMAGE_INSERT 이벤트 발행
       const result = eventBus.emit('IMAGE_INSERT', {

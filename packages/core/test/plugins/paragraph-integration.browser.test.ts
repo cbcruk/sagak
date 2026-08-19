@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { HeadingPlugin } from '@/plugins/heading-plugin'
 import { AlignmentPlugin } from '@/plugins/alignment-plugin'
 import { OrderedListPlugin } from '@/plugins/ordered-list-plugin'
@@ -11,34 +13,25 @@ import { OutdentPlugin } from '@/plugins/outdent-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('다중 플러그인 등록 (여러 플러그인 초기화)', () => {
@@ -88,7 +81,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('제목과 정렬을 함께 적용해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 제목 레벨 변경 후 가운데 정렬 적용
@@ -100,10 +93,9 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'formatBlock',
-        false,
         '<h2>'
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -111,7 +103,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('리스트와 들여쓰기를 함께 적용해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 순서 있는 리스트 생성 후 들여쓰기 적용
@@ -123,16 +115,16 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'insertOrderedList',
-        false
+        undefined
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', undefined)
 
       execCommandSpy.mockRestore()
     })
 
     it('개별 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand Mock과 STYLE_CHANGED 리스너 설정
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -177,10 +169,10 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('조합 중 모든 문단 명령을 차단해야 함', () => {
       // Given: console.warn Mock과 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 여러 문단 명령 시도
       eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -199,12 +191,12 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('조합 종료 후 모든 명령을 허용해야 함', () => {
       // Given: execCommand Mock과 조합 시작 후 종료
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 모든 문단 명령 실행
       eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -239,7 +231,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
         .mockImplementation(() => {})
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockImplementation((command) => {
           if (command === 'formatBlock') throw new Error('Heading failed')
           return true
@@ -278,7 +270,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('가운데 정렬 제목을 생성해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 H1 제목을 만들고 가운데 정렬 적용
@@ -290,10 +282,9 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'formatBlock',
-        false,
         '<h1>'
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'justifyCenter', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -301,7 +292,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('들여쓰기된 리스트를 생성해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 순서 있는 리스트를 만들고 들여쓰기 적용
@@ -313,9 +304,9 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'insertOrderedList',
-        false
+        undefined
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', false)
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'indent', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -323,7 +314,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('들여쓰기를 유지하며 리스트 유형을 전환해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 순서 있는 리스트 생성, 들여쓰기, 순서 없는 리스트로 전환
@@ -340,7 +331,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('오른쪽 정렬 제목과 리스트를 생성해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: H3 제목, 오른쪽 정렬, 순서 있는 리스트 적용
@@ -357,7 +348,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('다단계 리스트 들여쓰기를 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 리스트 생성 후 2단계 들여쓰기, 1단계 내어쓰기
@@ -375,7 +366,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
     it('문서 섹션 포맷을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 제목, 부제목, 본문 리스트를 순서대로 포맷
@@ -427,7 +418,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       await pluginManager.register(OrderedListPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       pluginManager.destroyAll()
@@ -450,7 +441,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       await pluginManager.register(OrderedListPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 제목 플러그인만 제거
@@ -462,9 +453,7 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
 
       // Then: 제목 명령은 실행되지 않고 나머지만 동작해야 함
       expect(execCommandSpy).not.toHaveBeenCalledWith(
-        'formatBlock',
-        false,
-        '<h2>'
+        'formatBlock', '<h2>'
       )
       expect(execCommandSpy).toHaveBeenCalledTimes(2)
 

@@ -10,7 +10,6 @@ export const CoreEvents = {
   /**
    * 서식 상태 변경 - 텍스트 서식이 변경될 때 발행
    */
-  FORMATTING_STATE_CHANGED: 'FORMATTING_STATE_CHANGED',
 
   /**
    * 스타일 변경 - 모든 서식 작업 후 발행
@@ -20,7 +19,6 @@ export const CoreEvents = {
   /**
    * 콘텐츠가 `undo`/`redo`를 통해 복원됨
    */
-  CONTENT_RESTORED: 'CONTENT_RESTORED',
 
   /**
    * 히스토리 스냅샷 캡처 요청
@@ -110,7 +108,6 @@ export const ContentEvents = {
 export const HistoryEvents = {
   UNDO: 'UNDO',
   REDO: 'REDO',
-  HISTORY_STATE_CHANGED: 'HISTORY_STATE_CHANGED',
 } as const
 
 /**
@@ -143,10 +140,7 @@ export const AutocompleteEvents = {
  * `EditingAreaManager` 이벤트
  */
 export const EditingAreaEvents = {
-  EDITING_AREA_INITIALIZED: 'EDITING_AREA_INITIALIZED',
-  EDITING_AREA_MODE_CHANGING: 'EDITING_AREA_MODE_CHANGING',
   EDITING_AREA_MODE_CHANGED: 'EDITING_AREA_MODE_CHANGED',
-  EDITING_AREA_DESTROYED: 'EDITING_AREA_DESTROYED',
 } as const
 
 /**
@@ -158,11 +152,9 @@ export const WysiwygEvents = {
   WYSIWYG_CONTENT_CHANGED: 'WYSIWYG_CONTENT_CHANGED',
   WYSIWYG_FOCUSED: 'WYSIWYG_FOCUSED',
   WYSIWYG_BLURRED: 'WYSIWYG_BLURRED',
-  WYSIWYG_SELECTION_CHANGED: 'WYSIWYG_SELECTION_CHANGED',
   WYSIWYG_PASTE: 'WYSIWYG_PASTE',
   WYSIWYG_KEYDOWN: 'WYSIWYG_KEYDOWN',
   WYSIWYG_KEYUP: 'WYSIWYG_KEYUP',
-  WYSIWYG_RESIZED: 'WYSIWYG_RESIZED',
 } as const
 
 /**

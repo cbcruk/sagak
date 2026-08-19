@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import {
   createUnderlinePlugin,
   UnderlinePlugin,
@@ -9,34 +11,25 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -83,14 +76,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
     it('UNDERLINE_CLICKED 이벤트에서 밑줄 명령을 실행해야 함', () => {
       // Given: 텍스트가 선택된 상태
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.select(1, 6)  /* 'Hello' 만 */
 
       // When: UNDERLINE_CLICKED 이벤트 발생
       const result = eventBus.emit('UNDERLINE_CLICKED')
@@ -102,7 +88,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
     it('밑줄 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand가 성공하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -117,7 +103,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: execCommand가 실패하는 상태
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
 
@@ -134,7 +120,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글 등 조합 문자 입력 중 스타일 변경 시 입력이 깨질 수 있음
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태 확인 후 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태 확인 후 차단
      */
 
     beforeEach(async () => {
@@ -144,10 +130,10 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
     it('IME 입력 중에는 밑줄을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 밑줄 명령 시도
       const result = eventBus.emit('UNDERLINE_CLICKED')
@@ -166,12 +152,12 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
     it('조합 종료 후에는 밑줄을 허용해야 함', () => {
       // Given: IME 조합이 종료된 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 밑줄 명령 실행
       const result = eventBus.emit('UNDERLINE_CLICKED')
@@ -191,20 +177,16 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
         checkComposition: false,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: IME 조합 중에도 밑줄 명령 실행
       const result = eventBus.emit('UNDERLINE_CLICKED')
@@ -230,7 +212,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
     it('3단계(BEFORE/ON/AFTER)를 모두 실행해야 함', () => {
       // Given: 각 단계별 리스너 등록
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const beforeSpy = vi.fn().mockReturnValue(true)
       const onSpy = vi.fn().mockReturnValue(true)
@@ -285,7 +267,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발생
@@ -293,7 +275,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
       // Then: 밑줄 명령이 실행됨
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('underline', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('underline', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -305,7 +287,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
       })
       await pluginManager.register(customPlugin)
 
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 기본 이벤트 발생
       eventBus.emit('UNDERLINE_CLICKED')
@@ -333,7 +315,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -363,7 +345,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
       await pluginManager.register(UnderlinePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('UNDERLINE_CLICKED')
@@ -388,7 +370,7 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
 
       const newContext = {
         eventBus: new EventBus(),
-        selectionManager,
+        composition,
         config: {},
       }
       const newManager = new PluginManager(newContext)
@@ -403,29 +385,26 @@ describe('UnderlinePlugin (밑줄 텍스트 스타일 적용)', () => {
     })
   })
 
-  describe('SelectionManager 통합 (선택 영역 연동)', () => {
+  describe('CompositionTracker 통합 (선택 영역 연동)', () => {
     /**
      * Why: 저장/복원된 선택 영역에서도 스타일이 적용되어야 함
-     * How: `SelectionManager`와 연동하여 선택 영역 관리
+     * How: `CompositionTracker`와 연동하여 선택 영역 관리
      */
 
     beforeEach(async () => {
       await pluginManager.register(UnderlinePlugin)
     })
 
-    it('context에 SelectionManager가 없어도 실행해야 함', async () => {
-      // Given: SelectionManager 없는 컨텍스트
+    it('context에 CompositionTracker가 없어도 실행해야 함', async () => {
+      // Given: CompositionTracker 없는 컨텍스트
       pluginManager.destroyAll()
 
-      const contextWithoutSM = {
-        eventBus,
-        config: {},
-      }
+      const contextWithoutSM = { ...context, composition: undefined }
       const managerWithoutSM = new PluginManager(contextWithoutSM)
       await managerWithoutSM.register(UnderlinePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 이벤트 발생

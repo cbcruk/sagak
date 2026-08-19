@@ -1,5 +1,5 @@
 import type { EventBus } from './event-bus'
-import type { SelectionManager } from './selection-manager'
+import type { CompositionTracker } from './composition'
 import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
 import { runCommand } from './command-registry'
@@ -25,7 +25,7 @@ export interface PluginHandlerContext<
    */
   context: EditorContext
   /** 선택 영역 관리자 */
-  selectionManager?: SelectionManager
+  composition?: CompositionTracker
   /** 플러그인 옵션 */
   options: TOpts
   /** 플러그인 상태 */
@@ -258,7 +258,7 @@ export function definePlugin<
       description: definition.description,
 
       initialize(context: EditorContext) {
-        const { eventBus, selectionManager } = context
+        const { eventBus, composition } = context
 
         const reportError = createErrorReporter(
           eventBus,
@@ -276,7 +276,7 @@ export function definePlugin<
         > => ({
           eventBus,
           context,
-          selectionManager,
+          composition,
           options: finalOptions,
           state,
           emit: (event, data) => eventBus.emit(event, data),
@@ -300,7 +300,7 @@ export function definePlugin<
             // 먼저 실행되며, 차단 시 `on`이 건너뛰어지고 `emit`이 `false`를 반환합니다.
             const unsubGuard = eventBus.on(eventName, 'before', () =>
               !isBlockedByComposition(
-                selectionManager,
+                composition,
                 finalOptions.checkComposition,
                 compositionLabel
               )

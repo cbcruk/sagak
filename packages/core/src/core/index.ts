@@ -14,7 +14,6 @@ export type {
   BasePluginOptions,
 } from './define-plugin'
 
-export { SelectionManager } from './selection-manager'
 
 /**
  * 브라우저 안의 파일 시스템(OPFS) 위에 놓인 문서 저장소 —
@@ -24,21 +23,6 @@ export {
   createDocumentStore,
   isDocumentStorageAvailable,
 } from './document-store'
-export type { DocumentStore, DocumentMeta } from './document-store'
-
-/**
- * DOM 좌표를 정수 위치로. `SelectionManager` 가 못 하는 일 —
- * `innerHTML` 교체를 견디는 위치입니다.
- */
-export {
-  nodeSize,
-  contentSize,
-  domToPos,
-  posToDom,
-  readSelectionPositions,
-  writeSelectionPositions,
-} from './dom-position'
-export type { DomPoint, PositionRange } from './dom-position'
 
 export { logger, setLogLevel, getLogLevel } from './logger'
 export type { LogLevel, Logger } from './logger'
@@ -53,64 +37,10 @@ export type {
   CommandStateQuery,
   CommandValueQuery,
 } from './command-registry'
-export { registerLegacyExecCommands } from './legacy-exec-command'
 export {
   registerDefaultCommands,
   createDefaultCommandRegistry,
 } from './default-commands'
-export type { DefaultCommandsOptions } from './default-commands'
-export {
-  registerNativeAlignment,
-  NATIVE_PRECEDENCE,
-} from './commands/native-alignment'
-export { registerNativeFormatBlock } from './commands/native-format-block'
-export { registerNativeInlineToggles } from './commands/native-inline-toggles'
-export { registerNativeInlineStyles } from './commands/native-inline-styles'
-export { registerNativeList } from './commands/native-list'
-export {
-  registerNativeFontSize,
-  legacyFontSizeToCss,
-  cssToLegacyFontSize,
-} from './commands/native-font-size'
-export { registerNativeQueries } from './commands/native-query'
-export {
-  insertHTMLAtSelection,
-  insertTextAtSelection,
-} from './commands/range-insert'
-export {
-  installStoredMarks,
-  togglePendingFormat,
-  getPendingFormat,
-  clearPendingFormats,
-  hasPendingFormats,
-  insertTextWithPendingFormats,
-} from './commands/stored-marks'
-export {
-  toggleList,
-  shiftIndent,
-  toggleListForBlocks,
-  shiftIndentForBlocks,
-  INDENT_STEP,
-} from './commands/list-format'
-export type { ListType } from './commands/list-format'
-export {
-  applyInlineStyle,
-  applyLink,
-  removeLink,
-  applyInlineStyleInRange,
-  applyLinkInRange,
-  removeLinkInRange,
-} from './commands/inline-style'
-export type { InlineStyleProp } from './commands/inline-style'
-export {
-  toggleInlineFormat,
-  toggleFormatInRange,
-  INLINE_FORMATS,
-} from './commands/inline-format'
-export type { InlineFormat } from './commands/inline-format'
-
-export { HistoryManager } from './history-manager'
-export type { HistoryState, HistoryManagerOptions } from './history-manager'
 
 export { EditorCore, AppStatus } from './editor-core'
 export type { EditorCoreConfig } from './editor-core'

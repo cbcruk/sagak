@@ -485,8 +485,8 @@ describe('EditorCore - EditingArea Integration', () => {
     })
   })
 
-  describe('SelectionManager 통합 (컴포넌트 협력)', () => {
-    it('편집 영역과 SelectionManager를 함께 사용할 수 있어야 함', async () => {
+  describe('CompositionTracker 통합 (컴포넌트 협력)', () => {
+    it('편집 영역과 CompositionTracker를 함께 사용할 수 있어야 함', async () => {
       // Given: element와 editingAreaContainer를 모두 제공
       const editableDiv = document.createElement('div')
       editableDiv.contentEditable = 'true'
@@ -503,13 +503,13 @@ describe('EditorCore - EditingArea Integration', () => {
       await core.run()
 
       // Then: 두 컴포넌트 모두 생성되어야 함
-      expect(core.getSelectionManager()).toBeDefined()
+      expect(core.getCompositionTracker()).toBeDefined()
       expect(core.getEditingAreaManager()).toBeDefined()
 
       document.body.removeChild(editableDiv)
     })
 
-    it('EditingAreaManager가 SelectionManager를 공유해야 함', async () => {
+    it('EditingAreaManager가 CompositionTracker를 공유해야 함', async () => {
       // Given: element와 editingAreaContainer를 모두 제공
       const editableDiv = document.createElement('div')
       editableDiv.contentEditable = 'true'
@@ -525,11 +525,11 @@ describe('EditorCore - EditingArea Integration', () => {
       // When: run() 호출
       await core.run()
 
-      // Then: Context의 SelectionManager가 동일해야 함
-      const selectionManager = core.getSelectionManager()
+      // Then: Context의 CompositionTracker가 동일해야 함
+      const composition = core.getCompositionTracker()
       const context = core.getContext()
 
-      expect(context.selectionManager).toBe(selectionManager)
+      expect(context.composition).toBe(composition)
 
       document.body.removeChild(editableDiv)
     })
@@ -844,7 +844,7 @@ describe('EditorCore - EditingArea Integration', () => {
       const context = core.getContext()
 
       expect(context.eventBus).toBeDefined()
-      expect(context.selectionManager).toBeDefined()
+      expect(context.composition).toBeDefined()
       expect(context.editingAreaManager).toBeDefined()
       expect(context.config).toBeDefined()
 

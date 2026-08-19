@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { createAutocompletePlugin } from '@/plugins/autocomplete-plugin'
 import type { EditorContext } from '@/core/types'
 
@@ -35,7 +35,7 @@ describe('자동 완성 — 언어 범위', () => {
     eventBus = new EventBus()
     const context: EditorContext = {
       eventBus,
-      selectionManager: new SelectionManager(element),
+      composition: trackComposition(element),
       element,
       config: { element },
     }

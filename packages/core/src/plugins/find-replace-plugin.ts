@@ -344,7 +344,7 @@ export function createFindReplacePlugin(
         eventBus,
         'plugin:utility:find-replace'
       )
-      const selectionManager = context.selectionManager
+      const composition = context.composition
 
       /**
        * 편집 영역은 **부를 때마다 다시 묻습니다.**
@@ -413,7 +413,7 @@ export function createFindReplacePlugin(
       unsubscribers.push(
         eventBus.on(findEventName, 'before', (data?: unknown) => {
           if (
-            isBlockedByComposition(selectionManager, checkComposition, 'Find')
+            isBlockedByComposition(composition, checkComposition, 'Find')
           ) {
             return false
           }
@@ -490,7 +490,7 @@ export function createFindReplacePlugin(
         eventBus.on(replaceEventName, 'before', (data?: unknown) => {
           if (
             isBlockedByComposition(
-              selectionManager,
+              composition,
               checkComposition,
               'Replace'
             )
@@ -569,7 +569,7 @@ export function createFindReplacePlugin(
         eventBus.on(replaceAllEventName, 'before', (data?: unknown) => {
           if (
             isBlockedByComposition(
-              selectionManager,
+              composition,
               checkComposition,
               'Replace all'
             )

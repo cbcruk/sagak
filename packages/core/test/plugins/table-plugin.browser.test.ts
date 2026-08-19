@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus } from '@/core/event-bus'
+import { trackComposition } from '@/core/composition'
+import type { CompositionTracker } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { createTablePlugin, TablePlugin } from '@/plugins/table-plugin'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { TextSelection } from 'prosemirror-state'
@@ -21,7 +22,7 @@ import type { EditorContext, EditingAreaManager } from '@/core/types'
 describe('TablePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
+  let composition: CompositionTracker
   let container: HTMLDivElement
   let area: WysiwygArea
   let element: HTMLElement
@@ -53,11 +54,11 @@ describe('TablePlugin', () => {
     area = new WysiwygArea({ container, eventBus })
     area.setRawContent('<p>Hello World</p>')
     element = area.getElement()
-    selectionManager = new SelectionManager(element)
+    composition = trackComposition(element)
 
     context = {
       eventBus,
-      selectionManager,
+      composition,
       config: {},
       editingAreaManager: {
         getCurrentArea: () => area,
@@ -493,7 +494,7 @@ describe('TablePlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: 한글, 일본어 등 조합 문자 입력 중 표 조작을 방지해야 함
-     * How: `SelectionManager.getIsComposing()`으로 조합 상태를 확인하고 차단
+     * How: `CompositionTracker.isComposing()`으로 조합 상태를 확인하고 차단
      */
 
     beforeEach(async () => {
@@ -506,7 +507,7 @@ describe('TablePlugin', () => {
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 TABLE_CREATE 이벤트 발행
       const result = eventBus.emit('TABLE_CREATE', { rows: 3, cols: 3 })
@@ -547,7 +548,7 @@ describe('TablePlugin', () => {
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 TABLE_INSERT_ROW 이벤트 발행
       const result = eventBus.emit('TABLE_INSERT_ROW')

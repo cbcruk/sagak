@@ -1,39 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { createHeadingPlugin, HeadingPlugin } from '@/plugins/heading-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('HeadingPlugin (제목 서식 적용)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -80,14 +73,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('H1으로 formatBlock 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: H1 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 1 })
@@ -100,14 +86,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('H2로 formatBlock 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: H2 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -120,14 +99,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('H3으로 formatBlock 명령을 실행해야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: H3 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', { level: 3 })
@@ -141,16 +113,14 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('모든 제목 레벨(1-6)을 지원해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 모든 제목 레벨 이벤트 발행
       for (let level = 1; level <= 6; level++) {
         eventBus.emit('HEADING_CHANGED', { level })
         expect(execCommandSpy).toHaveBeenCalledWith(
-          'formatBlock',
-          false,
-          `<h${level}>`
+          'formatBlock', `<h${level}>`
         )
       }
 
@@ -162,14 +132,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('객체 래퍼 없이 직접 숫자를 받아야 함', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 숫자 형태로 레벨 이벤트 발행
       const result = eventBus.emit('HEADING_CHANGED', 2)
@@ -181,7 +144,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('제목 변경 성공 후 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -200,7 +163,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
     it('execCommand 실패 시 STYLE_CHANGED를 발생시키지 않아야 함', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -228,7 +191,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('유효하지 않은 제목 레벨을 거부해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 유효하지 않은 레벨 전달 (0, 7, -1)
       eventBus.emit('HEADING_CHANGED', { level: 0 })
@@ -246,7 +209,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('정수가 아닌 레벨을 거부해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 정수가 아닌 값 전달
       eventBus.emit('HEADING_CHANGED', { level: 1.5 })
@@ -266,7 +229,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('레벨이 제공되지 않으면 차단해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 빈 객체 전달
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -285,7 +248,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('data가 undefined면 차단해야 함', () => {
       // Given: console.warn spy와 execCommand spy
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: undefined 전달
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -315,17 +278,13 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
         maxLevel: 4,
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 범위 내외 레벨 테스트
@@ -359,16 +318,12 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
         allowedLevels: [1, 2, 3],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 허용 목록에 있는 레벨 적용
@@ -390,16 +345,12 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
         allowedLevels: [1, 2, 3],
       })
 
-      const newContext = {
-        eventBus,
-        selectionManager,
-        config: {},
-      }
+      const newContext = { ...context }
       const newManager = new PluginManager(newContext)
       await newManager.register(customPlugin)
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 허용 목록에 없는 레벨 적용 시도
       const result = eventBus.emit('HEADING_CHANGED', { level: 4 })
@@ -420,7 +371,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 제목 변경으로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 제목 변경 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 제목 변경 차단
      */
 
     beforeEach(async () => {
@@ -430,10 +381,10 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('IME 입력 중에는 제목 변경을 차단해야 함', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 제목 변경 시도
       const result = eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -452,12 +403,12 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('조합 종료 후에는 제목 변경을 허용해야 함', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 제목 변경 시도
       const result = eventBus.emit('HEADING_CHANGED', { level: 2 })
@@ -486,7 +437,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -516,7 +467,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       await pluginManager.register(HeadingPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('HEADING_CHANGED', { level: 1 })
@@ -551,7 +502,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -559,7 +510,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h3>')
+      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', '<h3>')
 
       execCommandSpy.mockRestore()
     })
@@ -578,14 +529,14 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('제목 드롭다운 선택을 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 드롭다운에서 H2 선택
       eventBus.emit('HEADING_CHANGED', { level: 2 })
 
       // Then: formatBlock '<h2>' 명령이 실행되어야 함
-      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', false, '<h2>')
+      expect(execCommandSpy).toHaveBeenCalledWith('formatBlock', '<h2>')
 
       execCommandSpy.mockRestore()
     })
@@ -593,7 +544,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('빠른 제목 변경을 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 빠르게 제목 레벨 변경
@@ -610,7 +561,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
     it('다양한 제목 레벨의 키보드 단축키를 처리해야 함', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 키보드 단축키로 제목 레벨 변경
@@ -623,19 +574,16 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'formatBlock',
-        false,
         '<h1>'
       )
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         2,
         'formatBlock',
-        false,
         '<h2>'
       )
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         3,
         'formatBlock',
-        false,
         '<h3>'
       )
 

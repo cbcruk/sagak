@@ -11,14 +11,7 @@ import {
   DOMSerializer,
   type Node as PMNode,
 } from 'prosemirror-model'
-import {
-  history,
-  undo,
-  redo,
-  undoDepth,
-  redoDepth,
-  closeHistory,
-} from 'prosemirror-history'
+import { history, undo, redo, closeHistory } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap } from 'prosemirror-commands'
 import {
@@ -135,7 +128,6 @@ export class WysiwygArea implements EditingArea {
   private editable: boolean = true
   private spellCheck: boolean
   private className: string
-  private resizeObserver?: ResizeObserver
   private reportError: ErrorReporter
   private unsubscribers: Array<() => void> = []
   private listeners = new Set<ModelListener>()
@@ -189,9 +181,6 @@ export class WysiwygArea implements EditingArea {
     this.listenToDomEvents()
     this.listenToHistoryEvents()
 
-    if (config.autoResize) {
-      this.setupAutoResize()
-    }
   }
 
   /**
@@ -502,7 +491,6 @@ export class WysiwygArea implements EditingArea {
       listener(next, null)
     }
 
-    this.emitHistoryState()
   }
 
   /**
@@ -540,28 +528,8 @@ export class WysiwygArea implements EditingArea {
         },
       })
 
-      this.emitHistoryState()
     }
 
-    if (!next.selection.eq(previous.selection)) {
-      this.eventBus.emit(WysiwygEvents.WYSIWYG_SELECTION_CHANGED)
-    }
-  }
-
-  private emitHistoryState(): void {
-    if (!this.eventBus) {
-      return
-    }
-
-    const undoSize = undoDepth(this.view.state)
-    const redoSize = redoDepth(this.view.state)
-
-    this.eventBus.emit(HistoryEvents.HISTORY_STATE_CHANGED, {
-      canUndo: undoSize > 0,
-      canRedo: redoSize > 0,
-      undoSize,
-      redoSize,
-    })
   }
 
   private domAttributes(): Record<string, string> {
@@ -639,24 +607,15 @@ export class WysiwygArea implements EditingArea {
     }
 
     const bus = this.eventBus
-    const run = (
-      command: typeof undo,
-      action: 'undo' | 'redo'
-    ): (() => boolean) => {
+    const run = (command: typeof undo): (() => boolean) => {
       return () => {
-        const done = command(this.view.state, (tr) => this.view.dispatch(tr))
-
-        if (done) {
-          bus.emit(CoreEvents.CONTENT_RESTORED, { action })
-        }
-
-        return done
+        return command(this.view.state, (tr) => this.view.dispatch(tr))
       }
     }
 
     this.unsubscribers.push(
-      bus.on(HistoryEvents.UNDO, 'on', run(undo, 'undo')),
-      bus.on(HistoryEvents.REDO, 'on', run(redo, 'redo')),
+      bus.on(HistoryEvents.UNDO, 'on', run(undo)),
+      bus.on(HistoryEvents.REDO, 'on', run(redo)),
 
       /*
        * `CAPTURE_SNAPSHOT` 은 **"여기서 끊어라"** 입니다.
@@ -675,26 +634,6 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
-   * 자동 크기 조정 기능을 설정합니다
-   */
-  private setupAutoResize(): void {
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          if (this.eventBus) {
-            this.eventBus.emit(WysiwygEvents.WYSIWYG_RESIZED, {
-              width: entry.contentRect.width,
-              height: entry.contentRect.height,
-            })
-          }
-        }
-      })
-
-      this.resizeObserver.observe(this.element)
-    }
-  }
-
-  /**
    * 리소스를 정리합니다
    */
   destroy(): void {
@@ -703,11 +642,6 @@ export class WysiwygArea implements EditingArea {
     }
     this.unsubscribers = []
     this.listeners.clear()
-
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect()
-      this.resizeObserver = undefined
-    }
 
     /* `mount` 로 만든 뷰는 요소를 남깁니다 — 치우는 것은 우리 몫입니다 */
     this.view.destroy()

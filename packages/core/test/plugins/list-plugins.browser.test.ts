@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import {
   createOrderedListPlugin,
   OrderedListPlugin,
@@ -13,34 +15,20 @@ import {
 import type { EditorContext } from '@/core/types'
 
 describe('OrderedListPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -86,14 +74,7 @@ describe('OrderedListPlugin', () => {
 
     it('should execute insertOrderedList command', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 순서 있는 목록 이벤트 발행
       const result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -105,7 +86,7 @@ describe('OrderedListPlugin', () => {
 
     it('should emit STYLE_CHANGED event after successful list creation', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -123,7 +104,7 @@ describe('OrderedListPlugin', () => {
 
     it('should not emit STYLE_CHANGED if execCommand fails', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -141,7 +122,7 @@ describe('OrderedListPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 목록 생성으로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
      */
 
     beforeEach(async () => {
@@ -151,10 +132,10 @@ describe('OrderedListPlugin', () => {
     it('should block list creation during IME composition', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -173,12 +154,12 @@ describe('OrderedListPlugin', () => {
     it('should allow list creation after composition ends', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -207,7 +188,7 @@ describe('OrderedListPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -237,7 +218,7 @@ describe('OrderedListPlugin', () => {
       await pluginManager.register(OrderedListPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('ORDERED_LIST_CLICKED')
@@ -272,7 +253,7 @@ describe('OrderedListPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -280,7 +261,7 @@ describe('OrderedListPlugin', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('insertOrderedList', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('insertOrderedList', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -288,31 +269,20 @@ describe('OrderedListPlugin', () => {
 })
 
 describe('UnorderedListPlugin', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -358,14 +328,7 @@ describe('UnorderedListPlugin', () => {
 
     it('should execute insertUnorderedList command', () => {
       // Given: 선택 영역
-      const textNode = element.firstChild!.firstChild as Text
-      const range = document.createRange()
-      range.setStart(textNode, 0)
-      range.setEnd(textNode, 5)
-
-      const selection = window.getSelection()!
-      selection.removeAllRanges()
-      selection.addRange(range)
+      ed.selectAll()
 
       // When: 순서 없는 목록 이벤트 발행
       const result = eventBus.emit('UNORDERED_LIST_CLICKED')
@@ -377,7 +340,7 @@ describe('UnorderedListPlugin', () => {
 
     it('should emit STYLE_CHANGED event after successful list creation', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -395,7 +358,7 @@ describe('UnorderedListPlugin', () => {
 
     it('should not emit STYLE_CHANGED if execCommand fails', () => {
       // Given: 실패하는 execCommand mock
-      vi.spyOn(document, 'execCommand').mockReturnValue(false)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(false)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -413,7 +376,7 @@ describe('UnorderedListPlugin', () => {
   describe('CJK/IME 입력 지원 (조합 문자 처리)', () => {
     /**
      * Why: IME 입력 중 목록 생성으로 인한 조합 문자 입력 방해 방지
-     * How: `SelectionManager`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
+     * How: `CompositionTracker`의 조합 상태를 확인하여 IME 입력 중일 때 목록 생성 차단
      */
 
     beforeEach(async () => {
@@ -423,10 +386,10 @@ describe('UnorderedListPlugin', () => {
     it('should block list creation during IME composition', () => {
       // Given: IME 조합 중인 상태
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('UNORDERED_LIST_CLICKED')
@@ -445,12 +408,12 @@ describe('UnorderedListPlugin', () => {
     it('should allow list creation after composition ends', () => {
       // Given: IME 조합 종료 상태
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 목록 생성 시도
       const result = eventBus.emit('UNORDERED_LIST_CLICKED')
@@ -479,7 +442,7 @@ describe('UnorderedListPlugin', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      vi.spyOn(document, 'execCommand').mockImplementation(() => {
+      vi.spyOn(context.commandRegistry!, 'run').mockImplementation(() => {
         throw new Error('execCommand failed')
       })
 
@@ -509,7 +472,7 @@ describe('UnorderedListPlugin', () => {
       await pluginManager.register(UnorderedListPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       let result = eventBus.emit('UNORDERED_LIST_CLICKED')
@@ -544,7 +507,7 @@ describe('UnorderedListPlugin', () => {
       await pluginManager.register(customPlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 커스텀 이벤트 발행
@@ -552,7 +515,7 @@ describe('UnorderedListPlugin', () => {
 
       // Then: 정상 실행되어야 함
       expect(result).toBe(true)
-      expect(execCommandSpy).toHaveBeenCalledWith('insertUnorderedList', false)
+      expect(execCommandSpy).toHaveBeenCalledWith('insertUnorderedList', undefined)
 
       execCommandSpy.mockRestore()
     })
@@ -565,31 +528,18 @@ describe('List Plugins Integration', () => {
    * How: 두 플러그인을 동시에 등록하고 목록 타입 전환 등의 통합 시나리오 테스트
    */
 
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('Multiple list plugins', () => {
@@ -610,7 +560,7 @@ describe('List Plugins Integration', () => {
     it('should handle switching between list types', () => {
       // Given: execCommand spy
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 목록 타입 전환
@@ -623,17 +573,17 @@ describe('List Plugins Integration', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'insertOrderedList',
-        false
+        undefined
       )
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         2,
         'insertUnorderedList',
-        false
+        undefined
       )
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         3,
         'insertOrderedList',
-        false
+        undefined
       )
 
       execCommandSpy.mockRestore()
@@ -641,7 +591,7 @@ describe('List Plugins Integration', () => {
 
     it('should emit separate STYLE_CHANGED events', () => {
       // Given: execCommand mock과 STYLE_CHANGED 리스너
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)

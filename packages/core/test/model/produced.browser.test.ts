@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest'
-import { EventBus } from '@/core/event-bus'
-import { createDefaultCommandRegistry } from '@/core/default-commands'
 import { createDocumentStore } from '@/core/document-store'
 import type { CommandRegistry } from '@/core/command-registry'
 import { sagakSchema, createSagakSchema } from '@/model/schema'
 import { roundTrip } from './round-trip'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 
 /**
  * **제품이 실제로 만든 마크업**을 스키마에 통과시킵니다.
@@ -13,9 +13,17 @@ import { roundTrip } from './round-trip'
  * 통과하는 게 당연하고, 틀린 근거로 옳은 결론을 내는 길이기도 합니다
  * (`session-doc-model-spike.md` 의 "증명을 네 번 잘못했다").
  *
- * 여기서는 **코어의 커맨드가 직접 만든 DOM** 을 읽습니다. `execCommand` 와
- * 네이티브 선택 영역을 거치므로 브라우저가 있어야 하고, 브라우저마다 결과가
- * 다를 수 있다는 것 자체가 이 검사의 요지입니다.
+ * 여기서는 **코어의 커맨드가 직접 만든 마크업**을 읽습니다.
+ *
+ * ## 무엇을 거치는지가 바뀌었습니다
+ *
+ * 처음 이 파일을 쓸 때는 `execCommand` 와 네이티브 선택 영역을 거쳤고,
+ * 브라우저마다 결과가 다를 수 있다는 것이 요지였습니다. 그 층이 없어진 지금은
+ * **모델 커맨드 → 직렬화**를 거칩니다.
+ *
+ * 그래도 이 파일이 남는 이유는 재는 대상이 여전히 **손으로 쓴 픽스처가
+ * 아니기** 때문입니다. 커맨드가 만든 것을 그대로 받아 스키마에 통과시킵니다 —
+ * 규칙을 아는 입력으로 규칙을 확인하는 자기증명을 피하는 자리입니다.
  *
  * ## OPFS 실물 문서를 못 읽는 대신
  *
@@ -44,7 +52,7 @@ const OPERATIONS: Operation[] = [
   { name: '글자 크기', run: (r) => r.run('fontSize', '24px') },
   { name: '글자 색', run: (r) => r.run('foreColor', '#ff0000') },
   { name: '배경 색', run: (r) => r.run('backColor', '#ffff00') },
-  { name: '제목', run: (r) => r.run('formatBlock', 'h2') },
+  { name: '제목', run: (r) => r.run('formatBlock', '<h2>') },
   { name: '가운데 정렬', run: (r) => r.run('justifyCenter') },
   { name: '글머리 목록', run: (r) => r.run('insertUnorderedList') },
   { name: '번호 목록', run: (r) => r.run('insertOrderedList') },
@@ -62,44 +70,27 @@ const OPERATIONS: Operation[] = [
 const produced: Array<{ name: string; html: string; after: string }> = []
 
 describe('제품이 만든 마크업이 스키마를 통과하는가', () => {
-  let element: HTMLDivElement
+  let ed: PluginArea
   let registry: CommandRegistry
 
   beforeEach(() => {
-    window.getSelection()?.removeAllRanges()
-
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>가나다라</p>'
-    document.body.appendChild(element)
-
-    registry = createDefaultCommandRegistry({ eventBus: new EventBus() })
+    ed = mountPluginArea('<p>가나다라</p>')
+    registry = ed.registry
   })
 
   afterEach(() => {
-    element.remove()
+    ed.destroy()
   })
 
   /** 문단의 글자 전체를 고릅니다 — 툴바를 쓰기 직전 상태입니다 */
-  function selectAll(): void {
-    const paragraph = element.querySelector('p')!
-    const text = paragraph.firstChild!
-
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, text.textContent!.length)
-
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
-  }
+  const selectAll = (): void => ed.selectAll()
 
   for (const operation of OPERATIONS) {
     it(operation.name, () => {
       selectAll()
       operation.run(registry)
 
-      const html = element.innerHTML
+      const html = ed.html()
       const result = roundTrip(html, sagakSchema, document)
       produced.push({ name: operation.name, html, after: result.output })
 
@@ -124,23 +115,18 @@ describe('제품이 만든 마크업이 스키마를 통과하는가', () => {
    *
    * 그러면 겹친 `<span>` 은 언제 생기는가. **범위가 다를 때**입니다. 전체에
    * 글꼴을 주고 일부에 색을 주면 그때는 겹칩니다. 그것을 여기서 잽니다.
+   *
+   * 재는 자리가 DOM 에서 모델로 옮겨갔을 뿐, 결론은 그대로여야 합니다.
    */
   it('범위가 다르면 span 이 겹칩니다', () => {
     selectAll()
     registry.run('fontName', 'Georgia')
 
     /* 앞 두 글자에만 색 — 범위가 다릅니다 */
-    const text = element.querySelector('span')?.firstChild ?? element.querySelector('p')!.firstChild!
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, 2)
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
-
+    ed.select(1, 3)
     registry.run('foreColor', '#ff0000')
 
-    const html = element.innerHTML
+    const html = ed.html()
     produced.push({ name: '범위가 다른 겹침', html, after: roundTrip(html, sagakSchema, document).output })
 
     const depth = (() => {
@@ -233,26 +219,15 @@ describe('저장을 거쳐도 통과하는가 (OPFS)', () => {
 
   it('쓰고 읽은 뒤에도 손실이 없어야 함', async () => {
     const store = createDocumentStore()
+    const ed = mountPluginArea('<p>가나다라</p>')
 
-    const element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>가나다라</p>'
-    document.body.appendChild(element)
+    ed.selectAll()
+    ed.registry.run('bold')
+    ed.selectAll()
+    ed.registry.run('fontName', 'Georgia')
 
-    const registry = createDefaultCommandRegistry({ eventBus: new EventBus() })
-    const text = element.querySelector('p')!.firstChild!
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, text.textContent!.length)
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
-
-    registry.run('bold')
-    registry.run('fontName', 'Georgia')
-
-    const saved = element.innerHTML
-    element.remove()
+    const saved = ed.html()
+    ed.destroy()
 
     await store.write(NAME, saved)
     const loaded = await store.read(NAME)

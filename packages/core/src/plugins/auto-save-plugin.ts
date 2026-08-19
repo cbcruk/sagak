@@ -118,6 +118,26 @@ export function createAutoSavePlugin(
     initialize(context: EditorContext) {
       const { eventBus, element } = context
 
+      /*
+       * **문서를 읽고 쓰는 자리를 모델로 옮깁니다.**
+       *
+       * 예전에는 `element.innerHTML` 을 직접 읽고 썼습니다. 편집 영역이
+       * `prosemirror-view` 의 것이 된 뒤로 밖에서 `innerHTML` 을 갈아 끼우면
+       * 모델과 어긋납니다 — 되살리기가 조용히 문서를 망가뜨리는 자리였습니다.
+       */
+      const area = () => context.editingAreaManager?.getCurrentArea()
+      const readContent = (): string | null => {
+        const current = area()
+
+        return current ? current.getRawContent() : (element?.innerHTML ?? null)
+      }
+      const writeContent = (html: string): void => {
+        const current = area()
+
+        if (current) current.setRawContent(html)
+        else if (element) element.innerHTML = html
+      }
+
       reportError = createErrorReporter(eventBus, 'plugin:utility:auto-save')
 
       const emitStatus = (status: AutoSaveStatus, error?: Error): void => {
@@ -141,18 +161,16 @@ export function createAutoSavePlugin(
        * `CAPTURE_SNAPSHOT` 으로 남기면 Undo 가 바꾸기 전으로 돌아갑니다.
        */
       const replaceContent = (next: string): void => {
-        if (!element || element.innerHTML === next) return
+        if (readContent() === next) return
 
         eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-        element.innerHTML = next
-        eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-        eventBus.emit(CoreEvents.CONTENT_RESTORED)
+        writeContent(next)
       }
 
       const performSave = async (): Promise<void> => {
-        if (!element) return
+        const content = readContent()
 
-        const content = element.innerHTML
+        if (content === null) return
 
         if (content === lastSavedContent) {
           return
@@ -261,8 +279,8 @@ export function createAutoSavePlugin(
 
       const handleBeforeUnload = (e: BeforeUnloadEvent): void => {
         if (isDirty) {
-          if (element) {
-            const content = element.innerHTML
+          {
+            const content = readContent() ?? ''
             if (onSave) {
               // Can't await here, just try sync save
               try {
@@ -304,9 +322,8 @@ export function createAutoSavePlugin(
                  * 히스토리에 항목을 넣으면 아무것도 안 했는데 Undo 가 켜집니다.
                  * 사용자가 한 일이 아니라 되돌릴 대상도 아닙니다.
                  */
-                element.innerHTML = savedContent
+                writeContent(savedContent)
                 lastSavedContent = savedContent
-                eventBus.emit(CoreEvents.CONTENT_RESTORED)
               }
             } catch (e) {
               reportError(e, 'Failed to restore content on init:')
@@ -315,9 +332,7 @@ export function createAutoSavePlugin(
         }, 0)
       }
 
-      if (element) {
-        lastSavedContent = element.innerHTML
-      }
+      lastSavedContent = readContent() ?? ''
 
       emitStatus('idle')
     },

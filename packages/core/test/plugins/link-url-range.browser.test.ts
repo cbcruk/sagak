@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
-import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
 import { createLinkPlugin } from '@/plugins/link-plugin'
-import type { EditorContext } from '@/core/types'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 
 /**
  * 링크 URL 검증의 문자 범위.
@@ -16,37 +15,22 @@ import type { EditorContext } from '@/core/types'
  * 이번 세션에서 같은 부류(ASCII 전제)가 찾기·자동 완성에 이어 세 번째입니다.
  */
 describe('링크 URL 검증 — 문자 범위', () => {
+  let ed: PluginArea
   let eventBus: EventBus
-  let element: HTMLDivElement
 
   beforeEach(async () => {
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    const context: EditorContext = {
-      eventBus,
-      selectionManager: new SelectionManager(element),
-      element,
-      config: { element },
-    }
-    await new PluginManager(context).register(createLinkPlugin())
+    ed = mountPluginArea()
+    eventBus = ed.eventBus
+    await ed.pluginManager.register(createLinkPlugin())
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   /** `before` 단계가 막으면 `emit` 이 `false` 를 돌려줍니다 */
   const accepts = (url: string): boolean => {
-    element.innerHTML = '<p>link me</p>'
-    const paragraph = element.querySelector('p')!
-    const range = document.createRange()
-    range.selectNodeContents(paragraph)
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
+    ed.load('<p>link me</p>')
 
     return eventBus.emit('LINK_CHANGED', { url }) !== false
   }

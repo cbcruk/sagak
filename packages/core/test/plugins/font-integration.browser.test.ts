@@ -1,40 +1,33 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { CompositionTracker } from '@/core/composition'
 import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
-import { SelectionManager } from '@/core/selection-manager'
+import { mountPluginArea } from '../helpers/plugin-area'
+import type { PluginArea } from '../helpers/plugin-area'
 import { FontFamilyPlugin } from '@/plugins/font-family-plugin'
 import { FontSizePlugin } from '@/plugins/font-size-plugin'
 import type { EditorContext } from '@/core/types'
 
 describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
+  let ed: PluginArea
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let composition: CompositionTracker
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // 이전 테스트의 선택 영역이 남지 않도록 초기화합니다
-    window.getSelection()?.removeAllRanges()
-
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
-
-    eventBus = new EventBus()
-    selectionManager = new SelectionManager(element)
-    context = {
-      eventBus,
-      selectionManager,
-      config: {},
-    }
-    pluginManager = new PluginManager(context)
+    /*
+     * 예전에는 맨 `contentEditable` div 하나였습니다. 서식이 문서 모델 위로
+     * 옮겨가면서 커맨드가 그 div 를 고치지 않으므로, 검사도 편집 영역을
+     * 세웁니다 (`test/helpers/plugin-area.ts`).
+     */
+    ed = mountPluginArea()
+    ;({ eventBus, pluginManager, composition, element, context } = ed)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    ed.destroy()
   })
 
   describe('다중 플러그인 등록 (여러 플러그인 초기화)', () => {
@@ -72,7 +65,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('글꼴과 크기를 순차적으로 적용해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 글꼴 패밀리 변경 후 크기 변경
@@ -83,10 +76,9 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'fontName',
-        false,
         'Arial'
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'fontSize', false, '5')
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'fontSize', '5')
       expect(execCommandSpy).toHaveBeenCalledTimes(2)
 
       execCommandSpy.mockRestore()
@@ -94,7 +86,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
 
     it('개별 STYLE_CHANGED 이벤트를 발생시켜야 함', () => {
       // Given: execCommand Mock과 STYLE_CHANGED 리스너 설정
-      vi.spyOn(document, 'execCommand').mockReturnValue(true)
+      vi.spyOn(context.commandRegistry!, 'run').mockReturnValue(true)
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -120,7 +112,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('여러 글꼴 변경을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 글꼴 패밀리와 크기를 교차로 여러 번 변경
@@ -151,10 +143,10 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('조합 중 두 글꼴 명령을 모두 차단해야 함', () => {
       // Given: console.warn Mock과 조합 시작
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(selectionManager.getIsComposing()).toBe(true)
+      expect(composition.isComposing()).toBe(true)
 
       // When: 조합 중 글꼴 변경 시도
       const familyResult = eventBus.emit('FONT_FAMILY_CHANGED', {
@@ -175,12 +167,12 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('조합 종료 후 두 명령을 모두 허용해야 함', () => {
       // Given: execCommand Mock과 조합 시작 후 종료
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       element.dispatchEvent(new CompositionEvent('compositionstart'))
       element.dispatchEvent(new CompositionEvent('compositionend'))
-      expect(selectionManager.getIsComposing()).toBe(false)
+      expect(composition.isComposing()).toBe(false)
 
       // When: 조합 종료 후 글꼴 변경
       const familyResult = eventBus.emit('FONT_FAMILY_CHANGED', {
@@ -216,7 +208,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
         .mockImplementation(() => {})
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockImplementation((command) => {
           if (command === 'fontName') throw new Error('Font family failed')
           if (command === 'fontSize') return true
@@ -242,7 +234,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
         .mockImplementation(() => {})
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockImplementationOnce(() => {
           throw new Error('Failed')
         })
@@ -278,7 +270,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       // Given: console.warn Mock과 execCommand Mock 설정
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 유효한 글꼴 패밀리, 유효하지 않은 크기
@@ -296,7 +288,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('데이터 누락 시 둘 다 차단해야 함', () => {
       // Given: console.warn Mock 설정
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const execCommandSpy = vi.spyOn(document, 'execCommand')
+      const execCommandSpy = vi.spyOn(context.commandRegistry!, 'run')
 
       // When: 빈 데이터로 이벤트 발생
       // @ts-expect-error 런타임 검증을 확인하려고 일부러 잘못된 페이로드를 보냅니다
@@ -328,7 +320,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('글꼴 드롭다운 선택을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 드롭다운에서 글꼴과 크기 선택
@@ -340,10 +332,9 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       expect(execCommandSpy).toHaveBeenNthCalledWith(
         1,
         'fontName',
-        false,
         'Verdana'
       )
-      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'fontSize', false, '4')
+      expect(execCommandSpy).toHaveBeenNthCalledWith(2, 'fontSize', '4')
 
       execCommandSpy.mockRestore()
     })
@@ -351,7 +342,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('프리셋 조합을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 제목 프리셋(Arial, 큰 크기) 적용 후 본문 프리셋(Times New Roman, 보통 크기) 적용
@@ -372,7 +363,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('빠른 글꼴 변경을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 여러 글꼴을 빠르게 시도
@@ -389,7 +380,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
     it('크기 단계 조절을 처리해야 함', () => {
       // Given: execCommand Mock 설정
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       // When: 사용자가 크기 증가 버튼을 여러 번 클릭
@@ -430,7 +421,7 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       await pluginManager.register(FontSizePlugin)
 
       const execCommandSpy = vi
-        .spyOn(document, 'execCommand')
+        .spyOn(context.commandRegistry!, 'run')
         .mockReturnValue(true)
 
       pluginManager.destroyAll()

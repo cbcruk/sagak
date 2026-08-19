@@ -64,11 +64,55 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 76종 전부를 덮어야 함', async () => {
+  it('분류가 68종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(76)
+    expect(total).toBe(68)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
+  })
+
+  /**
+   * Why: 아무도 안 듣는 알림은 **없어야 합니다** — 있으면 죽은 코드거나
+   *      아직 못 이은 자리입니다. 5단계에서 여섯을 지우고 남은 것들이
+   *      정말 들리는지 여기서 못 박습니다.
+   * How: 앱을 통째로 띄우고 `notify` 전부의 처리자를 셉니다.
+   *
+   * 다만 **처리자가 없어도 되는 알림**이 있습니다 — 모델이나 DOM 에서 얻을 수
+   * 없는 것을 실어 나르는 확장점입니다. 붙여넣기 가로채기, 이미지 업로드
+   * 진행이 그렇습니다. 그것들은 여기 예외로 적어 둡니다.
+   */
+  it('아무도 안 듣는 알림은 확장점뿐이어야 함', async () => {
+    ed = await mountEditor(undefined, {
+      autoSave: true,
+      showAutoSaveIndicator: true,
+    })
+    await settle(6)
+
+    /* 임베더가 붙을 자리 — 문서에도 DOM 에도 없는 것을 실어 나릅니다 */
+    const EXTENSION_POINTS = [
+      'APP_READY',
+      'EDITOR_ERROR',
+      'IMAGE_RESIZE_START',
+      'IMAGE_RESIZE_END',
+      'IMAGE_UPLOAD_START',
+      'IMAGE_UPLOAD_COMPLETE',
+      'IMAGE_UPLOAD_ERROR',
+      'WYSIWYG_AREA_HIDDEN',
+      'WYSIWYG_FOCUSED',
+      'WYSIWYG_PASTE',
+    ]
+
+    const { eventBus } = ed.context
+    const unheard = byKind('notify').filter(
+      (name) =>
+        !eventBus.hasHandlers(name, 'before') &&
+        !eventBus.hasHandlers(name, 'on') &&
+        !eventBus.hasHandlers(name, 'after')
+    )
+
+    const surprises = unheard.filter((n) => !EXTENSION_POINTS.includes(n))
+
+    expect(surprises, `아무도 안 듣는 알림: ${surprises.join(', ')}`).toEqual([])
   })
 })

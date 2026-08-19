@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { EventBus } from '@/core/event-bus'
 import { TextSelection } from 'prosemirror-state'
+import { undoDepth, redoDepth } from 'prosemirror-history'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -27,7 +28,7 @@ const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
  * WysiwygArea 테스트
  *
  * Why: contentEditable 기반 WYSIWYG 편집 영역의 기능 검증
- * How: DOM 조작, 이벤트 처리, SelectionManager 통합 테스트
+ * How: DOM 조작, 이벤트 처리, CompositionTracker 통합 테스트
  */
 describe('WysiwygArea', () => {
   let container: HTMLDivElement
@@ -479,7 +480,7 @@ describe('WysiwygArea', () => {
 
   describe('선택과 삽입 — 모델 위에서', () => {
     /**
-     * Why: 예전에는 이 여섯이 `SelectionManager` 를 거쳐 DOM 을 직접 고쳤습니다.
+     * Why: 예전에는 이 여섯이 `CompositionTracker` 를 거쳐 DOM 을 직접 고쳤습니다.
      *      PM 이 DOM 을 소유한 뒤로 그 길은 모델을 지나지 않아 위험합니다.
      * How: `state.selection` 과 트랜잭션으로 옮기고, 결과를 **모델에서** 읽습니다
      */
@@ -580,19 +581,26 @@ describe('WysiwygArea', () => {
       expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
     })
 
-    it('되돌릴 수 있는지 알립니다', () => {
-      const seen: Array<{ canUndo: boolean; canRedo: boolean }> = []
-      eventBus.on('HISTORY_STATE_CHANGED', 'on', (state) => {
-        seen.push({ canUndo: state.canUndo, canRedo: state.canRedo })
-      })
+    /**
+     * Why: 툴바가 되돌리기 버튼을 켜고 끄려면 남은 깊이를 알아야 합니다.
+     * How: 예전에는 편집 영역이 `HISTORY_STATE_CHANGED` 를 쐈습니다. 버스에
+     *      **지금 값이 없어서** 늦게 붙은 툴바는 꺼진 채로 시작했습니다.
+     *      깊이는 상태 안에 있으므로 이제 **물어보면 됩니다.**
+     */
+    it('되돌릴 수 있는지 상태에서 읽힙니다', () => {
+      const depth = () => {
+        const state = wysiwygArea.getStateHandle().getState()!
+
+        return { undo: undoDepth(state), redo: redoDepth(state) }
+      }
+
+      expect(depth()).toEqual({ undo: 0, redo: 0 })
 
       type('가')
-
-      expect(seen.at(-1)).toEqual({ canUndo: true, canRedo: false })
+      expect(depth()).toEqual({ undo: 1, redo: 0 })
 
       eventBus.emit('UNDO')
-
-      expect(seen.at(-1)).toEqual({ canUndo: false, canRedo: true })
+      expect(depth()).toEqual({ undo: 0, redo: 1 })
     })
 
     /**
@@ -773,7 +781,7 @@ describe('WysiwygArea', () => {
   describe('선택 영역 작업 (getSelectedText/HTML)', () => {
     /**
      * Why: 선택된 콘텐츠를 기반으로 서식 적용이나 복사 기능을 구현해야 함
-     * How: `window.getSelection()` 또는 `SelectionManager`로 선택 영역 조회
+     * How: `window.getSelection()` 또는 `CompositionTracker`로 선택 영역 조회
      */
 
     beforeEach(() => {

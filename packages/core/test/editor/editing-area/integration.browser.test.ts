@@ -140,41 +140,28 @@ describe('Editing Area 통합', () => {
      * How: 모든 라이프사이클 이벤트와 모드별 이벤트 발행 확인
      */
 
-    it('모든 라이프사이클 이벤트를 발행해야 함', async () => {
+    /**
+     * Why: 모드가 바뀌었다는 것만 알면 됩니다.
+     * How: 예전에는 초기화·바뀌는 중·바뀜·파기 넷을 쐈고 **아무도 안 들었습니다.**
+     *      남은 하나는 `subscribeToModel` 이 구독을 다시 붙이는 데 씁니다.
+     */
+    it('모드가 바뀌면 알려야 함', async () => {
       // Given: 이벤트 수집을 위한 핸들러가 등록된 EventBus
       const events: string[] = []
 
-      eventBus.on('EDITING_AREA_INITIALIZED', 'on', () => {
-        events.push('initialized')
-      })
-      eventBus.on('EDITING_AREA_MODE_CHANGING', 'on', () => {
-        events.push('changing')
-      })
-      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', () => {
-        events.push('changed')
-      })
-      eventBus.on('EDITING_AREA_DESTROYED', 'on', () => {
-        events.push('destroyed')
+      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', (data) => {
+        events.push(`${data.from}→${data.to}`)
       })
 
-      const config: EditingAreaManagerConfig = {
-        container,
-        eventBus,
-      }
-      manager = new EditingAreaManager(config)
+      manager = new EditingAreaManager({ container, eventBus })
 
       // When: 전체 라이프사이클 실행
       await manager.initialize()
       await manager.switchMode('html')
       manager.destroy()
 
-      // Then: 모든 라이프사이클 이벤트가 순서대로 발행됨
-      expect(events).toEqual([
-        'initialized',
-        'changing',
-        'changed',
-        'destroyed',
-      ])
+      // Then: 모드 변경만 알려집니다
+      expect(events).toEqual(['wysiwyg→html'])
     })
 
     it('WYSIWYG 전용 이벤트를 발행해야 함', async () => {

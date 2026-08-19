@@ -12,6 +12,7 @@ export { toJSON, fromJSON, toHtml, parseHtml } from './model/storage'
  */
 export {
   subscribeToModel,
+  historyDepthOf,
   selectionFacts,
   alignmentOf,
   listKindOf,
@@ -51,7 +52,6 @@ export type { EditorEventMap, KnownEventName, PayloadOf } from './core/event-map
 export { EVENT_KIND } from './core/event-map'
 export type { EventKind, RequestEvent, NotifyEvent } from './core/event-map'
 export { PluginManager } from './core/plugin-manager'
-export { SelectionManager } from './core/selection-manager'
 export {
   createDocumentStore,
   isDocumentStorageAvailable,
@@ -73,60 +73,6 @@ export {
   createDefaultCommandRegistry,
 } from './core/default-commands'
 export type { DefaultCommandsOptions } from './core/default-commands'
-export {
-  registerNativeAlignment,
-  NATIVE_PRECEDENCE,
-} from './core/commands/native-alignment'
-export { registerNativeFormatBlock } from './core/commands/native-format-block'
-export { registerNativeInlineToggles } from './core/commands/native-inline-toggles'
-export { registerNativeInlineStyles } from './core/commands/native-inline-styles'
-export { registerNativeList } from './core/commands/native-list'
-export {
-  registerNativeFontSize,
-  legacyFontSizeToCss,
-  cssToLegacyFontSize,
-} from './core/commands/native-font-size'
-export { registerNativeQueries } from './core/commands/native-query'
-export {
-  insertHTMLAtSelection,
-  insertTextAtSelection,
-} from './core/commands/range-insert'
-export {
-  installStoredMarks,
-  togglePendingFormat,
-  getPendingFormat,
-  clearPendingFormats,
-  hasPendingFormats,
-  insertTextWithPendingFormats,
-} from './core/commands/stored-marks'
-export {
-  toggleList,
-  shiftIndent,
-  toggleListForBlocks,
-  shiftIndentForBlocks,
-  INDENT_STEP,
-} from './core/commands/list-format'
-export type { ListType } from './core/commands/list-format'
-export {
-  applyInlineStyle,
-  applyLink,
-  removeLink,
-  applyInlineStyleInRange,
-  applyLinkInRange,
-  removeLinkInRange,
-} from './core/commands/inline-style'
-export type { InlineStyleProp } from './core/commands/inline-style'
-export {
-  toggleInlineFormat,
-  toggleFormatInRange,
-  INLINE_FORMATS,
-} from './core/commands/inline-format'
-export type { InlineFormat } from './core/commands/inline-format'
-export { HistoryManager } from './core/history-manager'
-export type {
-  HistoryState,
-  HistoryManagerOptions,
-} from './core/history-manager'
 export {
   CoreEvents,
   TextStyleEvents,
@@ -198,8 +144,6 @@ export { createOutdentPlugin } from './plugins/outdent-plugin'
 export { createLinkPlugin } from './plugins/link-plugin'
 export { createTablePlugin } from './plugins/table-plugin'
 export { createImagePlugin } from './plugins/image-plugin'
-export { createFindReplacePlugin } from './plugins/find-replace-plugin'
-export { createHistoryPlugin } from './plugins/history-plugin'
 export { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 export type {
   AutocompleteSuggestion,

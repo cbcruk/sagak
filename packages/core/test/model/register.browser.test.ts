@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
 import { CommandRegistry } from '@/core/command-registry'
 import { EventBus } from '@/core/event-bus'
-import { registerLegacyExecCommands } from '@/core/legacy-exec-command'
 import { sagakSchema } from '@/model/schema'
 import { parseHtml, toHtml } from '@/model/storage'
 import { registerModelCommands } from '@/model/register'
@@ -12,15 +11,21 @@ import { registerModelCommands } from '@/model/register'
  *
  * 갈아타기가 한 줄짜리 사건이 되려면 두 가지가 지켜져야 합니다.
  *
- * 1. 상태가 있으면 모델 커맨드가 잡는다 — 아래 층(`execCommand`)이 안 돈다
+ * 1. 상태가 있으면 모델 커맨드가 잡는다 — 아래 층이 안 돈다
  * 2. 상태가 없으면 **안 잡는다** — 뷰가 붙기 전에도 등록해 둘 수 있다
  *
  * 둘째가 이 설계의 값입니다. 뷰가 없는 동안에도 등록해 두고, 뷰가 상태를
  * 내주기 시작하면 그 순간부터 모델 쪽이 맡습니다.
+ *
+ * 아래 층은 원래 `registerLegacyExecCommands`(= `document.execCommand`)였습니다.
+ * 그 층이 **한 번도 안 잡히는 것으로 판명나 지워졌으므로**
+ * (`command-layers.browser.test.ts`) 여기서는 흉내 낸 층을 씁니다 — 재려는
+ * 것은 아래에 무엇이 있느냐가 아니라 **넘어가느냐**입니다.
  */
 
 let registry: CommandRegistry
 let state: EditorState | null
+let below: string[]
 
 const html = (): string => toHtml(state!.doc, sagakSchema, document)
 
@@ -38,8 +43,28 @@ function load(source: string): void {
 beforeEach(() => {
   registry = new CommandRegistry({ eventBus: new EventBus() })
 
-  /* 지금 제품과 같은 순서로 쌓습니다 — 레거시가 맨 아래입니다 */
-  registerLegacyExecCommands(registry)
+  below = []
+
+  /* 아래 층을 흉내 냅니다 — 잡히면 이름이 남습니다 */
+  for (const name of ['bold', 'fontName']) {
+    registry.register(
+      name,
+      () => {
+        below.push(name)
+        return true
+      },
+      -100
+    )
+  }
+  registry.registerStateQuery(
+    'bold',
+    () => {
+      below.push('bold?')
+      return false
+    },
+    -100
+  )
+
   registerModelCommands(registry, {
     getState: () => state,
     dispatch: (tr) => {
@@ -73,24 +98,15 @@ describe('모델 커맨드를 레지스트리에 얹기', () => {
   it('상태가 없으면 안 잡고 아래로 넘깁니다', () => {
     state = null
 
-    const element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>가나다라</p>'
-    document.body.appendChild(element)
+    expect(registry.run('bold')).toBe(true)
+    expect(below).toEqual(['bold'])
+  })
 
-    const text = element.querySelector('p')!.firstChild!
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, 4)
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
+  it('값을 받는 커맨드도 상태가 없으면 넘깁니다', () => {
+    state = null
 
-    /* 레거시(`execCommand`)가 받아서 DOM 을 고칩니다 */
-    registry.run('bold')
-
-    expect(element.innerHTML).toContain('<b>')
-    element.remove()
+    expect(registry.run('fontName', 'Georgia')).toBe(true)
+    expect(below).toEqual(['fontName'])
   })
 
   describe('조회', () => {
@@ -109,8 +125,8 @@ describe('모델 커맨드를 레지스트리에 얹기', () => {
     it('상태가 없으면 조회도 아래로 넘깁니다', () => {
       state = null
 
-      /* 던지지 않고 아래 층의 답이 나옵니다 */
-      expect(() => registry.queryState('bold')).not.toThrow()
+      expect(registry.queryState('bold')).toBe(false)
+      expect(below).toEqual(['bold?'])
     })
   })
 })
