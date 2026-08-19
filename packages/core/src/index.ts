@@ -73,12 +73,15 @@ export {
   createDefaultCommandRegistry,
 } from './core/default-commands'
 export type { DefaultCommandsOptions } from './core/default-commands'
+export type {
+  CommandMap,
+  CommandName,
+  CommandArgs,
+  StateQueryName,
+  ValueQueryName,
+} from './core/command-map'
 export {
   CoreEvents,
-  TextStyleEvents,
-  FontEvents,
-  ParagraphEvents,
-  ContentEvents,
   HistoryEvents,
   FindReplaceEvents,
   AutocompleteEvents,
@@ -113,26 +116,6 @@ export type {
   HighlightRange,
 } from './core/types'
 
-export { createBoldPlugin } from './plugins/bold-plugin'
-export { createItalicPlugin } from './plugins/italic-plugin'
-export { createUnderlinePlugin } from './plugins/underline-plugin'
-export { createStrikePlugin } from './plugins/strike-plugin'
-export { createSubscriptPlugin } from './plugins/subscript-plugin'
-export { createSuperscriptPlugin } from './plugins/superscript-plugin'
-export { createFontFamilyPlugin } from './plugins/font-family-plugin'
-export { createFontSizePlugin } from './plugins/font-size-plugin'
-export { createTextColorPlugin } from './plugins/text-color-plugin'
-export { createBackgroundColorPlugin } from './plugins/background-color-plugin'
-export { createHeadingPlugin } from './plugins/heading-plugin'
-export { createParagraphPlugin } from './plugins/paragraph-plugin'
-export { createAlignmentPlugin } from './plugins/alignment-plugin'
-export { createOrderedListPlugin } from './plugins/ordered-list-plugin'
-export { createUnorderedListPlugin } from './plugins/unordered-list-plugin'
-export { createIndentPlugin } from './plugins/indent-plugin'
-export { createOutdentPlugin } from './plugins/outdent-plugin'
-export { createLinkPlugin } from './plugins/link-plugin'
-export { createTablePlugin } from './plugins/table-plugin'
-export { createImagePlugin } from './plugins/image-plugin'
 export { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 export type {
   AutocompleteSuggestion,

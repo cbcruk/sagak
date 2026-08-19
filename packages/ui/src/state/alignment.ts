@@ -1,7 +1,8 @@
 import type { Readable } from 'svelte/store'
-import { ParagraphEvents, alignmentOf } from 'sagak-core'
+import { alignmentOf } from 'sagak-core'
 import type { Alignment, EditorContext } from 'sagak-core'
 import { fromState } from './from-state'
+import { exec } from './exec'
 
 /**
  * 지금 문단의 정렬 — **모델에서 읽습니다.**
@@ -22,9 +23,16 @@ export function alignmentStore(
   return fromState(editor, () => alignmentOf(editor), 'left')
 }
 
+/** 정렬은 방향마다 커맨드가 따로입니다 — `execCommand` 시절의 이름 그대로입니다 */
+const ALIGN_COMMANDS = {
+  left: 'justifyLeft',
+  center: 'justifyCenter',
+  right: 'justifyRight',
+  justify: 'justifyFull',
+} as const
+
 export function alignmentCommands(editor: EditorContext): AlignmentCommands {
   return {
-    align: (align) =>
-      editor.eventBus.emit(ParagraphEvents.ALIGNMENT_CHANGED, { align }),
+    align: (align) => void exec(editor, ALIGN_COMMANDS[align]),
   }
 }

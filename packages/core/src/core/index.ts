@@ -47,10 +47,6 @@ export type { EditorCoreConfig } from './editor-core'
 
 export {
   CoreEvents,
-  TextStyleEvents,
-  FontEvents,
-  ParagraphEvents,
-  ContentEvents,
   HistoryEvents,
   FindReplaceEvents,
   AutocompleteEvents,

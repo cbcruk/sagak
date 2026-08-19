@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Table } from 'lucide'
-  import { ContentEvents } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import { editorState } from '../state/editor-state'
@@ -73,32 +73,23 @@
   function create(): void {
     if (!isValid) return
     restoreThen(() => {
-      editor.eventBus.emit(ContentEvents.TABLE_CREATE, {
-        rows: rowCount,
-        cols: colCount,
-      })
+      exec(editor, 'insertTable', { rows: rowCount, cols: colCount })
     })
   }
 
   const insertRow = (position: 'above' | 'below') => () =>
     restoreThen(() => {
-      editor.eventBus.emit(ContentEvents.TABLE_INSERT_ROW, { position })
+      exec(editor, position === 'above' ? 'addRowBefore' : 'addRowAfter')
     })
 
   const insertColumn = (position: 'left' | 'right') => () =>
     restoreThen(() => {
-      editor.eventBus.emit(ContentEvents.TABLE_INSERT_COLUMN, { position })
+      exec(editor, position === 'left' ? 'addColumnBefore' : 'addColumnAfter')
     })
 
-  /* 쏘는 이벤트를 실제로 있는 셋으로 좁힙니다 — `as never` 를 안 쓰려고 */
-  type DeleteEvent =
-    | typeof ContentEvents.TABLE_DELETE_ROW
-    | typeof ContentEvents.TABLE_DELETE_COLUMN
-    | typeof ContentEvents.TABLE_DELETE
-
-  const emit = (name: DeleteEvent) => () =>
+  const emit = (name: 'deleteRow' | 'deleteColumn' | 'deleteTable') => () =>
     restoreThen(() => {
-      editor.eventBus.emit(name)
+      exec(editor, name)
     })
 </script>
 
@@ -141,7 +132,7 @@
       <div id="table-row-actions" style="display: flex; gap: 8px">
         <button type="button" k="button" onclick={insertRow('above')}>+ Above</button>
         <button type="button" k="button" onclick={insertRow('below')}>+ Below</button>
-        <button type="button" k="button" onclick={emit(ContentEvents.TABLE_DELETE_ROW)}>
+        <button type="button" k="button" onclick={emit('deleteRow')}>
           Delete
         </button>
       </div>
@@ -152,7 +143,7 @@
       <div id="table-col-actions" style="display: flex; gap: 8px">
         <button type="button" k="button" onclick={insertColumn('left')}>+ Left</button>
         <button type="button" k="button" onclick={insertColumn('right')}>+ Right</button>
-        <button type="button" k="button" onclick={emit(ContentEvents.TABLE_DELETE_COLUMN)}>
+        <button type="button" k="button" onclick={emit('deleteColumn')}>
           Delete
         </button>
       </div>
@@ -166,7 +157,7 @@
         type="button"
         k="button"
         variant="destructive"
-        onclick={emit(ContentEvents.TABLE_DELETE)}
+        onclick={emit('deleteTable')}
       >
         Delete Table
       </button>

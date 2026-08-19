@@ -43,64 +43,16 @@ export const CoreEvents = {
   ERROR: 'EDITOR_ERROR',
 } as const
 
-/**
- * 텍스트 스타일 플러그인 이벤트 (기본값)
+/*
+ * **서식 이벤트가 통째로 없어졌습니다.**
+ *
+ * 굵게·글꼴·정렬·목록·표·이미지·링크 32종이 여기 있었습니다. 전부 커맨드가
+ * 됐고, 툴바는 이제 커맨드 레지스트리를 직접 부릅니다
+ * (`docs/prosemirror-migration.md` §11).
+ *
+ * 남은 이벤트는 **커맨드가 아닌 것들**입니다 — 되돌리기·찾기·자동 저장·
+ * 자동 완성처럼 상태나 흐름을 다루는 일, 그리고 밖에서 붙을 확장점.
  */
-export const TextStyleEvents = {
-  BOLD_CLICKED: 'BOLD_CLICKED',
-  ITALIC_CLICKED: 'ITALIC_CLICKED',
-  UNDERLINE_CLICKED: 'UNDERLINE_CLICKED',
-  STRIKE_CLICKED: 'STRIKE_CLICKED',
-  TOGGLE_SUBSCRIPT: 'TOGGLE_SUBSCRIPT',
-  TOGGLE_SUPERSCRIPT: 'TOGGLE_SUPERSCRIPT',
-} as const
-
-/**
- * 폰트 플러그인 이벤트 (기본값)
- */
-export const FontEvents = {
-  FONT_FAMILY_CHANGED: 'FONT_FAMILY_CHANGED',
-  FONT_SIZE_CHANGED: 'FONT_SIZE_CHANGED',
-  TEXT_COLOR_CHANGED: 'TEXT_COLOR_CHANGED',
-  BACKGROUND_COLOR_CHANGED: 'BACKGROUND_COLOR_CHANGED',
-  LINE_HEIGHT_CHANGED: 'LINE_HEIGHT_CHANGED',
-  LETTER_SPACING_CHANGED: 'LETTER_SPACING_CHANGED',
-} as const
-
-/**
- * 문단 플러그인 이벤트 (기본값)
- */
-export const ParagraphEvents = {
-  HEADING_CHANGED: 'HEADING_CHANGED',
-  FORMAT_PARAGRAPH: 'FORMAT_PARAGRAPH',
-  ALIGNMENT_CHANGED: 'ALIGNMENT_CHANGED',
-  INDENT_CLICKED: 'INDENT_CLICKED',
-  OUTDENT_CLICKED: 'OUTDENT_CLICKED',
-  ORDERED_LIST_CLICKED: 'ORDERED_LIST_CLICKED',
-  UNORDERED_LIST_CLICKED: 'UNORDERED_LIST_CLICKED',
-} as const
-
-/**
- * 콘텐츠 플러그인 이벤트 (기본값)
- */
-export const ContentEvents = {
-  LINK_CHANGED: 'LINK_CHANGED',
-  LINK_REMOVED: 'LINK_REMOVED',
-
-  IMAGE_INSERT: 'IMAGE_INSERT',
-  IMAGE_UPDATE: 'IMAGE_UPDATE',
-  IMAGE_DELETE: 'IMAGE_DELETE',
-
-  TABLE_CREATE: 'TABLE_CREATE',
-  TABLE_INSERT_ROW: 'TABLE_INSERT_ROW',
-  TABLE_DELETE_ROW: 'TABLE_DELETE_ROW',
-  TABLE_INSERT_COLUMN: 'TABLE_INSERT_COLUMN',
-  TABLE_DELETE_COLUMN: 'TABLE_DELETE_COLUMN',
-  TABLE_DELETE: 'TABLE_DELETE',
-
-  HORIZONTAL_RULE_INSERT: 'HORIZONTAL_RULE_INSERT',
-  SPECIAL_CHARACTER_INSERT: 'SPECIAL_CHARACTER_INSERT',
-} as const
 
 /**
  * 히스토리 플러그인 이벤트 (기본값)
@@ -196,10 +148,6 @@ export const ImageUploadEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...TextStyleEvents,
-  ...FontEvents,
-  ...ParagraphEvents,
-  ...ContentEvents,
   ...HistoryEvents,
   ...FindReplaceEvents,
   ...AutocompleteEvents,

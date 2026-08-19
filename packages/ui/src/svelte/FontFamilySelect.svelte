@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { FontEvents } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
+  import { exec } from '../state/exec'
   import { editorState } from '../state/editor-state'
   import {
     familiesStore,
@@ -133,7 +133,7 @@
       loadLocalFonts()
       return
     }
-    editor.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: value })
+    exec(editor, 'fontName', value)
   }}
 >
   {#if grouped}

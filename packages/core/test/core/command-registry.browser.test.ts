@@ -29,21 +29,21 @@ describe('CommandRegistry', () => {
   describe('register / run', () => {
     it('등록한 핸들러의 결과를 반환해야 함', () => {
       const registry = new CommandRegistry(ctx)
-      registry.register('foo', () => true)
+      registry.register('bold', () => true)
 
-      expect(registry.run('foo')).toBe(true)
+      expect(registry.run('bold')).toBe(true)
     })
 
     it('핸들러가 없으면 false를 반환해야 함', () => {
       const registry = new CommandRegistry(ctx)
-      expect(registry.run('missing')).toBe(false)
+      expect(registry.run('insertText', '가')).toBe(false)
     })
 
     it('높은 precedence 핸들러를 먼저 시도해야 함', () => {
       const registry = new CommandRegistry(ctx)
       const order: string[] = []
       registry.register(
-        'foo',
+        'bold',
         () => {
           order.push('low')
           return true
@@ -51,7 +51,7 @@ describe('CommandRegistry', () => {
         0
       )
       registry.register(
-        'foo',
+        'bold',
         () => {
           order.push('high')
           return true
@@ -59,7 +59,7 @@ describe('CommandRegistry', () => {
         100
       )
 
-      registry.run('foo')
+      registry.run('bold')
       expect(order).toEqual(['high'])
     })
 
@@ -67,7 +67,7 @@ describe('CommandRegistry', () => {
       const registry = new CommandRegistry(ctx)
       const order: string[] = []
       registry.register(
-        'foo',
+        'bold',
         () => {
           order.push('high')
           return undefined
@@ -75,7 +75,7 @@ describe('CommandRegistry', () => {
         100
       )
       registry.register(
-        'foo',
+        'bold',
         () => {
           order.push('low')
           return true
@@ -83,38 +83,38 @@ describe('CommandRegistry', () => {
         0
       )
 
-      expect(registry.run('foo')).toBe(true)
+      expect(registry.run('bold')).toBe(true)
       expect(order).toEqual(['high', 'low'])
     })
 
     it('핸들러의 false는 결과로 사용되어 다음으로 넘어가지 않아야 함', () => {
       const registry = new CommandRegistry(ctx)
       const lower = vi.fn(() => true)
-      registry.register('foo', () => false, 100)
-      registry.register('foo', lower, 0)
+      registry.register('bold', () => false, 100)
+      registry.register('bold', lower, 0)
 
-      expect(registry.run('foo')).toBe(false)
+      expect(registry.run('bold')).toBe(false)
       expect(lower).not.toHaveBeenCalled()
     })
 
     it('값 인자를 핸들러에 전달해야 함', () => {
       const registry = new CommandRegistry(ctx)
       const handler = vi.fn(() => true)
-      registry.register('foo', handler)
+      registry.register('fontName', handler)
 
-      registry.run('foo', 'bar')
-      expect(handler).toHaveBeenCalledWith(ctx, 'bar')
+      registry.run('fontName', 'Georgia')
+      expect(handler).toHaveBeenCalledWith(ctx, 'Georgia')
     })
 
     it('등록 해제 후에는 핸들러가 실행되지 않아야 함', () => {
       const registry = new CommandRegistry(ctx)
       const handler = vi.fn(() => true)
-      const unsub = registry.register('foo', handler)
+      const unsub = registry.register('bold', handler)
 
       unsub()
-      expect(registry.run('foo')).toBe(false)
+      expect(registry.run('bold')).toBe(false)
       expect(handler).not.toHaveBeenCalled()
-      expect(registry.has('foo')).toBe(false)
+      expect(registry.has('bold')).toBe(false)
     })
   })
 
@@ -139,12 +139,12 @@ describe('CommandRegistry', () => {
       eventBus.on(CoreEvents.CAPTURE_SNAPSHOT, 'on', () => {
         order.push('snapshot')
       })
-      registry.register('foo', () => {
+      registry.register('bold', () => {
         order.push('command')
         return true
       })
 
-      const result = runCommand(registry, eventBus, 'foo')
+      const result = runCommand(registry, eventBus, 'bold')
       expect(result).toBe(true)
       expect(order).toEqual(['snapshot', 'command'])
     })
@@ -155,12 +155,12 @@ describe('CommandRegistry', () => {
       eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
         order.push('focus')
       })
-      registry.register('foo', () => {
+      registry.register('bold', () => {
         order.push('command')
         return true
       })
 
-      runCommand(registry, eventBus, 'foo')
+      runCommand(registry, eventBus, 'bold')
       expect(order).toEqual(['command', 'focus'])
     })
 
@@ -170,9 +170,9 @@ describe('CommandRegistry', () => {
       eventBus.on(CoreEvents.FOCUS_REQUESTED, 'on', () => {
         focusCount += 1
       })
-      registry.register('foo', () => false)
+      registry.register('bold', () => false)
 
-      expect(runCommand(registry, eventBus, 'foo')).toBe(false)
+      expect(runCommand(registry, eventBus, 'bold')).toBe(false)
       expect(focusCount).toBe(0)
     })
 
@@ -183,7 +183,9 @@ describe('CommandRegistry', () => {
         focusCount += 1
       })
 
-      expect(runCommand(registry, eventBus, 'nope')).toBe(false)
+      expect(runCommand(registry, eventBus, 'insertHorizontalRule')).toBe(
+        false
+      )
       expect(focusCount).toBe(0)
     })
   })

@@ -5,10 +5,16 @@ import {
   commands,
   createLink,
   removeLink,
+  insertText,
+  insertTable,
+  insertImage,
+  updateImage,
+  deleteImage,
   isMarkActive,
   markValue,
   blockAttr,
   type Command,
+  type ImageAttrs,
 } from './commands'
 import { linkAt } from './selection'
 
@@ -73,6 +79,24 @@ const WITH_VALUE: Record<string, (value: string) => Command> = {
   lineHeight: commands.lineHeight,
   createLink,
   formatBlock,
+  insertText,
+}
+
+/**
+ * **구조 있는 값을 받는 커맨드들.**
+ *
+ * 표는 `{rows, cols}`, 이미지는 속성 다섯을 받습니다. 레지스트리의 서명이
+ * 문자열 하나뿐이던 동안 이것들만 버스로 남아 있었고, 그래서 층이 둘이었습니다
+ * (`docs/prosemirror-migration.md` §11).
+ */
+const WITH_OBJECT: Record<string, (value: unknown) => Command> = {
+  insertTable: (value) => {
+    const { rows, cols } = value as { rows: number; cols: number }
+
+    return insertTable(rows, cols)
+  },
+  insertImage: (value) => insertImage(value as ImageAttrs),
+  updateImage: (value) => updateImage(value as Partial<ImageAttrs>),
 }
 
 const PLAIN: Record<string, Command> = {
@@ -92,6 +116,15 @@ const PLAIN: Record<string, Command> = {
   insertOrderedList: commands.insertOrderedList,
   insertHorizontalRule: commands.insertHorizontalRule,
   unlink: removeLink,
+
+  addRowBefore: commands.addRowBefore,
+  addRowAfter: commands.addRowAfter,
+  deleteRow: commands.deleteRow,
+  addColumnBefore: commands.addColumnBefore,
+  addColumnAfter: commands.addColumnAfter,
+  deleteColumn: commands.deleteColumn,
+  deleteTable: commands.deleteTable,
+  deleteImage,
 }
 
 /** 툴바의 눌림 표시가 보는 것들 */
@@ -159,13 +192,28 @@ export function registerModelCommands(
     unsubs.push(registry.register(name, runner(command), MODEL_PRECEDENCE))
   }
 
-  for (const [name, make] of Object.entries(WITH_VALUE)) {
+  for (const [name, make] of Object.entries(WITH_OBJECT)) {
     unsubs.push(
       registry.register(
         name,
         (_ctx, value) => {
           const state = handle.getState()
           if (!state || value === undefined) return undefined
+
+          return make(value)(state, handle.dispatch)
+        },
+        MODEL_PRECEDENCE
+      )
+    )
+  }
+
+  for (const [name, make] of Object.entries(WITH_VALUE)) {
+    unsubs.push(
+      registry.register(
+        name,
+        (_ctx, value) => {
+          const state = handle.getState()
+          if (!state || typeof value !== 'string') return undefined
 
           return make(value)(state, handle.dispatch)
         },

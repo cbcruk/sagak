@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createEditor, FontEvents, type Editor, type EditorContext } from 'sagak-core'
+import { createEditor, runCommand, type Editor, type EditorContext } from 'sagak-core'
 
 describe('Editor Core', () => {
   let container: HTMLDivElement
@@ -49,7 +49,12 @@ describe('Editor Core', () => {
     selection?.addRange(range)
     document.dispatchEvent(new Event('selectionchange'))
 
-    editor.exec(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Georgia' })
+    runCommand(
+      editor.context.commandRegistry!,
+      editor.context.eventBus,
+      'fontName',
+      'Georgia'
+    )
 
     const content = await editor.getContent()
     expect(content).toContain('Georgia')
@@ -78,7 +83,7 @@ describe('EventBus Integration', () => {
     container.remove()
   })
 
-  it('should emit FONT_FAMILY_CHANGED via eventBus', async () => {
+  it('커맨드 레지스트리로 글꼴을 겁니다', async () => {
     const editableArea = container.querySelector('[contenteditable="true"]')
     expect(editableArea).not.toBeNull()
 
@@ -95,15 +100,26 @@ describe('EventBus Integration', () => {
     selection?.addRange(range)
     document.dispatchEvent(new Event('selectionchange'))
 
-    context.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Courier New' })
+    runCommand(
+      context.commandRegistry!,
+      context.eventBus,
+      'fontName',
+      'Courier New'
+    )
 
     const content = await editor.getContent()
     expect(content).toContain('Courier New')
   })
 
-  it('should call after handler when FONT_FAMILY_CHANGED succeeds', () => {
+  /**
+   * Why: 커맨드가 성공하면 무엇이 바뀌었는지 알려야 합니다.
+   * How: 예전에는 플러그인마다 `STYLE_CHANGED` 를 쐈고 이름이 UI 어휘였습니다
+   *      (`fontFamily`). 이제 커맨드 경계 한 곳에서 쏘고 이름도 커맨드
+   *      이름입니다 (`fontName`).
+   */
+  it('커맨드가 성공하면 STYLE_CHANGED 를 쏩니다', () => {
     const handler = vi.fn()
-    context.eventBus.on(FontEvents.FONT_FAMILY_CHANGED, 'after', handler)
+    context.eventBus.on('STYLE_CHANGED', 'on', handler)
 
     const editableArea = container.querySelector('[contenteditable="true"]')
     /*
@@ -119,8 +135,16 @@ describe('EventBus Integration', () => {
     selection?.addRange(range)
     document.dispatchEvent(new Event('selectionchange'))
 
-    context.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Verdana' })
+    runCommand(
+      context.commandRegistry!,
+      context.eventBus,
+      'fontName',
+      'Verdana'
+    )
 
-    expect(handler).toHaveBeenCalledWith({ fontFamily: 'Verdana' })
+    expect(handler).toHaveBeenCalledWith({
+      style: 'fontName',
+      value: 'Verdana',
+    })
   })
 })

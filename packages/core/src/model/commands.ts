@@ -219,8 +219,18 @@ export { isInTable }
  * 꽂았습니다. 그러면 문단 **안에** `<table>` 이 들어가는 꼴이 되고, 스키마를
  * 지나며 통째로 사라집니다. 모델에서는 애초에 그런 자리에 못 놓습니다.
  */
+/**
+ * 표 크기의 상한 — 실수로 100×50 을 넘기면 브라우저가 멈춥니다.
+ */
+const MAX_ROWS = 100
+const MAX_COLS = 50
+
 export function insertTable(rows: number, cols: number): Command {
   return (state, dispatch) => {
+    if (rows < 1 || rows > MAX_ROWS || cols < 1 || cols > MAX_COLS) {
+      return false
+    }
+
     const row = () =>
       nodes.table_row.create(
         null,
@@ -249,6 +259,30 @@ export function insertTable(rows: number, cols: number): Command {
     }
 
     return true
+  }
+}
+
+/**
+ * 이미지 주소로 쓸 수 있는가.
+ *
+ * `data:` 는 이미지일 때만 받습니다 — `data:text/html;base64,…` 는 문서에
+ * 스크립트를 심는 길입니다.
+ */
+const IMAGE_PROTOCOLS = ['http:', 'https:']
+
+export function isImageUrl(input: string): boolean {
+  const url = input.trim()
+
+  if (!url) return false
+
+  if (url.toLowerCase().startsWith('data:')) {
+    return /^data:image\/[a-z+]+;base64,/i.test(url)
+  }
+
+  try {
+    return IMAGE_PROTOCOLS.includes(new URL(url).protocol)
+  } catch {
+    return false
   }
 }
 
@@ -341,9 +375,45 @@ export function insertText(text: string): Command {
 }
 
 /**
+ * 프로토콜 없이 쓴 주소도 받습니다.
+ *
+ * `example.com` 을 그대로 두면 상대 경로가 되어 엉뚱한 데로 갑니다. 사람이
+ * 주소창에 치듯 쓴 것을 그대로 받으려면 여기서 붙여 줘야 합니다.
+ *
+ * **문자 범위가 넓습니다.** 예전 `[a-zA-Z0-9…]` 정규식은 `ko.wikipedia.org/wiki/한국`
+ * 같은 주소를 거부했고, 거부는 조용히 아무 일도 안 하는 것이었습니다. 유니코드
+ * 글자·숫자를 받습니다 — 이 검사의 역할은 "URL 이 아닌 문장" 을 걸러 내는
+ * 것뿐입니다.
+ */
+const BARE_URL = /^[\p{L}\p{N}/.][\p{L}\p{N}\-._~:/?#[\]@!$&'()*+,;=%]*$/u
+
+const LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:']
+
+/** 사람이 쓴 주소를 링크로 쓸 수 있는 꼴로 — 아니면 `null` */
+export function normalizeUrl(input: string): string | null {
+  const url = input.trim()
+
+  if (!url) return null
+
+  const hasProtocol =
+    url.includes('://') || url.startsWith('mailto:') || url.startsWith('tel:')
+
+  if (!hasProtocol) {
+    return BARE_URL.test(url) ? `https://${url}` : null
+  }
+
+  try {
+    return LINK_PROTOCOLS.includes(new URL(url).protocol) ? url : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * 고른 글을 링크로 만듭니다.
  *
  * 캐럿만 있으면 아무것도 안 합니다 — 링크는 범위가 있어야 하는 마크입니다.
+ * 주소가 주소 꼴이 아니면 안 겁니다.
  */
 export function createLink(href: string): Command {
   return (state, dispatch) => {
@@ -351,11 +421,15 @@ export function createLink(href: string): Command {
 
     if (empty) return false
 
+    const url = normalizeUrl(href)
+
+    if (!url) return false
+
     if (dispatch) {
       dispatch(
         state.tr
           .removeMark(from, to, marks.link)
-          .addMark(from, to, marks.link.create({ href, title: null }))
+          .addMark(from, to, marks.link.create({ href: url, title: null }))
       )
     }
 
@@ -385,6 +459,8 @@ export const removeLink: Command = (state, dispatch) => {
 /** 이미지를 넣습니다 — 크기는 속성이고, 화면에 붙는 것은 스타일입니다 */
 export function insertImage(attrs: ImageAttrs): Command {
   return (state, dispatch) => {
+    if (!isImageUrl(attrs.src)) return false
+
     if (dispatch) {
       dispatch(
         state.tr.replaceSelectionWith(

@@ -3,6 +3,7 @@ import type { CompositionTracker } from './composition'
 import type { EditorContext, Plugin } from './types'
 import { createErrorReporter, type ErrorReporter } from './errors'
 import { runCommand } from './command-registry'
+import type { CommandArgs, CommandName } from './command-map'
 import { createDefaultCommandRegistry } from './default-commands'
 
 /**
@@ -48,7 +49,10 @@ export interface PluginHandlerContext<
    * }
    * ```
    */
-  runCommand: (name: string, value?: string) => boolean
+  runCommand: <K extends CommandName>(
+    name: K,
+    ...args: CommandArgs<K>
+  ) => boolean
   /** 커맨드 활성 상태 조회 헬퍼 */
   queryState: (name: string) => boolean
   /**
@@ -282,8 +286,8 @@ export function definePlugin<
           options: finalOptions,
           state,
           emit: (event, data) => eventBus.emit(event, data),
-          runCommand: (name, value) =>
-            runCommand(commandRegistry, eventBus, name, value),
+          runCommand: (name, ...args) =>
+            runCommand(commandRegistry, eventBus, name, ...args),
           queryState: (name) => commandRegistry.queryState(name),
           reportError,
         })

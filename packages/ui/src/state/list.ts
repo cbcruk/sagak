@@ -1,7 +1,8 @@
 import type { Readable } from 'svelte/store'
-import { ParagraphEvents, listKindOf } from 'sagak-core'
+import { listKindOf } from 'sagak-core'
 import type { EditorContext, ListKind } from 'sagak-core'
 import { fromState } from './from-state'
+import { exec } from './exec'
 
 /**
  * 캐럿이 놓인 목록의 종류 — 없으면 `'none'` 입니다.
@@ -22,8 +23,7 @@ export function listStore(editor: EditorContext): Readable<ListType> {
 
 export function listCommands(editor: EditorContext): ListCommands {
   return {
-    unordered: () =>
-      editor.eventBus.emit(ParagraphEvents.UNORDERED_LIST_CLICKED),
-    ordered: () => editor.eventBus.emit(ParagraphEvents.ORDERED_LIST_CLICKED),
+    unordered: () => void exec(editor, 'insertUnorderedList'),
+    ordered: () => void exec(editor, 'insertOrderedList'),
   }
 }

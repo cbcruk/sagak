@@ -1,6 +1,6 @@
 <script lang="ts">
   import { X } from 'lucide'
-  import { FontEvents } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import {
@@ -37,9 +37,7 @@
 
   const isText = $derived(type === 'text')
   const label = $derived(isText ? 'Text Color' : 'Highlight Color')
-  const event = $derived(
-    isText ? FontEvents.TEXT_COLOR_CHANGED : FontEvents.BACKGROUND_COLOR_CHANGED
-  )
+  const command = $derived(isText ? 'foreColor' : 'backColor')
 
   let container: HTMLDivElement
   let open = $state(false)
@@ -70,12 +68,12 @@
     current = color
     open = false
     addRecentColor(type, color)
-    editor.eventBus.emit(event, { color })
+    exec(editor, command, color)
   }
 
   function remove(): void {
     open = false
-    editor.eventBus.emit(event, { color: isText ? '#000000' : 'transparent' })
+    exec(editor, command, isText ? '#000000' : 'transparent')
     current = isText ? '#000000' : '#ffff00'
   }
 
