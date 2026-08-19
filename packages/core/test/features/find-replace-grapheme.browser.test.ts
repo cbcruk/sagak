@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { trackComposition } from '@/core/composition'
-import { PluginManager } from '@/core/plugin-manager'
-import { FindReplacePlugin } from '@/plugins/find-replace-plugin'
+import { findReplace } from '@/features/find-replace'
+import type { FindReplace } from '@/features/find-replace'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { EditorContext, EditingAreaManager } from '@/core/types'
 
@@ -25,13 +25,13 @@ const BASE = '\u{1F926}'
 
 describe('찾기 — 문자소 클러스터', () => {
   let eventBus: EventBus
-  let pluginManager: PluginManager
+  let find: FindReplace
   let container: HTMLDivElement
   let area: WysiwygArea
   let element: HTMLElement
   let context: EditorContext
 
-  beforeEach(async () => {
+  beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
 
@@ -47,8 +47,7 @@ describe('찾기 — 문자소 클러스터', () => {
         getCurrentArea: () => area,
       } as unknown as EditingAreaManager,
     }
-    pluginManager = new PluginManager(context)
-    await pluginManager.register(FindReplacePlugin)
+    find = findReplace(context)
   })
 
   afterEach(() => {
@@ -68,7 +67,7 @@ describe('찾기 — 문자소 클러스터', () => {
     area.setRawContent(`<p>hello ${FACEPALM} world</p>`)
 
     // When: 평범한 단어를 찾는다
-    eventBus.emit('FIND', { query: 'world' })
+    find.find('world')
 
     // Then: 정확히 한 번 찾고 이모지는 그대로여야 함
     const highlights = element.querySelectorAll('.find-highlight')
@@ -82,7 +81,7 @@ describe('찾기 — 문자소 클러스터', () => {
     area.setRawContent(`<p>a${FACEPALM}b</p>`)
 
     // When
-    eventBus.emit('FIND', { query: FACEPALM })
+    find.find(FACEPALM)
 
     // Then
     const highlights = element.querySelectorAll('.find-highlight')
@@ -102,7 +101,7 @@ describe('찾기 — 문자소 클러스터', () => {
     area.setRawContent(`<p>${FACEPALM}</p>`)
 
     // When: 그 앞부분(기본 이모지)만 찾는다
-    eventBus.emit('FIND', { query: BASE })
+    find.find(BASE)
 
     // Then: 문자소 중간이므로 일치가 없어야 합니다
     expect(element.querySelectorAll('.find-highlight')).toHaveLength(0)
@@ -114,7 +113,7 @@ describe('찾기 — 문자소 클러스터', () => {
     area.setRawContent(`<p>${FACEPALM}</p>`)
 
     // When: 그 일부를 다른 글자로 바꾸려 한다
-    eventBus.emit('REPLACE_ALL', { query: BASE, replacement: 'X' })
+    find.replaceAll(BASE, 'X')
 
     // Then: 고치기 전에는 `X🏼‍♂️` 가 되어 피부톤·ZWJ 가 고아로 남았습니다
     expect(element.textContent).toBe(FACEPALM)
@@ -133,7 +132,7 @@ describe('찾기 — 문자소 클러스터', () => {
     area.setRawContent('<p>사과 사과나무 사과</p>')
 
     // When
-    eventBus.emit('FIND', { query: '사과', wholeWord: true })
+    find.find('사과', { wholeWord: true })
 
     // Then: 고치기 전에는 0개였습니다
     const highlights = element.querySelectorAll('.find-highlight')
@@ -144,7 +143,7 @@ describe('찾기 — 문자소 클러스터', () => {
   it('단어 단위가 아니면 부분 일치도 잡아야 함', () => {
     area.setRawContent('<p>사과 사과나무 사과</p>')
 
-    eventBus.emit('FIND', { query: '사과' })
+    find.find('사과')
 
     expect(element.querySelectorAll('.find-highlight')).toHaveLength(3)
   })
@@ -152,7 +151,7 @@ describe('찾기 — 문자소 클러스터', () => {
   it('영어 단어 단위는 그대로 동작해야 함', () => {
     area.setRawContent('<p>cat cats cat</p>')
 
-    eventBus.emit('FIND', { query: 'cat', wholeWord: true })
+    find.find('cat', { wholeWord: true })
 
     const hs = element.querySelectorAll('.find-highlight')
     expect(hs).toHaveLength(2)

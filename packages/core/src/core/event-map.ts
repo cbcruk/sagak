@@ -1,6 +1,5 @@
 import {
   CoreEvents,
-  FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
   AutoSaveEvents,
@@ -36,19 +35,6 @@ export interface StyleChangedPayload {
   rowIndex?: number
   colIndex?: number
   position?: string
-}
-
-export interface FindPayload {
-  query: string
-  caseSensitive?: boolean
-  wholeWord?: boolean
-}
-
-export interface ReplacePayload {
-  query: string
-  replacement: string
-  caseSensitive?: boolean
-  wholeWord?: boolean
 }
 
 /** 자동 저장 상태 */
@@ -104,14 +90,6 @@ export interface EditorEventMap {
   /** 객체형과 URL 문자열을 모두 받습니다 */
 
   // --- 히스토리 ---
-
-  // --- 찾기/바꾸기 ---
-  [FindReplaceEvents.FIND]: FindPayload
-  [FindReplaceEvents.FIND_NEXT]: void
-  [FindReplaceEvents.FIND_PREVIOUS]: void
-  [FindReplaceEvents.REPLACE]: ReplacePayload
-  [FindReplaceEvents.REPLACE_ALL]: ReplacePayload
-  [FindReplaceEvents.CLEAR_FIND]: void
 
   // --- 자동완성 ---
   [AutocompleteEvents.AUTOCOMPLETE_SHOW]: AutocompleteShowPayload
@@ -214,14 +192,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 콘텐츠 ---
 
   // --- 히스토리 ---
-
-  // --- 찾기/바꾸기 ---
-  [FindReplaceEvents.FIND]: 'request',
-  [FindReplaceEvents.FIND_NEXT]: 'request',
-  [FindReplaceEvents.FIND_PREVIOUS]: 'request',
-  [FindReplaceEvents.REPLACE]: 'request',
-  [FindReplaceEvents.REPLACE_ALL]: 'request',
-  [FindReplaceEvents.CLEAR_FIND]: 'request',
 
   // --- 자동완성 (코어가 발행하지만 팝오버가 처리해야 뜻이 있습니다) ---
   [AutocompleteEvents.AUTOCOMPLETE_SHOW]: 'request',

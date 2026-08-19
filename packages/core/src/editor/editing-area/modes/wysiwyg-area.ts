@@ -355,6 +355,18 @@ export class WysiwygArea implements EditingArea {
   }
 
   private setHighlights(ranges: HighlightRange[]): void {
+    /*
+     * **강조는 에디터보다 오래 살 수 있습니다.**
+     *
+     * 찾기가 플러그인이던 때는 에디터가 죽으면 구독도 함께 끊겨서 늦게 온
+     * 요청이 갈 곳이 없었습니다. 지금은 부르는 쪽이 객체를 직접 들고 있어서,
+     * 다이얼로그의 `close` 처럼 **정리 순서 뒤에 오는 호출**이 실제로
+     * 들어옵니다. 그때 뷰에 트랜잭션을 던지면 터집니다.
+     */
+    if (this.view.isDestroyed) {
+      return
+    }
+
     const size = this.view.state.doc.content.size
     const decorations = ranges
       .filter((range) => range.from >= 0 && range.to <= size)
@@ -373,6 +385,10 @@ export class WysiwygArea implements EditingArea {
   }
 
   private scrollTo(pos: number): void {
+    if (this.view.isDestroyed) {
+      return
+    }
+
     if (pos < 0 || pos > this.view.state.doc.content.size) {
       return
     }
