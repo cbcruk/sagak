@@ -94,14 +94,6 @@ export type {
   PluginEventName,
 } from './core/events'
 
-export { definePlugin } from './core/define-plugin'
-export type {
-  PluginDefinition,
-  PluginFactory,
-  PluginHandlerContext,
-  PluginInitContext,
-  BasePluginOptions,
-} from './core/define-plugin'
 
 export type {
   Plugin,

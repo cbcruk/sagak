@@ -2,9 +2,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { EventBus } from '@/core/event-bus'
 import { createErrorReporter } from '@/core/errors'
 import { EditorCore } from '@/core/editor-core'
+import type { EditorContext } from '@/core/types'
 import { CoreEvents } from '@/core/events'
 import { setLogLevel } from '@/core/logger'
-import { definePlugin } from '@/core/define-plugin'
 
 /**
  * 오류 피드백 경로 테스트
@@ -112,19 +112,32 @@ describe('error reporting', () => {
   })
 
   describe('플러그인 reportError', () => {
+    /**
+     * Why: 플러그인이 삼킨 오류는 소비자가 볼 수 있어야 합니다.
+     * How: 예전에는 `definePlugin` 이 `reportError` 를 핸들러에 넣어 줬습니다.
+     *      서식 플러그인 24개가 커맨드가 되면서 그 팩토리를 쓰는 곳이 하나도
+     *      안 남아 지웠고, 남은 플러그인들은 `createErrorReporter` 를 직접
+     *      부릅니다 — 재는 것은 그 규약입니다.
+     */
     it('플러그인 이름을 소스로 하여 오류를 발행해야 함', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       const errors: Array<{ source: string; message: string }> = []
 
-      const failingPlugin = definePlugin({
+      const failingPlugin = {
         name: 'test:failing',
-        handlers: {
-          DO_FAIL: ({ reportError }) => {
-            reportError(new Error('nope'), 'Failed to do thing:')
+        initialize(context: EditorContext) {
+          const report = createErrorReporter(
+            context.eventBus,
+            'plugin:test:failing'
+          )
+
+          context.eventBus.on('DO_FAIL', 'on', () => {
+            report(new Error('nope'), 'Failed to do thing:')
+
             return false
-          },
+          })
         },
-      })()
+      }
 
       const core = new EditorCore()
       core.getEventBus().on(CoreEvents.ERROR, 'on', (data?: unknown) => {

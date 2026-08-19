@@ -236,49 +236,9 @@ export interface EditingAreaManagerConfig {
 /**
  * 모드 변경 이벤트 데이터
  */
-export interface ModeChangeEvent {
-  /**
-   * 이전 모드
-   */
-  from: EditingMode
-
-  /**
-   * 새 모드
-   */
-  to: EditingMode
-
-  /**
-   * 전송되는 콘텐츠
-   */
-  content: IRContent
-}
-
 /**
  * 콘텐츠 변경 이벤트 데이터
  */
-export interface ContentChangeEvent {
-  /**
-   * 현재 편집 모드
-   */
-  mode: EditingMode
-
-  /**
-   * 새 콘텐츠
-   */
-  content: IRContent
-}
-
 /**
  * 크기 조정 이벤트 데이터
  */
-export interface ResizeEvent {
-  /**
-   * 새 높이 (픽셀)
-   */
-  height: number
-
-  /**
-   * 새 너비 (픽셀)
-   */
-  width: number
-}

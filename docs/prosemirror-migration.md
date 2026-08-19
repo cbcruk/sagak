@@ -818,3 +818,28 @@ emit(...)` 를 들고 있던 자리입니다.
 ```
 
 `HistoryEvents` 묶음이 통째로 없어졌습니다.
+
+### 11-4. 뒤따라 죽은 것 — `definePlugin`
+
+서식 플러그인 24개가 커맨드가 되고 나서 세어 보니 **`definePlugin` 을 쓰는
+플러그인이 0개**였습니다. 349줄짜리 팩토리였고, 옵션 병합·상태·핸들러 컨텍스트·
+`before` 자동 가드를 얹어 주던 것입니다.
+
+그 넷 중 셋이 이미 자리를 옮겼습니다.
+
+| | 어디로 |
+| --- | --- |
+| `before` 자동 가드 | 커맨드 경계 (11-1) |
+| `runCommand` 헬퍼 | 툴바가 직접 부름 (11-2) |
+| 옵션 검증 | 커맨드 (11-2) |
+
+남은 여덟 플러그인은 평범한 객체입니다 — `initialize(context)` 하나. **팩토리가
+없어도 되는 모양이 되고 나서야 팩토리가 없어졌습니다.**
+
+죽은 페이로드 타입 여섯(`FormattingStatePayload`·`ImagePayload`·
+`TableCreatePayload`·`ModeChangeEvent`·`ContentChangeEvent`·`ResizeEvent`)도
+같이 걷었습니다.
+
+```
+코어 소스  9,522줄  (이주 전 대비 약 -4,000)
+```

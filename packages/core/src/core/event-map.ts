@@ -13,18 +13,6 @@ import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
 
 /**
- * 서식 상태 (툴바 활성 표시용)
- */
-export interface FormattingStatePayload {
-  isBold: boolean
-  isItalic: boolean
-  isUnderline: boolean
-  isStrikeThrough: boolean
-  isSubscript: boolean
-  isSuperscript: boolean
-}
-
-/**
  * 서식이 적용된 뒤 발행되는 알림
  *
  * `style`은 무엇이 바뀌었는지를 나타내고, 나머지는 발행처에 따라 달라집니다.
@@ -62,41 +50,6 @@ export interface ReplacePayload {
   replacement: string
   caseSensitive?: boolean
   wholeWord?: boolean
-}
-
-/**
- * 이미지 페이로드 (`ImageData`와 동일한 형태)
- *
- * 삽입은 `src`가 필수, 갱신은 전부 선택입니다.
- */
-export interface ImagePayload {
-  src: string
-  width?: string
-  height?: string
-  alt?: string
-  alignment?: string
-  border?: string
-}
-
-/**
- * 표 생성 페이로드 — 모든 필드가 선택이며 미지정 시 플러그인 기본값을 씁니다
- *
- * `cols`의 별칭으로 `columns`도 받습니다 (`extractTableCreateData` 참고).
- */
-export interface TableCreatePayload {
-  rows?: number
-  cols?: number
-  columns?: number
-
-  /**
-   * @deprecated **문서에 안 붙습니다.** 표의 테두리·너비는 생김새라
-   * 스타일시트의 몫입니다 — 이미지의 테두리와 같은 이유입니다
-   * (`docs/prosemirror-migration.md` §10).
-   */
-  border?: string
-
-  /** @deprecated `border` 와 같습니다 */
-  width?: string
 }
 
 /** 자동 저장 상태 */
