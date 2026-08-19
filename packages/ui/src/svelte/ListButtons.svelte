@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ListOrdered, List, ChevronDown } from 'lucide'
   import { icon } from '../elements/icon'
-  import type { ListType } from '../components/list-buttons/list-buttons.shared'
+  import type { ListType } from '../state/list'
 
   /**
    * 목록 버튼 — **드롭다운 메뉴를 처음 옮기는 자리**입니다.

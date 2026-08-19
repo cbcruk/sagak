@@ -1,57 +1,156 @@
+import {
+  EditorState,
+  Plugin as PMPlugin,
+  PluginKey,
+  TextSelection,
+  type Transaction,
+} from 'prosemirror-state'
+import { EditorView, Decoration, DecorationSet } from 'prosemirror-view'
+import {
+  DOMParser,
+  DOMSerializer,
+  type Node as PMNode,
+} from 'prosemirror-model'
+import {
+  history,
+  undo,
+  redo,
+  undoDepth,
+  redoDepth,
+  closeHistory,
+} from 'prosemirror-history'
+import { keymap } from 'prosemirror-keymap'
+import { baseKeymap } from 'prosemirror-commands'
+import {
+  splitListItem,
+  liftListItem,
+  sinkListItem,
+} from 'prosemirror-schema-list'
 import { logger } from '@/core/logger'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
-import type { SelectionManager } from '@/core/selection-manager'
-import { WysiwygEvents, type EventBus } from '@/core'
+import { CoreEvents, HistoryEvents, WysiwygEvents, type EventBus } from '@/core'
+import type { Highlighter, HighlightRange } from '@/core/types'
 import { sagakSchema } from '@/model/schema'
-import { parseHtml, toHtml } from '@/model/storage'
+import { toHtml, parseHtml } from '@/model/storage'
+import type { StateHandle } from '@/model/register'
+import type { ModelListener } from '@/model/bridge'
 import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
-import { resolveSanitizer, type Sanitizer } from '../sanitizer'
-import {
-  insertHTMLAtSelection,
-  insertTextAtSelection,
-} from '@/core/commands/range-insert'
-import { installStoredMarks } from '@/core/commands/stored-marks'
 
+/**
+ * WYSIWYG 편집 영역 — **`prosemirror-view` 가 DOM 을 소유합니다.**
+ *
+ * ## 무엇이 바뀌었나
+ *
+ * 전에는 `contentEditable` 요소의 `innerHTML` 이 진실이었습니다. 이제 진실은
+ * `EditorState` 하나이고 DOM 은 그것을 그린 것입니다. 그래서 이 클래스가 하던
+ * 일 중 **여러 개가 통째로 사라집니다.**
+ *
+ * | 사라진 것 | 대신 |
+ * | --- | --- |
+ * | `installStoredMarks` | PM 의 `storedMarks` |
+ * | 채움용 `<br>` 끼워 넣기 | PM 의 trailing break |
+ * | `selectionchange` 리스너 | 트랜잭션의 선택 변화 |
+ * | `SelectionManager` 위임 여섯 | `state.selection` |
+ * | 붙여넣기 소독 | 스키마 (표현할 수 없는 것은 안 들어옵니다) |
+ *
+ * ## 소독은 어디로 갔나
+ *
+ * `sanitize` 옵션을 안 봅니다. 예전에는 HTML 문자열을 `innerHTML` 에 넣는
+ * 경계가 있어 거기서 걸렀지만, 이제 **HTML 이 DOM 으로 바로 가는 길이
+ * 없습니다.** 들어오는 모든 것은 스키마를 지나며, 스키마에 없는 것(`<script>`·
+ * `onerror`·`javascript:` 주소)은 모델에 존재할 수 없습니다.
+ *
+ * ## 히스토리
+ *
+ * `prosemirror-history` 를 여기서 답니다. 되돌리기 단축키는 **안 답니다** —
+ * 키보드 플러그인이 이미 `Ctrl+Z` 를 버스의 `UNDO` 로 옮기고 있어 둘 다 달면
+ * 한 번 누를 때 두 번 되돌아갑니다. 버스가 유일한 입구입니다.
+ */
 export interface WysiwygAreaConfig extends EditingAreaConfig {
-  /**
-   * 선택 작업을 위한 `SelectionManager` 인스턴스
-   */
-  selectionManager?: SelectionManager
-
   /**
    * 이벤트 발행을 위한 `EventBus`
    */
   eventBus?: EventBus
 }
 
+/**
+ * 화면에만 있는 표시.
+ *
+ * 데코레이션은 **문서가 아닙니다** — 트랜잭션에 실려 오지만 `doc` 을 안
+ * 바꾸고, 직렬화에도 저장물에도 안 나타납니다. 찾기 강조가 그래야 하는
+ * 것입니다.
+ *
+ * 문서가 바뀌면 `map` 이 자리를 따라 옮겨 줍니다. 예전 DOM span 은 글을 한 자
+ * 치면 그대로 어긋났습니다.
+ */
+const highlightKey = new PluginKey<DecorationSet>('sagak-highlight')
+
+function highlightPlugin(): PMPlugin<DecorationSet> {
+  return new PMPlugin<DecorationSet>({
+    key: highlightKey,
+    state: {
+      init: () => DecorationSet.empty,
+      apply(tr, current) {
+        const next = tr.getMeta(highlightKey) as Decoration[] | undefined
+
+        if (next) {
+          return DecorationSet.create(tr.doc, next)
+        }
+
+        return current.map(tr.mapping, tr.doc)
+      },
+    },
+    props: {
+      decorations: (state) => highlightKey.getState(state),
+    },
+  })
+}
+
+/** 편집에 필요한 최소한의 플러그인 */
+function editingPlugins() {
+  const listItem = sagakSchema.nodes.list_item
+
+  return [
+    history(),
+    keymap({
+      Enter: splitListItem(listItem),
+      Tab: sinkListItem(listItem),
+      'Shift-Tab': liftListItem(listItem),
+    }),
+    keymap(baseKeymap),
+    highlightPlugin(),
+  ]
+}
+
+function emptyDocument(): PMNode {
+  return sagakSchema.topNodeType.createAndFill()!
+}
+
 export class WysiwygArea implements EditingArea {
   private element: HTMLDivElement
   private container: HTMLElement
-  private selectionManager?: SelectionManager
+  private view: EditorView
   private eventBus?: EventBus
   private visible: boolean = false
-  private documentSelectionChangeHandler?: () => void
+  private editable: boolean = true
+  private spellCheck: boolean
+  private className: string
   private resizeObserver?: ResizeObserver
-  private sanitize: Sanitizer
   private reportError: ErrorReporter
-  private storedMarksCleanup?: () => void
+  private unsubscribers: Array<() => void> = []
+  private listeners = new Set<ModelListener>()
+  private savedSelection?: { anchor: number; head: number }
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
-    this.selectionManager = config.selectionManager
     this.eventBus = config.eventBus
-    this.sanitize = resolveSanitizer(config.sanitize)
+    this.spellCheck = config.spellCheck !== false
+    this.className = config.className || 'modern-wysiwyg-area'
     this.reportError = this.eventBus
       ? createErrorReporter(this.eventBus, 'wysiwyg-area')
       : (error, message) => logger.error(message, error)
 
     this.element = document.createElement('div')
-    this.element.contentEditable = 'true'
-    this.element.className = config.className || 'modern-wysiwyg-area'
-
-    if (config.minHeight) {
-      this.element.style.minHeight = `${config.minHeight}px`
-    }
 
     this.element.style.width = '100%'
     this.element.style.height = '100%'
@@ -65,13 +164,30 @@ export class WysiwygArea implements EditingArea {
     this.element.style.boxSizing = 'border-box'
     this.element.style.display = 'none'
 
-    this.element.innerHTML = '<p><br></p>'
-    this.element.spellcheck = config.spellCheck !== false
-
     this.container.appendChild(this.element)
-    this.initializeEventListeners()
-    // 보류 서식(stored marks): collapsed 커서 토글 후 입력에 서식을 적용합니다
-    this.storedMarksCleanup = installStoredMarks(this.element)
+
+    /*
+     * `mount` 로 **우리가 만든 요소를 그대로 씁니다.**
+     *
+     * `new EditorView(container, …)` 로 만들면 PM 이 자식 div 를 하나 더 만들고,
+     * 그러면 `getElement()` 가 돌려주는 요소와 실제 편집 표면이 갈립니다.
+     */
+    this.view = new EditorView(
+      { mount: this.element },
+      {
+        state: EditorState.create({
+          doc: emptyDocument(),
+          plugins: editingPlugins(),
+        }),
+        dispatchTransaction: (tr) => this.applyTransaction(tr),
+        editable: () => this.editable,
+        attributes: () => this.domAttributes(),
+        handlePaste: (_view, event) => this.handlePaste(event),
+      }
+    )
+
+    this.listenToDomEvents()
+    this.listenToHistoryEvents()
 
     if (config.autoResize) {
       this.setupAutoResize()
@@ -79,43 +195,21 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
-   * IR 형식(HTML)으로 콘텐츠를 가져옵니다
+   * 지금 문서를 모델로 돌려줍니다 — **직렬화가 없습니다.**
    */
   async getContent(): Promise<IRContent> {
-    return parseHtml(this.element.innerHTML, sagakSchema, document)
+    return this.view.state.doc
   }
 
   /**
-   * IR 형식(HTML)에서 콘텐츠를 설정합니다
+   * 문서를 갈아 끼웁니다.
+   *
+   * 상태를 새로 만듭니다 — 되돌리기 기록도 같이 비워집니다. 다른 문서를 여는
+   * 것이나 모드를 오간 것이라 이전 문서의 되돌리기가 남아 있으면 오히려
+   * 위험합니다.
    */
   async setContent(content: IRContent): Promise<void> {
-    /*
-     * 소독은 **HTML 경계에서** 합니다. 모델은 스키마를 통과한 것이라 위험한
-     * 것이 이미 없지만, 직렬화한 문자열을 DOM 에 넣는 것은 여전히 경계라
-     * 지나온 길을 그대로 지킵니다.
-     */
-    const html = toHtml(content, sagakSchema, document)
-
-    if (!html) {
-      this.element.innerHTML = '<p><br></p>'
-      return
-    }
-
-    /*
-     * **빈 블록에는 캐럿이 설 자리가 필요합니다.**
-     *
-     * 모델의 빈 문단은 `<p></p>` 로 직렬화되는데, 그대로 넣으면 브라우저가
-     * 캐럿을 놓지 못해 그 줄에 글을 쓸 수 없습니다. 그래서 표시할 때만 채움용
-     * `<br>` 을 넣습니다 — 모델에는 없는 것이고, 다시 읽을 때 스키마가 걷어내므로
-     * 저장물에도 안 남습니다.
-     */
-    this.element.innerHTML = this.sanitize(
-      html.replace(/<(p|h[1-6])([^>]*)><\/\1>/g, '<$1$2><br></$1>')
-    )
-
-    if (!this.element.firstChild) {
-      this.element.innerHTML = '<p><br></p>'
-    }
+    this.replaceDocument(content)
   }
 
   /**
@@ -144,41 +238,46 @@ export class WysiwygArea implements EditingArea {
 
   /**
    * 편집 영역에 포커스를 설정합니다
+   *
+   * PM 이 선택을 상태로 들고 있어 **복원할 것이 없습니다** — 포커스를 잃어도
+   * `state.selection` 은 그대로입니다.
    */
   focus(): void {
-    this.element.focus()
-
-    if (this.selectionManager) {
-      this.selectionManager.restoreSelection()
-    }
+    this.view.focus()
   }
 
   /**
    * 편집 가능 여부를 설정합니다
    */
   setEditable(enabled: boolean): void {
-    this.element.contentEditable = enabled ? 'true' : 'false'
+    this.editable = enabled
+    this.view.setProps({ editable: () => this.editable })
   }
 
   /**
    * 맞춤법 검사 활성화 여부를 설정합니다
    */
   setSpellCheck(enabled: boolean): void {
-    this.element.spellcheck = enabled
+    this.spellCheck = enabled
+    this.view.setProps({ attributes: () => this.domAttributes() })
   }
 
   /**
-   * 원시 HTML 콘텐츠를 가져옵니다
+   * 지금 문서를 HTML 로 돌려줍니다.
+   *
+   * **`innerHTML` 이 아닙니다.** PM 이 그린 DOM 에는 클래스와 표시용 `<br>` 이
+   * 섞여 있어 그대로 내보내면 저장물에 편집기 사정이 새어 들어갑니다. 모델을
+   * 직렬화하면 밖에 내놓을 수 있는 꼴 하나만 나옵니다.
    */
   getRawContent(): string {
-    return this.element.innerHTML
+    return toHtml(this.view.state.doc, sagakSchema, document)
   }
 
   /**
-   * 원시 HTML 콘텐츠를 설정합니다
+   * HTML 로 문서를 설정합니다 — 스키마를 지나 모델이 됩니다
    */
   setRawContent(content: string): void {
-    this.element.innerHTML = content
+    this.replaceDocument(parseHtml(content, sagakSchema, document))
   }
 
   /**
@@ -196,16 +295,94 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
-   * 현재 선택 영역에 HTML을 삽입합니다
-   * CJK 지원 개선을 위해 `SelectionManager`를 사용합니다
+   * 커맨드가 이 영역의 상태를 읽고 고치는 창구입니다.
+   *
+   * `EditorCore` 가 이것으로 모델 커맨드를 레지스트리에 얹습니다
+   * (`src/model/register.ts`). 이 메서드가 있다는 것은 곧 **이 영역이 자기
+   * 문서를 소유한다**는 뜻이고, 히스토리 플러그인도 그 신호를 봅니다.
    */
-  insertHTML(html: string): boolean {
-    if (this.selectionManager) {
-      return this.selectionManager.insertHTML(html)
+  getStateHandle(): StateHandle {
+    return {
+      getState: () => this.view.state,
+      dispatch: (tr) => this.view.dispatch(tr),
+    }
+  }
+
+  /**
+   * **상태가 바뀔 때마다** 알립니다.
+   *
+   * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이므로 거르지 않고 전부
+   * 흘려보냅니다. 문서도 선택도 안 바뀌고 `storedMarks` 만 바뀌는 경우가
+   * 있는데(캐럿만 둔 채 굵게를 누른 것) 툴바는 그것도 봐야 합니다.
+   *
+   * 예전에 구독하는 쪽이 들고 있던 가드 셋(IME 조합 중 무시 · 다음 프레임까지
+   * 지연 · 선택이 에디터 밖이면 건너뜀)은 **여기 없습니다.** 조합 중에는
+   * `prosemirror-view` 가 트랜잭션을 안 만들고, 트랜잭션이 왔다는 것은 이미
+   * 확정된 상태라는 뜻이며, 이 상태는 애초에 이 에디터의 것입니다.
+   */
+  subscribe(listener: ModelListener): () => void {
+    this.listeners.add(listener)
+
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  /**
+   * 문서를 건드리지 않는 표시 — 찾기 강조가 씁니다
+   */
+  getHighlighter(): Highlighter {
+    return {
+      set: (ranges) => this.setHighlights(ranges),
+      clear: () => this.setHighlights([]),
+      scrollTo: (pos) => this.scrollTo(pos),
+    }
+  }
+
+  private setHighlights(ranges: HighlightRange[]): void {
+    const size = this.view.state.doc.content.size
+    const decorations = ranges
+      .filter((range) => range.from >= 0 && range.to <= size)
+      .map((range) =>
+        Decoration.inline(range.from, range.to, {
+          ...(range.className ? { class: range.className } : {}),
+          ...(range.style ? { style: range.style } : {}),
+        })
+      )
+
+    /*
+     * 메타만 실은 트랜잭션입니다 — `docChanged` 도 선택 변화도 없어서
+     * 내용 변경 이벤트가 안 나갑니다. 저장이 더러워지지 않습니다.
+     */
+    this.view.dispatch(this.view.state.tr.setMeta(highlightKey, decorations))
+  }
+
+  private scrollTo(pos: number): void {
+    if (pos < 0 || pos > this.view.state.doc.content.size) {
+      return
     }
 
+    const { node } = this.view.domAtPos(pos)
+    const element =
+      node.nodeType === Node.ELEMENT_NODE
+        ? (node as Element)
+        : node.parentElement
+
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  /**
+   * 현재 선택 영역에 HTML을 삽입합니다
+   */
+  insertHTML(html: string): boolean {
     try {
-      return insertHTMLAtSelection(html)
+      const source = document.createElement('div')
+      source.innerHTML = html
+
+      const slice = DOMParser.fromSchema(sagakSchema).parseSlice(source)
+      this.view.dispatch(this.view.state.tr.replaceSelection(slice))
+
+      return true
     } catch (e) {
       this.reportError(e, 'HTML 삽입 실패:')
       return false
@@ -214,15 +391,12 @@ export class WysiwygArea implements EditingArea {
 
   /**
    * 현재 선택 영역에 텍스트를 삽입합니다
-   * CJK 지원 개선을 위해 `SelectionManager`를 사용합니다
    */
   insertText(text: string): boolean {
-    if (this.selectionManager) {
-      return this.selectionManager.insertText(text)
-    }
-
     try {
-      return insertTextAtSelection(text)
+      this.view.dispatch(this.view.state.tr.insertText(text))
+
+      return true
     } catch (e) {
       this.reportError(e, '텍스트 삽입 실패:')
       return false
@@ -233,8 +407,9 @@ export class WysiwygArea implements EditingArea {
    * 네이티브 `execCommand`를 직접 실행합니다 (탈출구)
    *
    * @deprecated 서식은 커맨드 레지스트리(`EditorCore.getCommandRegistry()`)를
-   * 통해 실행하세요. 이 메서드는 레지스트리가 다루지 않는 브라우저 명령을
-   * 위한 하위 호환 탈출구로만 남아 있습니다.
+   * 통해 실행하세요. PM 이 DOM 을 소유한 뒤로는 이 경로가 **모델을 거치지
+   * 않습니다** — DOM 이 바뀐 것을 PM 이 나중에 읽어 모델로 되돌리므로 결과가
+   * 스키마에 눌립니다.
    */
   execCommand(command: string, value?: string): boolean {
     try {
@@ -249,52 +424,62 @@ export class WysiwygArea implements EditingArea {
    * 선택된 텍스트를 가져옵니다
    */
   getSelectedText(): string {
-    if (this.selectionManager) {
-      return this.selectionManager.getSelectedText()
-    }
+    const { from, to } = this.view.state.selection
 
-    const selection = window.getSelection()
-
-    return selection ? selection.toString() : ''
+    return this.view.state.doc.textBetween(from, to, '\n')
   }
 
   /**
    * 선택된 HTML을 가져옵니다
    */
   getSelectedHTML(): string {
-    if (this.selectionManager) {
-      return this.selectionManager.getSelectedHTML()
-    }
+    const slice = this.view.state.selection.content()
+    const fragment = DOMSerializer.fromSchema(sagakSchema).serializeFragment(
+      slice.content,
+      { document }
+    )
+    const holder = document.createElement('div')
+    holder.appendChild(fragment)
 
-    const selection = window.getSelection()
-
-    if (!selection || selection.rangeCount === 0) {
-      return ''
-    }
-
-    const range = selection.getRangeAt(0)
-    const fragment = range.cloneContents()
-    const div = document.createElement('div')
-    div.appendChild(fragment)
-
-    return div.innerHTML
+    return holder.innerHTML
   }
 
   /**
    * 현재 선택 영역을 저장합니다
+   *
+   * 대화상자가 포커스를 가져가는 동안 쓰던 것입니다. 이제는 위치 정수 둘이라
+   * DOM 이 바뀌어도 가리키는 자리가 유지됩니다.
    */
   saveSelection(): void {
-    if (this.selectionManager) {
-      this.selectionManager.saveSelection()
-    }
+    const { anchor, head } = this.view.state.selection
+
+    this.savedSelection = { anchor, head }
   }
 
   /**
    * 저장된 선택 영역을 복원합니다
    */
   restoreSelection(): void {
-    if (this.selectionManager) {
-      this.selectionManager.restoreSelection()
+    if (!this.savedSelection) {
+      return
+    }
+
+    const { doc } = this.view.state
+    const limit = doc.content.size
+
+    try {
+      this.view.dispatch(
+        this.view.state.tr.setSelection(
+          TextSelection.create(
+            doc,
+            Math.min(this.savedSelection.anchor, limit),
+            Math.min(this.savedSelection.head, limit)
+          )
+        )
+      )
+      this.view.focus()
+    } catch (e) {
+      this.reportError(e, '선택 영역 복원 실패:')
     }
   }
 
@@ -302,126 +487,191 @@ export class WysiwygArea implements EditingArea {
    * IME 입력이 진행 중인지 확인합니다
    */
   isComposing(): boolean {
-    if (this.selectionManager) {
-      return this.selectionManager.getIsComposing()
-    }
-
-    return false
+    return this.view.composing
   }
 
   /**
-   * 이벤트 리스너를 초기화합니다
+   * 문서를 통째로 갈아 끼웁니다 — 되돌리기 기록도 새로 시작합니다
    */
-  private initializeEventListeners(): void {
-    this.element.addEventListener('input', () => {
-      if (!this.eventBus) return
+  private replaceDocument(doc: PMNode): void {
+    const next = EditorState.create({ doc, plugins: editingPlugins() })
 
+    this.view.updateState(next)
+
+    for (const listener of this.listeners) {
+      listener(next, null)
+    }
+
+    this.emitHistoryState()
+  }
+
+  /**
+   * **모든 변경이 여기를 지납니다.**
+   *
+   * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이라, 예전처럼 DOM 이벤트를
+   * 종류별로 듣고 짐작할 필요가 없습니다.
+   */
+  private applyTransaction(tr: Transaction): void {
+    const previous = this.view.state
+    const next = previous.apply(tr)
+
+    this.view.updateState(next)
+
+    for (const listener of this.listeners) {
+      listener(next, tr)
+    }
+
+    if (!this.eventBus) {
+      return
+    }
+
+    if (tr.docChanged) {
       /*
        * `content` 는 **읽을 때** 직렬화합니다.
        *
-       * 이전에는 여기서 `this.element.innerHTML` 을 바로 담았습니다. 그러면
-       * 키를 누를 때마다 문서 전체가 문자열로 만들어지는데, 재 보니 2000문단
-       * (222 KB) 에서 키 하나당 0.925 ms 였습니다. 문서 크기에 비례합니다.
-       *
-       * 그런데 **구독자 둘 다 이 값을 읽지 않습니다** — `EditorCore` 는
-       * `updateFormattingState()` 로 넘기고(인자를 받지 않습니다), 자동 저장은
-       * `() => scheduleSave()` 입니다. 즉 아무도 안 보는 문자열을 매번
-       * 만들고 있었습니다.
-       *
-       * 게터로 두면 계약은 그대로이고 아무도 안 읽으면 비용이 0 입니다.
+       * 구독자 둘 다(`EditorCore` 의 서식 상태 갱신, 자동 저장) 이 값을 읽지
+       * 않습니다. 게터로 두면 계약은 그대로이고 아무도 안 읽으면 비용이 0 입니다.
        */
-      const element = this.element
+      const read = () => this.getRawContent()
+
       this.eventBus.emit(WysiwygEvents.WYSIWYG_CONTENT_CHANGED, {
         get content(): string {
-          return element.innerHTML
+          return read()
         },
       })
-    })
 
-    this.element.addEventListener('focus', () => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_FOCUSED)
-      }
-    })
-
-    this.element.addEventListener('blur', () => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_BLURRED)
-      }
-    })
-
-    this.documentSelectionChangeHandler = () => {
-      const selection = window.getSelection()
-      if (selection && this.element.contains(selection.anchorNode as Node)) {
-        if (this.eventBus) {
-          this.eventBus.emit(WysiwygEvents.WYSIWYG_SELECTION_CHANGED)
-        }
-      }
+      this.emitHistoryState()
     }
-    document.addEventListener(
-      'selectionchange',
-      this.documentSelectionChangeHandler
-    )
 
-    this.element.addEventListener('paste', (event) => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_PASTE, { event })
-      }
-      this.handleSanitizedPaste(event)
-    })
+    if (!next.selection.eq(previous.selection)) {
+      this.eventBus.emit(WysiwygEvents.WYSIWYG_SELECTION_CHANGED)
+    }
+  }
 
-    this.element.addEventListener('keydown', (event) => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_KEYDOWN, { event })
-      }
-    })
+  private emitHistoryState(): void {
+    if (!this.eventBus) {
+      return
+    }
 
-    this.element.addEventListener('keyup', (event) => {
-      if (this.eventBus) {
-        this.eventBus.emit(WysiwygEvents.WYSIWYG_KEYUP, { event })
-      }
+    const undoSize = undoDepth(this.view.state)
+    const redoSize = redoDepth(this.view.state)
+
+    this.eventBus.emit(HistoryEvents.HISTORY_STATE_CHANGED, {
+      canUndo: undoSize > 0,
+      canRedo: redoSize > 0,
+      undoSize,
+      redoSize,
     })
   }
 
+  private domAttributes(): Record<string, string> {
+    return {
+      class: this.className,
+      spellcheck: this.spellCheck ? 'true' : 'false',
+    }
+  }
+
   /**
-   * 붙여넣기된 HTML을 정화한 뒤 삽입합니다
+   * 붙여넣기.
    *
-   * `text/html` 데이터가 있을 때만 개입하여 기본 동작을 취소하고 정화된
-   * HTML을 삽입합니다. 이미지 붙여넣기는 이미지 업로드 플러그인이 처리하도록
-   * 건너뛰고, 순수 텍스트는 브라우저 기본 동작(안전함)에 맡깁니다.
+   * PM 이 클립보드를 자기 파서로 읽습니다 — 스키마 밖의 것은 애초에 못
+   * 들어오므로 따로 소독하지 않습니다. 이미지만 비켜 줍니다.
    */
-  private handleSanitizedPaste(event: ClipboardEvent): void {
+  private handlePaste(event: ClipboardEvent): boolean {
+    if (this.eventBus) {
+      this.eventBus.emit(WysiwygEvents.WYSIWYG_PASTE, { event })
+    }
+
     if (event.defaultPrevented) {
+      return true
+    }
+
+    const items = Array.from(event.clipboardData?.items ?? [])
+
+    /* 이미지 붙여넣기는 업로드 플러그인의 몫입니다 */
+    return items.some((item) => item.type.startsWith('image/'))
+  }
+
+  /**
+   * DOM 이벤트를 버스로 옮깁니다
+   *
+   * 내용과 선택은 여기 없습니다 — 트랜잭션에서 나옵니다.
+   */
+  private listenToDomEvents(): void {
+    const forward = (type: string, event: string) => {
+      const handler = (e: Event) => {
+        this.eventBus?.emit(event, { event: e })
+      }
+
+      this.element.addEventListener(type, handler)
+      this.unsubscribers.push(() =>
+        this.element.removeEventListener(type, handler)
+      )
+    }
+
+    const announce = (type: string, event: string) => {
+      const handler = () => {
+        this.eventBus?.emit(event)
+      }
+
+      this.element.addEventListener(type, handler)
+      this.unsubscribers.push(() =>
+        this.element.removeEventListener(type, handler)
+      )
+    }
+
+    announce('focus', WysiwygEvents.WYSIWYG_FOCUSED)
+    announce('blur', WysiwygEvents.WYSIWYG_BLURRED)
+    forward('keydown', WysiwygEvents.WYSIWYG_KEYDOWN)
+    forward('keyup', WysiwygEvents.WYSIWYG_KEYUP)
+  }
+
+  /**
+   * 되돌리기·다시 하기는 **버스로 들어옵니다.**
+   *
+   * 키보드 플러그인이 `Ctrl+Z` 를 여기로 옮기고, 툴바 버튼도 같은 이벤트를
+   * 씁니다. 그래서 뷰에는 단축키를 안 답니다 — 입구가 둘이면 한 번에 두 번
+   * 되돌아갑니다.
+   */
+  private listenToHistoryEvents(): void {
+    if (!this.eventBus) {
       return
     }
 
-    const clipboard = event.clipboardData
-    if (!clipboard) {
-      return
+    const bus = this.eventBus
+    const run = (
+      command: typeof undo,
+      action: 'undo' | 'redo'
+    ): (() => boolean) => {
+      return () => {
+        const done = command(this.view.state, (tr) => this.view.dispatch(tr))
+
+        if (done) {
+          bus.emit(CoreEvents.CONTENT_RESTORED, { action })
+        }
+
+        return done
+      }
     }
 
-    // 이미지 붙여넣기는 이미지 업로드 플러그인이 처리합니다
-    const hasImage = Array.from(clipboard.items ?? []).some((item) =>
-      item.type.startsWith('image/')
+    this.unsubscribers.push(
+      bus.on(HistoryEvents.UNDO, 'on', run(undo, 'undo')),
+      bus.on(HistoryEvents.REDO, 'on', run(redo, 'redo')),
+
+      /*
+       * `CAPTURE_SNAPSHOT` 은 **"여기서 끊어라"** 입니다.
+       *
+       * 스냅샷 히스토리에서는 지금 상태를 통째로 찍어 두는 일이었지만, 모델에는
+       * 찍을 것이 없습니다 — 바뀐 것은 트랜잭션 자신이 알고 있습니다. 남는 뜻은
+       * **다음 변경을 앞의 것과 한 덩어리로 묶지 말라**이고, 그게 `closeHistory`
+       * 입니다.
+       */
+      bus.on(CoreEvents.CAPTURE_SNAPSHOT, 'on', () => {
+        this.view.dispatch(closeHistory(this.view.state.tr))
+
+        return true
+      })
     )
-    if (hasImage) {
-      return
-    }
-
-    const html = clipboard.getData('text/html')
-    if (!html) {
-      // 순수 텍스트 붙여넣기는 브라우저 기본 동작에 맡깁니다
-      return
-    }
-
-    event.preventDefault()
-    const clean = this.sanitize(html)
-
-    if (this.selectionManager) {
-      this.selectionManager.insertHTML(clean)
-    } else {
-      insertHTMLAtSelection(clean)
-    }
   }
 
   /**
@@ -446,27 +696,21 @@ export class WysiwygArea implements EditingArea {
 
   /**
    * 리소스를 정리합니다
-   *
-   * 요소를 DOM에서 제거하고, `document`에 등록한 `selectionchange` 리스너와
-   * `ResizeObserver`를 해제합니다. 요소에 직접 등록한 리스너는 요소가
-   * 참조 해제되면 함께 정리됩니다.
    */
   destroy(): void {
-    this.storedMarksCleanup?.()
-    this.storedMarksCleanup = undefined
-
-    if (this.documentSelectionChangeHandler) {
-      document.removeEventListener(
-        'selectionchange',
-        this.documentSelectionChangeHandler
-      )
-      this.documentSelectionChangeHandler = undefined
+    for (const unsubscribe of this.unsubscribers) {
+      unsubscribe()
     }
+    this.unsubscribers = []
+    this.listeners.clear()
 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()
       this.resizeObserver = undefined
     }
+
+    /* `mount` 로 만든 뷰는 요소를 남깁니다 — 치우는 것은 우리 몫입니다 */
+    this.view.destroy()
 
     if (this.element.parentNode) {
       this.element.parentNode.removeChild(this.element)

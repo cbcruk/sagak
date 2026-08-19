@@ -6,6 +6,15 @@
 @import './kinu.css';
 
 /*
+ * `prosemirror-view` 가 편집 표면을 그리는 데 **기대는 규칙들**입니다.
+ *
+ * `white-space: pre-wrap` 이 없으면 연속 공백이 접히고, `.ProseMirror-separator`
+ * 규칙이 없으면 빈 문단의 캐럿 자리가 보입니다. 우리 규칙보다 먼저 와야
+ * 덮어쓸 수 있습니다.
+ */
+@import 'prosemirror-view/style/prosemirror.css';
+
+/*
  * 색은 두 무리로 나뉩니다.
  *
  * 크롬 — 툴바, 컨테이너, 메뉴처럼 에디터를 감싸는 부분입니다. kinu 의 `--k-*`
@@ -284,6 +293,11 @@
   outline: none;
 }
 
+/* 찾기 강조 — 문서가 아니라 화면에만 있는 표시입니다 */
+.modern-wysiwyg-area .find-highlight {
+  border-radius: 2px;
+}
+
 /* Editor content normalization */
 .modern-wysiwyg-area p {
   margin: 0 0 0.5em 0;
@@ -306,6 +320,17 @@
 
 .modern-wysiwyg-area li {
   margin: 0.25em 0;
+}
+
+/*
+ * **목록 항목은 문단을 감쌉니다.**
+ *
+ * 스키마에서 `<li>` 의 내용이 블록이라 `<li><p>하나</p></li>` 가 됩니다
+ * (`docs/prosemirror-migration.md` §2-2). 그대로 두면 문단의 아래 여백이
+ * 항목마다 붙어 목록이 성기게 벌어집니다.
+ */
+.modern-wysiwyg-area li > p {
+  margin: 0;
 }
 
 .modern-wysiwyg-area h1,

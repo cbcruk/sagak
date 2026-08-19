@@ -36,11 +36,18 @@ describe('Editor Core', () => {
     const editableArea = container.querySelector('[contenteditable="true"]')
     expect(editableArea).not.toBeNull()
 
+    /*
+     * 편집 영역이 선택을 자기 것으로 읽으려면 **포커스가 있어야 합니다** —
+     * 밖에서 일어난 선택까지 문서 선택으로 받으면 안 되기 때문입니다.
+     */
+    ;(editableArea as HTMLElement).focus()
+
     const range = document.createRange()
     range.selectNodeContents(editableArea!)
     const selection = window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
+    document.dispatchEvent(new Event('selectionchange'))
 
     editor.exec(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Georgia' })
 
@@ -75,11 +82,18 @@ describe('EventBus Integration', () => {
     const editableArea = container.querySelector('[contenteditable="true"]')
     expect(editableArea).not.toBeNull()
 
+    /*
+     * 편집 영역이 선택을 자기 것으로 읽으려면 **포커스가 있어야 합니다** —
+     * 밖에서 일어난 선택까지 문서 선택으로 받으면 안 되기 때문입니다.
+     */
+    ;(editableArea as HTMLElement).focus()
+
     const range = document.createRange()
     range.selectNodeContents(editableArea!)
     const selection = window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
+    document.dispatchEvent(new Event('selectionchange'))
 
     context.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Courier New' })
 
@@ -92,11 +106,18 @@ describe('EventBus Integration', () => {
     context.eventBus.on(FontEvents.FONT_FAMILY_CHANGED, 'after', handler)
 
     const editableArea = container.querySelector('[contenteditable="true"]')
+    /*
+     * 편집 영역이 선택을 자기 것으로 읽으려면 **포커스가 있어야 합니다** —
+     * 밖에서 일어난 선택까지 문서 선택으로 받으면 안 되기 때문입니다.
+     */
+    ;(editableArea as HTMLElement).focus()
+
     const range = document.createRange()
     range.selectNodeContents(editableArea!)
     const selection = window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
+    document.dispatchEvent(new Event('selectionchange'))
 
     context.eventBus.emit(FontEvents.FONT_FAMILY_CHANGED, { fontFamily: 'Verdana' })
 

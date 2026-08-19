@@ -1,8 +1,10 @@
+import type { Node as PMNode } from 'prosemirror-model'
 import { logger } from '@/core/logger'
 import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
-import type { Plugin, EditorContext } from '@/core'
+import type { Plugin, EditorContext, Highlighter } from '@/core'
 import { FindReplaceEvents, CoreEvents } from '@/core'
+import { modelHandle } from '@/model/bridge'
 
 /**
  * 찾기/바꾸기 플러그인 설정 옵션
@@ -95,11 +97,20 @@ export interface ReplaceData extends FindData {
   replacement: string
 }
 
+/**
+ * 일치 하나 — **모델 좌표**입니다.
+ *
+ * 예전에는 `{node: Text, offset, length}` 로 DOM 을 가리켰고, 강조도 그 자리에
+ * `<span>` 을 끼워 넣어 만들었습니다. 편집 영역이 문서 모델을 갖게 되면서
+ * 그 span 이 **문서의 일부가 됩니다** — 찾기를 한 번 했다고 글에 배경색이
+ * 칠해지고 저장물에도 들어갑니다.
+ *
+ * 정수 둘로 바뀌면서 강조는 데코레이션(화면에만 있는 것)이 되고, 바꾸기는
+ * 트랜잭션이 됩니다. 문서가 바뀌어도 남은 일치의 자리는 매핑으로 따라옵니다.
+ */
 interface Match {
-  node: Text
-  offset: number
-  length: number
-  element?: HTMLElement
+  from: number
+  to: number
 }
 
 /**
@@ -124,24 +135,6 @@ function isReplaceData(data: unknown): data is ReplaceData {
     'replacement' in data &&
     typeof (data as ReplaceData).replacement === 'string'
   )
-}
-
-/**
- * 요소의 모든 텍스트 노드를 가져옵니다
- */
-function getTextNodes(element: Node): Text[] {
-  const textNodes: Text[] = []
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null)
-
-  let node: Node | null
-
-  while ((node = walker.nextNode())) {
-    if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-      textNodes.push(node as Text)
-    }
-  }
-
-  return textNodes
 }
 
 /**
@@ -208,10 +201,14 @@ function buildPattern(
 }
 
 /**
- * 텍스트 노드에서 일치 항목을 찾습니다
+ * 문서에서 일치 항목을 찾습니다.
+ *
+ * 텍스트 조각 하나 안에서만 찾습니다 — 서식이 바뀌는 자리에서 조각이 갈리므로
+ * `<b>사</b>과` 의 "사과" 는 안 잡힙니다. DOM 텍스트 노드를 훑던 예전과 같은
+ * 성질이라 동작은 그대로입니다.
  */
 function findMatches(
-  element: HTMLElement,
+  doc: PMNode,
   query: string,
   options: { caseSensitive?: boolean; wholeWord?: boolean } = {}
 ): Match[] {
@@ -221,13 +218,16 @@ function findMatches(
 
   const { caseSensitive = false, wholeWord = false } = options
   const matches: Match[] = []
-  const textNodes = getTextNodes(element)
 
   const flags = caseSensitive ? 'g' : 'gi'
   const pattern = buildPattern(query, flags, wholeWord)
 
-  for (const node of textNodes) {
-    const text = node.textContent || ''
+  doc.descendants((node, pos) => {
+    if (!node.isText) {
+      return true
+    }
+
+    const text = node.text ?? ''
 
     /*
      * 경계는 **일치가 하나라도 나온 뒤에** 계산합니다.
@@ -254,9 +254,11 @@ function findMatches(
         continue
       }
 
-      matches.push({ node, offset: start, length: match[0].length })
+      matches.push({ from: pos + start, to: pos + end })
     }
-  }
+
+    return false
+  })
 
   return matches
 }
@@ -266,60 +268,6 @@ function findMatches(
  */
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/**
- * 일치 항목을 강조 표시합니다
- *
- * **원본 노드에는 앞부분을 남깁니다.** 호출부는 한 노드 안의 여러 일치를
- * 오프셋 역순으로 강조하는데, 이는 앞쪽 오프셋이 그대로 유효하다는 전제입니다.
- * 예전에는 반대로 뒷부분을 남겨서 그 전제가 깨졌습니다 — 두 번째 이후의
- * 강조가 빈 노드를 잘라 **빈 `<span>`** 이 되었고, "3개 일치" 라고 세어 놓고
- * 실제로는 하나만 칠해졌습니다. ASCII 에서도 재현됩니다.
- */
-function highlightMatch(match: Match, color: string): void {
-  const { node, offset, length } = match
-
-  if (!node.parentNode) return
-
-  const text = node.textContent!
-  const before = text.substring(0, offset)
-  const matchText = text.substring(offset, offset + length)
-  const after = text.substring(offset + length)
-
-  const highlight = document.createElement('span')
-  highlight.style.backgroundColor = color
-  highlight.className = 'find-highlight'
-  highlight.textContent = matchText
-
-  const parent = node.parentNode
-  const next = node.nextSibling
-
-  node.textContent = before
-  parent.insertBefore(highlight, next)
-
-  if (after) {
-    parent.insertBefore(document.createTextNode(after), next)
-  }
-
-  match.element = highlight
-}
-
-/**
- * 모든 강조 표시를 제거합니다
- */
-function clearHighlights(element: HTMLElement): void {
-  const highlights = element.querySelectorAll('.find-highlight')
-  highlights.forEach((highlight) => {
-    const parent = highlight.parentNode
-
-    if (parent) {
-      const text = document.createTextNode(highlight.textContent || '')
-      parent.replaceChild(text, highlight)
-
-      parent.normalize()
-    }
-  })
 }
 
 /**
@@ -382,15 +330,59 @@ export function createFindReplacePlugin(
 
   const unsubscribers: Array<() => void> = []
 
-  let editorElement: HTMLElement | null = null
   let currentMatches: Match[] = []
   let currentMatchIndex = -1
+  let highlighter: Highlighter | undefined
 
   return {
     name: 'utility:find-replace',
 
     initialize(context: EditorContext) {
-      const { eventBus, config } = context
+      const { eventBus } = context
+
+      const reportError = createErrorReporter(
+        eventBus,
+        'plugin:utility:find-replace'
+      )
+      const selectionManager = context.selectionManager
+
+      /**
+       * 편집 영역은 **부를 때마다 다시 묻습니다.**
+       *
+       * 모드를 오가면 영역이 바뀌고, 소스·텍스트 모드에는 문서 모델이 아예
+       * 없습니다. 초기화 때 한 번 잡아 두면 그 뒤로 엉뚱한 곳을 가리킵니다.
+       */
+      const area = () => context.editingAreaManager?.getCurrentArea()
+      const state = () => modelHandle(context)?.getState() ?? null
+
+      const paint = (): void => {
+        highlighter = area()?.getHighlighter?.() ?? highlighter
+
+        highlighter?.set(
+          currentMatches.map((match, i) => ({
+            from: match.from,
+            to: match.to,
+            className: 'find-highlight',
+            style: `background-color: ${
+              i === currentMatchIndex ? currentHighlightColor : highlightColor
+            }`,
+          }))
+        )
+      }
+
+      const clear = (): void => {
+        currentMatches = []
+        currentMatchIndex = -1
+        ;(area()?.getHighlighter?.() ?? highlighter)?.clear()
+      }
+
+      const reveal = (): void => {
+        if (currentMatchIndex < 0) return
+
+        ;(area()?.getHighlighter?.() ?? highlighter)?.scrollTo(
+          currentMatches[currentMatchIndex].from
+        )
+      }
 
       /**
        * 찾기 상태를 한 곳에서 알립니다.
@@ -418,168 +410,84 @@ export function createFindReplacePlugin(
         })
       }
 
-      const reportError = createErrorReporter(
-        eventBus,
-        'plugin:utility:find-replace'
-      )
-      const selectionManager = context.selectionManager
-
-      editorElement =
-        ('element' in config && config.element instanceof HTMLElement
-          ? config.element
-          : null) ||
-        selectionManager?.getElement() ||
-        null
-
-      const unsubFindBefore = eventBus.on(
-        findEventName,
-        'before',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(findEventName, 'before', (data?: unknown) => {
           if (
             isBlockedByComposition(selectionManager, checkComposition, 'Find')
           ) {
             return false
           }
+
           if (!isFindData(data)) {
             logger.warn('Find blocked: Invalid find data')
             return false
           }
 
-          if (!editorElement) {
-            logger.warn('Find blocked: No editor element')
+          if (!state()) {
+            logger.warn('Find blocked: No document')
             return false
           }
 
           return true
-        }
+        })
       )
 
-      unsubscribers.push(unsubFindBefore)
+      unsubscribers.push(
+        eventBus.on(findEventName, 'on', (data?: unknown) => {
+          try {
+            const current = state()
 
-      const unsubFindOn = eventBus.on(findEventName, 'on', (data?: unknown) => {
-        try {
-          if (!isFindData(data) || !editorElement) {
+            if (!isFindData(data) || !current) {
+              return false
+            }
+
+            currentMatches = findMatches(current.doc, data.query, {
+              caseSensitive: data.caseSensitive,
+              wholeWord: data.wholeWord,
+            })
+            currentMatchIndex = currentMatches.length > 0 ? 0 : -1
+
+            paint()
+            reveal()
+            emitFindState('find')
+
+            return true
+          } catch (error) {
+            reportError(error, 'Failed to find text:')
+            return false
+          }
+        })
+      )
+
+      /** 다음·이전은 인덱스만 옮깁니다 — 문서는 그대로입니다 */
+      const step = (
+        delta: number,
+        action: 'next' | 'previous'
+      ): (() => boolean) => {
+        return () => {
+          if (currentMatches.length === 0) {
             return false
           }
 
-          clearHighlights(editorElement)
-          currentMatches = []
-          currentMatchIndex = -1
+          currentMatchIndex =
+            (currentMatchIndex + delta + currentMatches.length) %
+            currentMatches.length
 
-          currentMatches = findMatches(editorElement, data.query, {
-            caseSensitive: data.caseSensitive,
-            wholeWord: data.wholeWord,
-          })
-
-          for (let i = currentMatches.length - 1; i >= 0; i--) {
-            const color = i === 0 ? currentHighlightColor : highlightColor
-            highlightMatch(currentMatches[i], color)
-          }
-
-          if (currentMatches.length > 0) {
-            currentMatchIndex = 0
-
-            if (
-              currentMatches[0].element &&
-              typeof currentMatches[0].element.scrollIntoView === 'function'
-            ) {
-              currentMatches[0].element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-              })
-            }
-          }
-
-          emitFindState('find')
+          paint()
+          reveal()
+          emitFindState(action)
 
           return true
-        } catch (error) {
-          reportError(error, 'Failed to find text:')
-          return false
         }
-      })
+      }
 
-      unsubscribers.push(unsubFindOn)
+      unsubscribers.push(eventBus.on(findNextEventName, 'on', step(1, 'next')))
+      unsubscribers.push(
+        eventBus.on(findPreviousEventName, 'on', step(-1, 'previous'))
+      )
 
-      const unsubFindNext = eventBus.on(findNextEventName, 'on', () => {
-        if (currentMatches.length === 0) {
-          return false
-        }
-
-        if (
-          currentMatchIndex >= 0 &&
-          currentMatches[currentMatchIndex].element
-        ) {
-          currentMatches[currentMatchIndex].element!.style.backgroundColor =
-            highlightColor
-        }
-
-        currentMatchIndex = (currentMatchIndex + 1) % currentMatches.length
-
-        if (currentMatches[currentMatchIndex].element) {
-          currentMatches[currentMatchIndex].element!.style.backgroundColor =
-            currentHighlightColor
-
-          if (
-            typeof currentMatches[currentMatchIndex].element!.scrollIntoView ===
-            'function'
-          ) {
-            currentMatches[currentMatchIndex].element!.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-            })
-          }
-        }
-
-        emitFindState('next')
-
-        return true
-      })
-      unsubscribers.push(unsubFindNext)
-
-      const unsubFindPrevious = eventBus.on(findPreviousEventName, 'on', () => {
-        if (currentMatches.length === 0) {
-          return false
-        }
-
-        if (
-          currentMatchIndex >= 0 &&
-          currentMatches[currentMatchIndex].element
-        ) {
-          currentMatches[currentMatchIndex].element!.style.backgroundColor =
-            highlightColor
-        }
-
-        currentMatchIndex = currentMatchIndex - 1
-        if (currentMatchIndex < 0) {
-          currentMatchIndex = currentMatches.length - 1
-        }
-
-        if (currentMatches[currentMatchIndex].element) {
-          currentMatches[currentMatchIndex].element!.style.backgroundColor =
-            currentHighlightColor
-
-          if (
-            typeof currentMatches[currentMatchIndex].element!.scrollIntoView ===
-            'function'
-          ) {
-            currentMatches[currentMatchIndex].element!.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-            })
-          }
-        }
-
-        emitFindState('previous')
-
-        return true
-      })
-      unsubscribers.push(unsubFindPrevious)
-
-      const unsubReplaceBefore = eventBus.on(
-        replaceEventName,
-        'before',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(replaceEventName, 'before', (data?: unknown) => {
           if (
             isBlockedByComposition(
               selectionManager,
@@ -589,6 +497,7 @@ export function createFindReplacePlugin(
           ) {
             return false
           }
+
           if (!isReplaceData(data)) {
             logger.warn('Replace blocked: Invalid replace data')
             return false
@@ -600,17 +509,16 @@ export function createFindReplacePlugin(
           }
 
           return true
-        }
+        })
       )
 
-      unsubscribers.push(unsubReplaceBefore)
-
-      const unsubReplaceOn = eventBus.on(
-        replaceEventName,
-        'on',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(replaceEventName, 'on', (data?: unknown) => {
           try {
-            if (!isReplaceData(data)) {
+            const handle = modelHandle(context)
+            const current = handle?.getState()
+
+            if (!isReplaceData(data) || !handle || !current) {
               return false
             }
 
@@ -618,27 +526,35 @@ export function createFindReplacePlugin(
               return false
             }
 
-            const currentMatch = currentMatches[currentMatchIndex]
-            if (currentMatch.element) {
-              currentMatch.element.textContent = data.replacement
-              currentMatch.element.style.backgroundColor = ''
-              currentMatch.element.className = ''
-            }
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-            currentMatches.splice(currentMatchIndex, 1)
+            const target = currentMatches[currentMatchIndex]
+            const tr = current.tr.insertText(
+              data.replacement,
+              target.from,
+              target.to
+            )
+
+            handle.dispatch(tr)
+
+            /*
+             * 남은 일치는 **다시 찾지 않고 자리만 옮깁니다.**
+             *
+             * 다시 찾으면 바꿔 넣은 글이 질의를 품고 있을 때(`a` → `aa`)
+             * 방금 만든 것이 새 일치로 잡혀 끝나지 않습니다.
+             */
+            currentMatches = currentMatches
+              .filter((_, i) => i !== currentMatchIndex)
+              .map((match) => ({
+                from: tr.mapping.map(match.from),
+                to: tr.mapping.map(match.to),
+              }))
 
             if (currentMatchIndex >= currentMatches.length) {
               currentMatchIndex = currentMatches.length - 1
             }
 
-            if (
-              currentMatchIndex >= 0 &&
-              currentMatches[currentMatchIndex].element
-            ) {
-              currentMatches[currentMatchIndex].element!.style.backgroundColor =
-                currentHighlightColor
-            }
-
+            paint()
             emitFindState('replace')
 
             return true
@@ -646,15 +562,11 @@ export function createFindReplacePlugin(
             reportError(error, 'Failed to replace text:')
             return false
           }
-        }
+        })
       )
 
-      unsubscribers.push(unsubReplaceOn)
-
-      const unsubReplaceAllBefore = eventBus.on(
-        replaceAllEventName,
-        'before',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(replaceAllEventName, 'before', (data?: unknown) => {
           if (
             isBlockedByComposition(
               selectionManager,
@@ -664,99 +576,87 @@ export function createFindReplacePlugin(
           ) {
             return false
           }
+
           if (!isReplaceData(data)) {
             logger.warn('Replace all blocked: Invalid replace data')
             return false
           }
 
-          if (!editorElement) {
-            logger.warn('Replace all blocked: No editor element')
+          if (!state()) {
+            logger.warn('Replace all blocked: No document')
             return false
           }
 
           return true
-        }
+        })
       )
 
-      unsubscribers.push(unsubReplaceAllBefore)
-
-      const unsubReplaceAllOn = eventBus.on(
-        replaceAllEventName,
-        'on',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(replaceAllEventName, 'on', (data?: unknown) => {
           try {
-            if (!isReplaceData(data) || !editorElement) {
+            const handle = modelHandle(context)
+            const current = handle?.getState()
+
+            if (!isReplaceData(data) || !handle || !current) {
               return false
             }
 
-            clearHighlights(editorElement)
-
-            const matches = findMatches(editorElement, data.query, {
+            const matches = findMatches(current.doc, data.query, {
               caseSensitive: data.caseSensitive,
               wholeWord: data.wholeWord,
             })
 
-            const replaceCount = matches.length
+            if (matches.length === 0) {
+              clear()
+              emitFindState('replaceAll', { replaceCount: 0 })
 
-            for (let i = matches.length - 1; i >= 0; i--) {
-              const match = matches[i]
-              const { node, offset, length } = match
-
-              const before = node.textContent!.substring(0, offset)
-              const after = node.textContent!.substring(offset + length)
-
-              node.textContent = before + data.replacement + after
+              return true
             }
 
-            currentMatches = []
-            currentMatchIndex = -1
+            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-            emitFindState('replaceAll', { replaceCount })
+            /* 뒤에서부터 갑니다 — 앞쪽 자리가 그대로 유효합니다 */
+            const tr = current.tr
+
+            for (let i = matches.length - 1; i >= 0; i -= 1) {
+              tr.insertText(data.replacement, matches[i].from, matches[i].to)
+            }
+
+            handle.dispatch(tr)
+            clear()
+            emitFindState('replaceAll', { replaceCount: matches.length })
 
             return true
           } catch (error) {
             reportError(error, 'Failed to replace all text:')
             return false
           }
-        }
+        })
       )
 
-      unsubscribers.push(unsubReplaceAllOn)
+      unsubscribers.push(
+        eventBus.on(clearFindEventName, 'on', () => {
+          try {
+            clear()
+            emitFindState('clear')
 
-      const unsubClearFind = eventBus.on(clearFindEventName, 'on', () => {
-        try {
-          if (!editorElement) {
+            return true
+          } catch (error) {
+            reportError(error, 'Failed to clear find highlights:')
             return false
           }
-
-          clearHighlights(editorElement)
-
-          currentMatches = []
-          currentMatchIndex = -1
-
-          emitFindState('clear')
-
-          return true
-        } catch (error) {
-          reportError(error, 'Failed to clear find highlights:')
-          return false
-        }
-      })
-
-      unsubscribers.push(unsubClearFind)
+        })
+      )
     },
 
     destroy() {
       unsubscribers.forEach((unsub) => unsub())
       unsubscribers.length = 0
 
-      if (editorElement) {
-        clearHighlights(editorElement)
-      }
-
+      highlighter?.clear()
+      highlighter = undefined
       currentMatches = []
       currentMatchIndex = -1
-      editorElement = null
     },
   }
 }

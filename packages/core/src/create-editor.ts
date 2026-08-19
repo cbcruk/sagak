@@ -115,11 +115,11 @@ export interface CreateEditorOptions {
   spellCheck?: boolean
 
   /**
-   * HTML sanitization for paste and setContent (default: enabled)
+   * HTML sanitization for paste and setContent
    *
-   * - `true` or omitted: use the default sanitizer (recommended)
-   * - `false`: disable sanitization (trusted content only)
-   * - `SanitizerOptions`: custom DOMPurify configuration
+   * @deprecated **아무 데도 안 쓰입니다.** 소독은 스키마가 합니다 — 스키마 밖의
+   * 것은 문서에 존재할 수 없습니다. `false` 를 줘도 정화가 꺼지지 않습니다
+   * (`docs/prosemirror-migration.md` §10).
    */
   sanitize?: SanitizeOption
 

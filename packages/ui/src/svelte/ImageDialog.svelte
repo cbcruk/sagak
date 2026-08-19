@@ -1,12 +1,11 @@
 <script lang="ts">
   import { Image as ImageIcon, Link as LinkIcon, Upload } from 'lucide'
-  import { ContentEvents } from 'sagak-core'
+  import { ContentEvents, imageOf } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import {
     ALLOWED_TYPES,
     MAX_FILE_SIZE,
-    getSelectedImage,
   } from '../components/image-dialog/image-dialog.shared'
 
   /**
@@ -73,13 +72,13 @@
   }
 
   export function open(): void {
-    editor.selectionManager?.saveSelection()
 
-    const img = getSelectedImage()
+    /* 모델에 물어봅니다 — `<img>` 요소를 찾아 스타일을 읽던 자리입니다 */
+    const img = imageOf(editor)
     src = img?.src ?? ''
     alt = img?.alt ?? ''
-    width = img?.style.width ?? ''
-    height = img?.style.height ?? ''
+    width = img?.width ?? ''
+    height = img?.height ?? ''
     isEditing = !!img
     mode = 'url'
     resetUpload()
@@ -87,11 +86,17 @@
     dialogEl.showModal()
   }
 
-  /** 닫은 다음 프레임에 선택을 되돌리고 적용합니다 */
+  /**
+   * 닫은 **다음 프레임**에 적용합니다.
+   *
+   * 예전에는 여기서 선택 영역도 되돌렸습니다 — 다이얼로그가 포커스를 가져가면
+   * 브라우저 선택이 풀렸기 때문입니다. 이제 선택은 문서 상태의 일부라 그럴
+   * 필요가 없지만, **닫고 나서 적용한다** 는 순서는 남습니다. 다이얼로그가 아직
+   * 열려 있는 동안 커맨드를 돌리면 포커스 되돌리기가 그 위에서 일어납니다.
+   */
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor.selectionManager?.restoreSelection()
       action()
     })
   }

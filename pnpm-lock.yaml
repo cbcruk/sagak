@@ -121,15 +121,33 @@ importers:
       dompurify:
         specifier: ^3.4.11
         version: 3.4.11
+      prosemirror-commands:
+        specifier: ^1.7.2
+        version: 1.7.2
+      prosemirror-history:
+        specifier: ^1.5.0
+        version: 1.5.0
+      prosemirror-keymap:
+        specifier: ^1.2.3
+        version: 1.2.3
       prosemirror-model:
         specifier: ^1.25.11
         version: 1.25.11
       prosemirror-schema-list:
         specifier: ^1.5.1
         version: 1.5.1
+      prosemirror-state:
+        specifier: ^1.4.4
+        version: 1.4.4
       prosemirror-tables:
         specifier: ^1.8.5
         version: 1.8.5
+      prosemirror-transform:
+        specifier: ^1.12.0
+        version: 1.12.0
+      prosemirror-view:
+        specifier: ^1.42.2
+        version: 1.42.2
     devDependencies:
       tsup:
         specifier: ^8.4.0

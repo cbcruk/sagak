@@ -3,6 +3,7 @@ export type { EventPhase, EventHandler, Unsubscribe } from './event-bus'
 
 export { PluginManager } from './plugin-manager'
 export type { Plugin, EditorContext, EditorConfig } from './types'
+export type { Highlighter, HighlightRange } from './types'
 
 export { definePlugin } from './define-plugin'
 export type {

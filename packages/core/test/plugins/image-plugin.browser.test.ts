@@ -3,45 +3,93 @@ import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
 import { createImagePlugin, ImagePlugin } from '@/plugins/image-plugin'
-import type { EditorContext } from '@/core/types'
+import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
+import { NodeSelection, TextSelection } from 'prosemirror-state'
+import type { EditorContext, EditingAreaManager } from '@/core/types'
 import type { ImageData } from '@/plugins/image-plugin'
 
+/**
+ * 이미지도 **문서 모델 위에서** 다룹니다.
+ *
+ * 예전에는 `document.createElement('img')` 를 만들어 선택 자리에 꽂고, 고칠
+ * 때는 DOM 선택에서 `<img>` 를 거슬러 찾았습니다. 이제 넣는 것은 트랜잭션이고
+ * 찾는 것은 `NodeSelection` 이나 캐럿 옆의 노드입니다.
+ *
+ * **정렬과 테두리는 안 붙습니다.** 스키마의 이미지가 갖는 것은 주소·대체글·
+ * 너비·높이 넷입니다. 제품의 다이얼로그도 그 넷만 보내므로 잃는 기능은
+ * 없지만, 이벤트로 직접 부르면 나머지는 조용히 빠집니다.
+ */
 describe('ImagePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let container: HTMLDivElement
+  let area: WysiwygArea
+  let element: HTMLElement
   let context: EditorContext
 
+  /** 문서의 첫 이미지를 통째로 고릅니다 */
+  const selectImage = (): void => {
+    const handle = area.getStateHandle()
+    const state = handle.getState()!
+    let at = -1
+
+    state.doc.descendants((node, pos) => {
+      if (at < 0 && node.type.name === 'image') at = pos
+      return at < 0
+    })
+
+    if (at < 0) return
+
+    handle.dispatch(
+      state.tr.setSelection(NodeSelection.create(state.doc, at))
+    )
+  }
+
+  /**
+   * 글 끝에 캐럿을 둡니다 — 이미지가 안 골린 상태.
+   *
+   * 문서 맨 앞은 안 됩니다. 이미지가 문단 처음에 들어가 있어 그 자리는
+   * "캐럿 바로 뒤가 이미지" 라 골린 것으로 칩니다.
+   */
+  const selectText = (): void => {
+    const handle = area.getStateHandle()
+    const state = handle.getState()!
+
+    handle.dispatch(
+      state.tr.setSelection(
+        TextSelection.create(state.doc, state.doc.content.size - 1)
+      )
+    )
+  }
+
+  const image = (): HTMLImageElement | null =>
+    element.querySelector('img')
+
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
+    container = document.createElement('div')
+    document.body.appendChild(container)
 
     eventBus = new EventBus()
+    area = new WysiwygArea({ container, eventBus })
+    area.setRawContent('<p>Hello World</p>')
+    element = area.getElement()
     selectionManager = new SelectionManager(element)
+
     context = {
       eventBus,
       selectionManager,
       config: {},
+      editingAreaManager: {
+        getCurrentArea: () => area,
+      } as unknown as EditingAreaManager,
     }
     pluginManager = new PluginManager(context)
-
-    // 선택 영역을 요소로 설정
-    const range = document.createRange()
-    range.selectNodeContents(element)
-    range.collapse(true)
-    const selection = window.getSelection()
-    if (selection) {
-      selection.removeAllRanges()
-      selection.addRange(range)
-    }
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    area.destroy()
+    document.body.removeChild(container)
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -153,68 +201,26 @@ describe('ImagePlugin', () => {
       expect(img?.style.height).toBe('200px')
     })
 
-    it('should insert image with border', () => {
-      // Given: 테두리가 지정된 이미지 데이터 준비
-      const imageData: ImageData = {
+    /**
+     * Why: 예전에는 `border`·`alignment` 를 `<img>` 에 인라인 스타일로 박았습니다.
+     * How: 스키마의 이미지에는 그 자리가 없어 **넘겨도 안 붙습니다.** 지금
+     *      제품의 다이얼로그도 이 둘을 보내지 않습니다
+     *      (`docs/prosemirror-migration.md` §10).
+     */
+    it('테두리·정렬은 더 이상 문서에 안 붙습니다', () => {
+      // When: 예전 옵션을 그대로 넘겨 봅니다
+      eventBus.emit('IMAGE_INSERT', {
         src: 'https://example.com/image.jpg',
         border: '2px solid red',
-      }
-
-      // When: IMAGE_INSERT 이벤트 발행
-      eventBus.emit('IMAGE_INSERT', imageData)
-
-      // Then: 이미지 테두리가 적용되어야 함
-      const img = element.querySelector('img')
-      expect(img?.style.border).toBe('2px solid red')
-    })
-
-    it('should insert image with left alignment', () => {
-      // Given: 왼쪽 정렬 이미지 데이터 준비
-      const imageData: ImageData = {
-        src: 'https://example.com/image.jpg',
-        alignment: 'left',
-      }
-
-      // When: IMAGE_INSERT 이벤트 발행
-      eventBus.emit('IMAGE_INSERT', imageData)
-
-      // Then: 왼쪽 정렬 스타일이 적용되어야 함
-      const img = element.querySelector('img')
-      expect(img?.style.display).toBe('block')
-      expect(img?.style.marginRight).toBe('auto')
-    })
-
-    it('should insert image with center alignment', () => {
-      // Given: 가운데 정렬 이미지 데이터 준비
-      const imageData: ImageData = {
-        src: 'https://example.com/image.jpg',
         alignment: 'center',
-      }
+      })
 
-      // When: IMAGE_INSERT 이벤트 발행
-      eventBus.emit('IMAGE_INSERT', imageData)
-
-      // Then: 가운데 정렬 스타일이 적용되어야 함
-      const img = element.querySelector('img')
-      expect(img?.style.display).toBe('block')
-      expect(img?.style.marginLeft).toBe('auto')
-      expect(img?.style.marginRight).toBe('auto')
-    })
-
-    it('should insert image with right alignment', () => {
-      // Given: 오른쪽 정렬 이미지 데이터 준비
-      const imageData: ImageData = {
-        src: 'https://example.com/image.jpg',
-        alignment: 'right',
-      }
-
-      // When: IMAGE_INSERT 이벤트 발행
-      eventBus.emit('IMAGE_INSERT', imageData)
-
-      // Then: 오른쪽 정렬 스타일이 적용되어야 함
-      const img = element.querySelector('img')
-      expect(img?.style.display).toBe('block')
-      expect(img?.style.marginLeft).toBe('auto')
+      // Then: 이미지는 들어가되 그 둘은 없습니다
+      const img = image()
+      expect(img).toBeTruthy()
+      expect(img!.style.border).toBe('')
+      expect(img!.style.display).toBe('')
+      expect(img!.style.marginLeft).toBe('')
     })
 
     it('should reject image without src', () => {
@@ -326,73 +332,46 @@ describe('ImagePlugin', () => {
 
     it('should update image width', () => {
       // Given: 이미지 선택
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       // When: IMAGE_UPDATE 이벤트 발행
       const result = eventBus.emit('IMAGE_UPDATE', { width: '500px' })
 
       // Then: 이미지 너비가 업데이트되어야 함
       expect(result).toBe(true)
-      expect(img?.style.width).toBe('500px')
+      expect(image()?.style.width).toBe('500px')
     })
 
     it('should update image alt text', () => {
       // Given: 이미지 선택
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       // When: IMAGE_UPDATE 이벤트 발행
       eventBus.emit('IMAGE_UPDATE', { alt: 'Updated alt' })
 
       // Then: 이미지 alt가 업데이트되어야 함
-      expect(img?.alt).toBe('Updated alt')
+      expect(image()?.alt).toBe('Updated alt')
     })
 
-    it('should update image alignment', () => {
+    /** 정렬은 문서에 자리가 없습니다 — 넘겨도 그대로입니다 */
+    it('정렬은 고쳐도 안 붙습니다', () => {
       // Given: 이미지 선택
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       // When: IMAGE_UPDATE 이벤트 발행
       eventBus.emit('IMAGE_UPDATE', { alignment: 'center' })
 
-      // Then: 이미지 정렬이 업데이트되어야 함
-      expect(img?.style.display).toBe('block')
-      expect(img?.style.marginLeft).toBe('auto')
-      expect(img?.style.marginRight).toBe('auto')
+      // Then: 아무것도 안 붙습니다
+      expect(image()?.style.display).toBe('')
+      expect(image()?.style.marginLeft).toBe('')
+      expect(image()?.style.marginRight).toBe('')
     })
 
     it('should fail when no image is selected', () => {
       // Given: console.warn spy 준비, 텍스트 선택
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      const p = element.querySelector('p')
-      const range = document.createRange()
-      range.selectNodeContents(p!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectText()
 
       // When: IMAGE_UPDATE 이벤트 발행
       const result = eventBus.emit('IMAGE_UPDATE', { width: '400px' })
@@ -408,14 +387,7 @@ describe('ImagePlugin', () => {
 
     it('should emit STYLE_CHANGED after update', () => {
       // Given: 이미지 선택, 이벤트 리스너 준비
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -454,13 +426,7 @@ describe('ImagePlugin', () => {
       let img = element.querySelector('img')
       expect(img).toBeTruthy()
 
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       // When: IMAGE_DELETE 이벤트 발행
       const result = eventBus.emit('IMAGE_DELETE')
@@ -474,14 +440,7 @@ describe('ImagePlugin', () => {
 
     it('should emit STYLE_CHANGED after deletion', () => {
       // Given: 이미지 선택, 이벤트 리스너 준비
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -502,14 +461,7 @@ describe('ImagePlugin', () => {
       // Given: console.warn spy 준비, 텍스트 선택
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      const p = element.querySelector('p')
-      const range = document.createRange()
-      range.selectNodeContents(p!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectText()
 
       // When: IMAGE_DELETE 이벤트 발행
       const result = eventBus.emit('IMAGE_DELETE')
@@ -562,14 +514,7 @@ describe('ImagePlugin', () => {
         src: 'https://example.com/image.jpg',
       })
 
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -593,14 +538,7 @@ describe('ImagePlugin', () => {
         src: 'https://example.com/image.jpg',
       })
 
-      const img = element.querySelector('img')
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
       const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -681,35 +619,28 @@ describe('ImagePlugin', () => {
         alt: 'Test',
       })
 
-      let img = element.querySelector('img')
-      expect(img).toBeTruthy()
-      expect(img?.style.width).toBe('300px')
+      expect(image()).toBeTruthy()
+      expect(image()?.style.width).toBe('300px')
 
       // When: 이미지 선택 및 수정
-      const range = document.createRange()
-      range.selectNode(img!)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      selectImage()
 
-      eventBus.emit('IMAGE_UPDATE', {
-        width: '500px',
-        alignment: 'center',
-      })
+      eventBus.emit('IMAGE_UPDATE', { width: '500px' })
 
-      // Then: 이미지가 수정되어야 함
-      expect(img?.style.width).toBe('500px')
-      expect(img?.style.marginLeft).toBe('auto')
-      expect(img?.style.marginRight).toBe('auto')
+      /*
+       * Then: 이미지가 수정되어야 함.
+       *
+       * 매번 다시 물어야 합니다 — 속성이 바뀌면 PM 이 `<img>` 를 다시 그려서
+       * 예전에 잡아 둔 요소는 문서에서 떨어져 나갑니다.
+       */
+      expect(image()?.style.width).toBe('500px')
 
       // When: 이미지 삭제
+      selectImage()
       eventBus.emit('IMAGE_DELETE')
 
       // Then: 이미지가 삭제되어야 함
-      img = element.querySelector('img')
-      expect(img).toBeNull()
+      expect(image()).toBeNull()
     })
 
     it('should handle multiple images', () => {
@@ -743,16 +674,14 @@ describe('ImagePlugin', () => {
         border: '1px solid #ccc',
       })
 
-      // Then: 모든 속성이 적용되어야 함
-      const img = element.querySelector('img')
+      // Then: 스키마가 아는 넷만 적용되어야 함
+      const img = image()
       expect(img?.src).toBe('https://example.com/image.jpg')
       expect(img?.style.width).toBe('400px')
       expect(img?.style.height).toBe('300px')
       expect(img?.alt).toBe('Full featured image')
-      expect(img?.style.display).toBe('block')
-      expect(img?.style.marginLeft).toBe('auto')
-      expect(img?.style.marginRight).toBe('auto')
-      expect(img?.style.border).toBe('1px solid rgb(204, 204, 204)')
+      expect(img?.style.display).toBe('')
+      expect(img?.style.border).toBe('')
     })
   })
 })

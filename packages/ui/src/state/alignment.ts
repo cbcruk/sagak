@@ -1,18 +1,17 @@
 import type { Readable } from 'svelte/store'
-import { ParagraphEvents } from 'sagak-core'
-import type { EditorContext } from 'sagak-core'
-import { fromSelection } from './from-selection'
-import {
-  getCurrentAlignment,
-  type AlignmentType,
-} from '../components/alignment-buttons/alignment-buttons.shared'
+import { ParagraphEvents, alignmentOf } from 'sagak-core'
+import type { Alignment, EditorContext } from 'sagak-core'
+import { fromState } from './from-state'
 
 /**
- * 지금 문단의 정렬 — 선택에서 읽는 값입니다.
+ * 지금 문단의 정렬 — **모델에서 읽습니다.**
  *
- * `getCurrentAlignment()` 은 문서에서 직접 읽으므로 `editor` 를 안 받습니다.
- * 어느 에디터의 선택인지는 `fromSelection` 이 가려 줍니다.
+ * 예전에는 캐럿에서 `parentNode` 를 타고 올라가며 `getComputedStyle(...)
+ * .textAlign` 을 봤습니다. 그러면 CSS 가 준 정렬과 사용자가 준 정렬을 구별할
+ * 수 없고, 어느 에디터의 선택인지도 알 수 없었습니다.
  */
+export type AlignmentType = Alignment
+
 export interface AlignmentCommands {
   align: (align: AlignmentType) => void
 }
@@ -20,7 +19,7 @@ export interface AlignmentCommands {
 export function alignmentStore(
   editor: EditorContext
 ): Readable<AlignmentType> {
-  return fromSelection(editor, getCurrentAlignment, 'left')
+  return fromState(editor, () => alignmentOf(editor), 'left')
 }
 
 export function alignmentCommands(editor: EditorContext): AlignmentCommands {

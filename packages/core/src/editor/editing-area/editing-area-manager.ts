@@ -4,7 +4,6 @@ import type { WysiwygArea } from './modes/wysiwyg-area'
 import type { HtmlSourceArea } from './modes/html-source-area'
 import type { TextArea } from './modes/text-area'
 import { EditingAreaEvents, type EventBus } from '@/core'
-import type { SelectionManager } from '@/core/selection-manager'
 import type { SanitizeOption } from './sanitizer'
 
 export interface EditingAreaManagerConfig {
@@ -22,11 +21,6 @@ export interface EditingAreaManagerConfig {
    * 이벤트 발행을 위한 `EventBus`
    */
   eventBus?: EventBus
-
-  /**
-   * WYSIWYG 모드를 위한 `SelectionManager`
-   */
-  selectionManager?: SelectionManager
 
   /**
    * 각 모드에 대한 사용자 정의 클래스 이름
@@ -60,7 +54,6 @@ export interface EditingAreaManagerConfig {
 
 export class EditingAreaManager {
   private eventBus?: EventBus
-  private selectionManager?: SelectionManager
 
   private areas: Map<EditingMode, EditingArea> = new Map()
   private currentMode: EditingMode
@@ -78,7 +71,6 @@ export class EditingAreaManager {
 
   constructor(config: EditingAreaManagerConfig) {
     this.eventBus = config.eventBus
-    this.selectionManager = config.selectionManager
     this.currentMode = config.initialMode || 'wysiwyg'
 
     this.config = {
@@ -275,7 +267,6 @@ export class EditingAreaManager {
           autoResize: this.config.autoResize,
           spellCheck: this.config.spellCheck,
           sanitize: this.config.sanitize,
-          selectionManager: this.selectionManager,
           eventBus: this.eventBus,
         })
 

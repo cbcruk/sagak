@@ -55,8 +55,13 @@ describe('커맨드 후 포커스 복귀', () => {
     await userEvent.keyboard('XYZ')
     await settle(4)
 
-    // 이 수정 전에는 키 입력이 통째로 사라졌습니다
-    expect(ed.editable.innerHTML).toMatch(/<li>list meXYZ<\/li>/)
+    /*
+     * 이 수정 전에는 키 입력이 통째로 사라졌습니다.
+     *
+     * 목록 항목이 문단을 감싸는 것은 스키마가 그렇기 때문입니다
+     * (`docs/prosemirror-migration.md` §2-2).
+     */
+    expect(ed.editable.innerHTML).toMatch(/<li><p>list meXYZ<\/p><\/li>/)
   })
 
   it('정렬 뒤에도 포커스가 돌아오고 입력이 이어져야 함', async () => {

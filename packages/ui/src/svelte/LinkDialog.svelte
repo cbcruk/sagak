@@ -1,10 +1,9 @@
 <script lang="ts">
   import { Link } from 'lucide'
-  import { ContentEvents } from 'sagak-core'
+  import { ContentEvents, linkOf } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import { editorState } from '../state/editor-state'
-  import { getSelectedLink } from '../components/link-dialog/link-dialog.shared'
 
   /**
    * 링크 다이얼로그.
@@ -21,10 +20,11 @@
    * 2. 적용은 **닫은 다음 프레임**에 합니다. 닫히기 전에 되돌리면 다이얼로그가
    *    아직 포커스를 쥐고 있어 선택이 다시 풀립니다.
    *
-   * ## 지우기는 범위를 다시 잡습니다
+   * ## 지우기는 이제 범위를 안 잡습니다
    *
-   * 링크 전체를 선택 영역으로 잡아야 코어가 그 범위를 풀 수 있습니다.
-   * 캐럿만 얹혀 있으면 아무것도 안 지워집니다.
+   * 예전에는 링크 전체를 선택 영역으로 넓혀 놓고 명령을 불렀습니다 — 캐럿만
+   * 얹혀 있으면 아무것도 안 지워졌기 때문입니다. 그 넓힌 선택은 사용자에게도
+   * 보였습니다. 모델 커맨드가 링크가 차지한 범위를 스스로 찾습니다.
    */
 
   interface Props {
@@ -43,16 +43,21 @@
   const { link: onLink } = editorState(editor)
 
   export function open(): void {
-    editor.selectionManager?.saveSelection()
-    url = getSelectedLink()?.href ?? ''
+    url = linkOf(editor)?.href ?? ''
     dialogEl.showModal()
   }
 
-  /** 닫은 다음 프레임에 선택을 되돌리고 적용합니다 */
+  /**
+   * 닫은 **다음 프레임**에 적용합니다.
+   *
+   * 예전에는 여기서 선택 영역도 되돌렸습니다 — 다이얼로그가 포커스를 가져가면
+   * 브라우저 선택이 풀렸기 때문입니다. 이제 선택은 문서 상태의 일부라 그럴
+   * 필요가 없지만, **닫고 나서 적용한다** 는 순서는 남습니다. 다이얼로그가 아직
+   * 열려 있는 동안 커맨드를 돌리면 포커스 되돌리기가 그 위에서 일어납니다.
+   */
   function restoreThen(action: () => void): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor.selectionManager?.restoreSelection()
       action()
     })
   }
@@ -71,14 +76,6 @@
 
   function remove(): void {
     restoreThen(() => {
-      const link = getSelectedLink()
-      if (link) {
-        const range = document.createRange()
-        range.selectNodeContents(link)
-        const selection = window.getSelection()
-        selection?.removeAllRanges()
-        selection?.addRange(range)
-      }
       editor.eventBus.emit(ContentEvents.LINK_REMOVED)
     })
   }

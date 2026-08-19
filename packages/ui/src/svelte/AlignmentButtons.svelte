@@ -6,7 +6,7 @@
     TextAlignJustify,
   } from 'lucide'
   import { icon } from '../elements/icon'
-  import type { AlignmentType } from '../components/alignment-buttons/alignment-buttons.shared'
+  import type { AlignmentType } from '../state/alignment'
 
   /**
    * 정렬 버튼 넷 — 켜진 것 하나만 `data-state="active"` 입니다.

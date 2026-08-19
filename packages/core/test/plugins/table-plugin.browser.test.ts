@@ -3,44 +3,72 @@ import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
 import { createTablePlugin, TablePlugin } from '@/plugins/table-plugin'
-import type { EditorContext } from '@/core/types'
+import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
+import { TextSelection } from 'prosemirror-state'
+import type { EditorContext, EditingAreaManager } from '@/core/types'
 
+/**
+ * 표는 이제 **`prosemirror-tables`** 가 다룹니다.
+ *
+ * 예전에는 이 플러그인이 `<table>`·`<tr>`·`<td>` 를 직접 만들고 지웠고, 검사도
+ * 맨 div 하나면 됐습니다. 편집 영역이 문서 모델을 갖게 되면서 문단 **안에**
+ * 표를 꽂는 그 길이 막혔습니다 — 스키마를 지나며 통째로 사라집니다.
+ *
+ * 그래서 검사가 편집 영역을 세우고, 셀을 고르는 것도 DOM 범위가 아니라
+ * 모델 선택입니다. 확인은 그대로 DOM 에서 합니다 — PM 이 그린 것이 곧 모델의
+ * 모습이기 때문입니다.
+ */
 describe('TablePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let container: HTMLDivElement
+  let area: WysiwygArea
+  let element: HTMLElement
   let context: EditorContext
 
+  /** 표의 첫 칸에 캐럿을 둡니다 — 행·열 명령의 전제입니다 */
+  const selectFirstCell = (): void => {
+    const handle = area.getStateHandle()
+    const state = handle.getState()!
+    let at = -1
+
+    state.doc.descendants((node, pos) => {
+      if (at < 0 && node.type.name === 'table') at = pos
+      return at < 0
+    })
+
+    if (at < 0) return
+
+    handle.dispatch(
+      state.tr.setSelection(TextSelection.near(state.doc.resolve(at)))
+    )
+  }
+
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World</p>'
-    document.body.appendChild(element)
+    container = document.createElement('div')
+    document.body.appendChild(container)
 
     eventBus = new EventBus()
+    area = new WysiwygArea({ container, eventBus })
+    area.setRawContent('<p>Hello World</p>')
+    element = area.getElement()
     selectionManager = new SelectionManager(element)
+
     context = {
       eventBus,
       selectionManager,
       config: {},
+      editingAreaManager: {
+        getCurrentArea: () => area,
+      } as unknown as EditingAreaManager,
     }
     pluginManager = new PluginManager(context)
-
-    // 선택 영역을 요소로 설정
-    const range = document.createRange()
-    range.selectNodeContents(element)
-    range.collapse(true)
-    const selection = window.getSelection()
-    if (selection) {
-      selection.removeAllRanges()
-      selection.addRange(range)
-    }
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    area.destroy()
+    document.body.removeChild(container)
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -138,10 +166,13 @@ describe('TablePlugin', () => {
       vi.restoreAllMocks()
     })
 
-    it('should create table with custom border and width', () => {
-      // Given: 테두리와 너비가 지정된 옵션 준비
-
-      // When: TABLE_CREATE 이벤트 발행
+    /**
+     * Why: 예전에는 `border`·`width` 를 표에 인라인으로 박았습니다.
+     * How: 스키마의 표에는 그런 자리가 없어 **넘겨도 안 붙습니다** — 생김새는
+     *      스타일시트의 몫이 되었습니다. 크기만 그대로 지켜집니다.
+     */
+    it('테두리·너비는 더 이상 문서에 안 붙습니다', () => {
+      // When: 예전 옵션을 그대로 넘겨 봅니다
       eventBus.emit('TABLE_CREATE', {
         rows: 2,
         cols: 2,
@@ -149,11 +180,12 @@ describe('TablePlugin', () => {
         width: '50%',
       })
 
-      // Then: 테두리와 너비가 적용되어야 함
+      // Then: 표는 생기고 크기는 맞되, 인라인 스타일은 없습니다
       const table = element.querySelector('table') as HTMLTableElement
       expect(table).toBeTruthy()
-      expect(table.border).toBe('2')
-      expect(table.style.width).toBe('50%')
+      expect(table.querySelectorAll('tr').length).toBe(2)
+      expect(table.getAttribute('border')).toBeNull()
+      expect(table.style.width).toBe('')
     })
 
     it('should reject table with invalid dimensions', () => {
@@ -174,29 +206,25 @@ describe('TablePlugin', () => {
       consoleWarn.mockRestore()
     })
 
+    /**
+     * Why: 표를 만들자마자 친 글자가 표 **밑에** 붙으면 안 됩니다
+     * How: 캐럿이 표 안에 있는지를 모델에서 확인합니다
+     */
     it('should move cursor to first cell after creation', () => {
       // Given: TABLE_CREATE 이벤트 발행
       eventBus.emit('TABLE_CREATE', { rows: 2, cols: 2 })
 
-      // When: 선택 영역 확인
-      const selection = window.getSelection()
-      expect(selection).toBeTruthy()
+      // When: 선택 위치의 조상들을 봅니다
+      const state = area.getStateHandle().getState()!
+      const { $from } = state.selection
+      const names: string[] = []
 
-      const table = element.querySelector('table')
-      const firstCell = table?.querySelector('td')
-      expect(firstCell).toBeTruthy()
-
-      // Then: 커서가 첫 번째 셀에 있어야 함
-      let node = selection?.anchorNode
-      let foundCell = false
-      while (node && node !== element) {
-        if (node === firstCell) {
-          foundCell = true
-          break
-        }
-        node = node.parentNode
+      for (let depth = $from.depth; depth > 0; depth -= 1) {
+        names.push($from.node(depth).type.name)
       }
-      expect(foundCell).toBe(true)
+
+      // Then: 표 안의 칸에 있어야 합니다
+      expect(names).toContain('table_cell')
     })
   })
 
@@ -258,41 +286,22 @@ describe('TablePlugin', () => {
       )
     })
 
+    /**
+     * Why: 행 없는 `<table>` 껍데기가 남으면 안 됩니다
+     * How: 막는 자리가 우리 코드에서 `prosemirror-tables` 로 옮겨졌을 뿐,
+     *      결과는 그대로입니다 — 다만 **경고를 찍지 않고** 조용히 거절합니다
+     */
     it('should not delete last row', () => {
-      // Given: console.warn spy 준비, 셀 선택 헬퍼 함수
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const table = element.querySelector('table')
-
-      const selectFirstCell = () => {
-        const cell = table?.querySelector('td')
-        if (cell) {
-          const range = document.createRange()
-          range.selectNodeContents(cell)
-          range.collapse(true)
-          const selection = window.getSelection()
-          if (selection) {
-            selection.removeAllRanges()
-            selection.addRange(range)
-          }
-        }
+      // When: 세 번 지우려 합니다
+      for (let i = 0; i < 3; i += 1) {
+        selectFirstCell()
+        eventBus.emit('TABLE_DELETE_ROW')
       }
 
-      // When: 마지막 행까지 삭제 시도
-      selectFirstCell()
-      eventBus.emit('TABLE_DELETE_ROW')
-      selectFirstCell()
-      eventBus.emit('TABLE_DELETE_ROW')
-
-      selectFirstCell()
-      const result = eventBus.emit('TABLE_DELETE_ROW')
-
-      // Then: 마지막 행 삭제가 차단되어야 함
-      expect(result).toBe(false)
-      expect(consoleWarn).toHaveBeenCalledWith(
-        'Cannot delete last row in table'
-      )
-
-      consoleWarn.mockRestore()
+      // Then: 마지막 행은 남아 있어야 합니다
+      const table = element.querySelector('table')
+      expect(table).not.toBeNull()
+      expect(table!.querySelectorAll('tr').length).toBe(1)
     })
 
     it('should emit STYLE_CHANGED after row insertion', () => {
@@ -380,41 +389,18 @@ describe('TablePlugin', () => {
       )
     })
 
+    /** 행과 같습니다 — 마지막 열은 남습니다 */
     it('should not delete last column', () => {
-      // Given: console.warn spy 준비, 셀 선택 헬퍼 함수
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const table = element.querySelector('table')
-
-      const selectFirstCell = () => {
-        const cell = table?.querySelector('td')
-        if (cell) {
-          const range = document.createRange()
-          range.selectNodeContents(cell)
-          range.collapse(true)
-          const selection = window.getSelection()
-          if (selection) {
-            selection.removeAllRanges()
-            selection.addRange(range)
-          }
-        }
+      // When: 세 번 지우려 합니다
+      for (let i = 0; i < 3; i += 1) {
+        selectFirstCell()
+        eventBus.emit('TABLE_DELETE_COLUMN')
       }
 
-      // When: 마지막 열까지 삭제 시도
-      selectFirstCell()
-      eventBus.emit('TABLE_DELETE_COLUMN')
-      selectFirstCell()
-      eventBus.emit('TABLE_DELETE_COLUMN')
-
-      selectFirstCell()
-      const result = eventBus.emit('TABLE_DELETE_COLUMN')
-
-      // Then: 마지막 열 삭제가 차단되어야 함
-      expect(result).toBe(false)
-      expect(consoleWarn).toHaveBeenCalledWith(
-        'Cannot delete last column in table'
-      )
-
-      consoleWarn.mockRestore()
+      // Then: 마지막 열은 남아 있어야 합니다
+      const table = element.querySelector('table')
+      expect(table).not.toBeNull()
+      expect(table!.querySelector('tr')!.querySelectorAll('td').length).toBe(1)
     })
 
     it('should emit STYLE_CHANGED after column insertion', () => {
@@ -497,7 +483,7 @@ describe('TablePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Table delete blocked: No table selected'
+        'Table delete blocked: No table cell selected'
       )
 
       consoleWarn.mockRestore()
@@ -691,20 +677,6 @@ describe('TablePlugin', () => {
       eventBus.emit('TABLE_CREATE', { rows: 4, cols: 4 })
 
       const table = element.querySelector('table')
-
-      const selectFirstCell = () => {
-        const cell = table?.querySelector('td')
-        if (cell) {
-          const range = document.createRange()
-          range.selectNodeContents(cell)
-          range.collapse(true)
-          const selection = window.getSelection()
-          if (selection) {
-            selection.removeAllRanges()
-            selection.addRange(range)
-          }
-        }
-      }
 
       // When: 행과 열 삭제
       selectFirstCell()

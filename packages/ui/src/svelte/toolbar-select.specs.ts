@@ -91,7 +91,7 @@ export interface ToolbarSelectSpec {
  *
  * ## 전에는 ⌘A 에서 안 따라갔습니다 (지금은 고쳤습니다)
  *
- * Svelte 로 옮기며 사보타주를 돌렸더니 `subscribeToSelection` 구독을 통째로
+ * Svelte 로 옮기며 사보타주를 돌렸더니 상태 구독을 통째로
  * 지워도 검사가 하나도 안 걸렸습니다. 구독이 안 도는 것이 아니라 **질의가
  * 틀린 값을 주고 있었습니다.**
  *

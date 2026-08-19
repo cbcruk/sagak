@@ -186,7 +186,12 @@ export interface EditorEventMap {
   // --- 히스토리 ---
   [HistoryEvents.UNDO]: void
   [HistoryEvents.REDO]: void
-  [HistoryEvents.HISTORY_STATE_CHANGED]: { canUndo: boolean; canRedo: boolean }
+  [HistoryEvents.HISTORY_STATE_CHANGED]: {
+    canUndo: boolean
+    canRedo: boolean
+    undoSize: number
+    redoSize: number
+  }
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: FindPayload

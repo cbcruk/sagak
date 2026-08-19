@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
 import { EventBus } from '@/core/event-bus'
-import { SelectionManager } from '@/core/selection-manager'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
 import type { EditingArea } from '@/editor/editing-area/types'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
@@ -191,9 +190,9 @@ describe('Editing Area 통합', () => {
 
       await manager.initialize()
 
-      // When: WYSIWYG 영역에서 input 이벤트 발생
-      const element = manager.getCurrentArea()?.getElement()
-      element?.dispatchEvent(new Event('input', { bubbles: true }))
+      // When: WYSIWYG 영역의 문서가 바뀜
+      const handle = manager.getCurrentArea()!.getStateHandle!()
+      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
       // Then: WYSIWYG_CONTENT_CHANGED 이벤트가 발행됨
       expect(handler).toHaveBeenCalled()
@@ -233,57 +232,36 @@ describe('Editing Area 통합', () => {
 
       await manager.initialize()
 
-      // When: WYSIWYG 영역에서 input 이벤트 발생
-      const wysiwygElement = manager.getCurrentArea()?.getElement()
-      wysiwygElement?.dispatchEvent(new Event('input', { bubbles: true }))
+      // When: WYSIWYG 영역의 문서가 바뀜
+      const handle = manager.getCurrentArea()!.getStateHandle!()
+      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
       // Then: 이벤트 핸들러가 호출됨
       expect(wysiwygHandler).toHaveBeenCalled()
     })
   })
 
-  describe('SelectionManager 통합 (선택 영역 관리)', () => {
+  describe('선택 영역 (모델이 갖습니다)', () => {
     /**
-     * Why: CJK/IME 입력 처리를 위해 SelectionManager 통합이 필요
-     * How: WYSIWYG 모드에서 SelectionManager 사용 확인
+     * Why: CJK/IME 와 선택 영역은 이제 `prosemirror-view` 의 일입니다
+     * How: 영역이 자기 상태를 내주는지, 조합 여부를 뷰에서 읽는지 확인
      */
 
-    it('WYSIWYG 모드에서 SelectionManager와 통합되어야 함', async () => {
-      // Given: SelectionManager가 설정된 매니저
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
-
-      const selectionManager = new SelectionManager(editableDiv)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        selectionManager,
-      }
-      manager = new EditingAreaManager(config)
+    it('WYSIWYG 모드가 자기 문서를 소유해야 함', async () => {
+      // Given: 기본 매니저
+      manager = new EditingAreaManager({ container })
 
       // When: 초기화
       await manager.initialize()
 
-      // Then: WYSIWYG 모드로 정상 작동
+      // Then: WYSIWYG 모드로 정상 작동하고 상태 창구를 내줍니다
       expect(manager.getCurrentMode()).toBe('wysiwyg')
-
-      document.body.removeChild(editableDiv)
+      expect(manager.getCurrentArea()?.getStateHandle?.()).toBeDefined()
     })
 
     it('IME 조합 상태를 처리해야 함', async () => {
-      // Given: SelectionManager가 설정된 매니저
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
-
-      const selectionManager = new SelectionManager(editableDiv)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        selectionManager,
-      }
-      manager = new EditingAreaManager(config)
+      // Given: 기본 매니저
+      manager = new EditingAreaManager({ container })
 
       await manager.initialize()
 
@@ -295,8 +273,6 @@ describe('Editing Area 통합', () => {
         // Then: boolean 타입의 조합 상태가 반환됨
         expect(typeof isComposing).toBe('boolean')
       }
-
-      document.body.removeChild(editableDiv)
     })
   })
 

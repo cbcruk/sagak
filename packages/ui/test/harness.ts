@@ -1,4 +1,5 @@
 import { mount, unmount } from 'svelte'
+import { parseHtml, sagakSchema } from 'sagak-core'
 import type { CreateEditorOptions, Editor, EditorContext } from 'sagak-core'
 import { expect } from 'vitest'
 import Harness from './Harness.svelte'
@@ -131,13 +132,55 @@ export async function mountEditor(
   }
 }
 
+/**
+ * 편집 영역에 글을 넣습니다 — **모델을 통해서**입니다.
+ *
+ * 예전에는 `editable.innerHTML = …` 로 넣었습니다. 편집 영역이 문서 모델을
+ * 갖게 된 뒤로 그것은 "친 것" 이 아니라 **밖에서 DOM 을 건드린 것**이라,
+ * 모델이 그 변화를 읽어 들이기까지 한 박자가 뜹니다. 사람이 치면 그 박자가
+ * 없으므로 검사도 없어야 합니다.
+ */
+export function setHtml(ed: MountedEditor, html: string): void {
+  const handle = ed.context.editingAreaManager
+    ?.getCurrentArea()
+    ?.getStateHandle?.()
+  const state = handle?.getState()
+
+  if (!handle || !state) {
+    throw new Error('편집 영역이 문서 모델을 갖고 있지 않습니다')
+  }
+
+  const doc = parseHtml(html, sagakSchema, document)
+
+  handle.dispatch(
+    state.tr.replaceWith(0, state.doc.content.size, doc.content)
+  )
+}
+
+/**
+ * 편집 영역이 선택을 **자기 것으로 읽으려면 포커스가 있어야 합니다.**
+ *
+ * `prosemirror-view` 는 포커스가 없는 동안의 DOM 선택을 무시합니다 — 에디터
+ * 밖에서 일어난 선택까지 문서 선택으로 받아들이면 안 되기 때문입니다. 사람이
+ * 하는 순서도 같습니다: 먼저 편집 영역을 누르고, 그다음 끕니다.
+ */
+function focusEditable(node: Node): void {
+  const start = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
+  const editable = start?.closest<HTMLElement>('[contenteditable="true"]')
+
+  editable?.focus()
+}
+
 /** 편집 영역 전체를 선택합니다 — 서식 커맨드는 선택 영역을 필요로 합니다 */
 export function selectAll(editable: HTMLElement): void {
+  editable.focus()
+
   const range = document.createRange()
   range.selectNodeContents(editable)
   const selection = window.getSelection()
   selection?.removeAllRanges()
   selection?.addRange(range)
+  document.dispatchEvent(new Event('selectionchange'))
 }
 
 /** 편집 영역의 첫 텍스트 노드 안에 캐럿을 둡니다 (타이핑 직후와 같은 상태) */
@@ -150,6 +193,8 @@ export function placeCaretInText(root: HTMLElement, offset = 0): void {
 
 /** 특정 노드 안에 캐럿을 둡니다 */
 export function placeCaret(node: Node, offset = 0): void {
+  focusEditable(node)
+
   const range = document.createRange()
   range.setStart(node, offset)
   range.collapse(true)

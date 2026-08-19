@@ -1,4 +1,6 @@
 import { logger } from '@/core/logger'
+import { runModelCommand } from '@/model/bridge'
+import { insertText } from '@/model/commands'
 import { definePlugin, ContentEvents, CoreEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
@@ -35,7 +37,7 @@ export const createSpecialCharacterPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? ContentEvents.SPECIAL_CHARACTER_INSERT]: (
-        { emit, reportError },
+        { emit, reportError, context },
         data?: unknown
       ) => {
         const character = extractCharacter(data)
@@ -47,28 +49,20 @@ export const createSpecialCharacterPlugin =
         try {
           emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-          const selection = window.getSelection()
-          if (!selection || selection.rangeCount === 0) {
-            return false
+          /*
+           * 예전에는 DOM 범위에 텍스트 노드를 직접 꽂았습니다. 편집 영역이
+           * 문서 모델을 갖게 된 뒤로 그 길은 모델을 지나지 않습니다.
+           */
+          const done = runModelCommand(context, insertText(character))
+
+          if (done) {
+            emit(CoreEvents.STYLE_CHANGED, {
+              style: 'specialCharacter',
+              value: character,
+            })
           }
 
-          const range = selection.getRangeAt(0)
-          range.deleteContents()
-
-          const textNode = document.createTextNode(character)
-          range.insertNode(textNode)
-
-          const newRange = document.createRange()
-          newRange.setStartAfter(textNode)
-          newRange.collapse(true)
-          selection.removeAllRanges()
-          selection.addRange(newRange)
-
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'specialCharacter',
-            value: character,
-          })
-          return true
+          return done
         } catch (error) {
           reportError(error, 'Failed to insert special character:')
           return false

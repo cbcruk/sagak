@@ -4,6 +4,9 @@
  */
 
 import type { Node } from 'prosemirror-model'
+import type { StateHandle } from '@/model/register'
+import type { ModelListener } from '@/model/bridge'
+import type { Highlighter } from '@/core/types'
 import type { SanitizeOption } from './sanitizer'
 
 /**
@@ -56,9 +59,12 @@ export interface EditingAreaConfig {
   /**
    * 붙여넣기 및 `setContent` 시 HTML 정화 옵션
    *
-   * - `true` 또는 미지정: 기본 정화기 사용 (권장)
-   * - `false`: 정화 비활성화 (신뢰할 수 있는 콘텐츠 전용)
-   * - `SanitizerOptions`: 사용자 정의 `DOMPurify` 설정
+   * @deprecated **지금은 아무 데도 안 쓰입니다.** 소독은 스키마가 합니다 —
+   * WYSIWYG 는 `prosemirror-view` 가, 소스 모드는 `parseHtml` 이 모델을 거치므로
+   * 스키마 밖의 것(`<script>`·`onerror`·`javascript:` 주소)은 애초에 문서에
+   * 존재할 수 없습니다. `false` 를 줘도 정화가 꺼지지 않고, 사용자 정의 설정도
+   * 반영되지 않습니다. 옵션을 없앨지는 따로 정합니다
+   * (`docs/prosemirror-migration.md` §10).
    */
   sanitize?: SanitizeOption
 }
@@ -134,6 +140,28 @@ export interface EditingArea {
    * 이 편집 영역의 DOM 요소를 가져옵니다
    */
   getElement(): HTMLElement
+
+  /**
+   * 이 영역이 **자기 문서를 소유할 때만** 있습니다.
+   *
+   * 있으면 두 가지 뜻입니다 — 커맨드가 이 상태 위에서 돌아야 하고
+   * (`registerModelCommands`), 되돌리기도 이 영역의 것입니다. 없으면 예전 길
+   * (`execCommand` · 스냅샷 히스토리)이 그대로 맡습니다.
+   */
+  getStateHandle?(): StateHandle
+
+  /**
+   * 문서를 건드리지 않는 표시 — 찾기 강조가 씁니다
+   */
+  getHighlighter?(): Highlighter
+
+  /**
+   * 상태가 바뀔 때마다 알립니다 — 자기 문서를 소유하는 영역만 있습니다.
+   *
+   * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이라, 구독하는 쪽이 DOM 이벤트를
+   * 종류별로 듣고 짐작할 필요가 없습니다.
+   */
+  subscribe?(listener: ModelListener): () => void
 
   /**
    * 리소스와 이벤트 리스너를 정리합니다

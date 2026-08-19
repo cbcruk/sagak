@@ -4,6 +4,31 @@ export { createEditor } from './create-editor'
 export { sagakSchema, createSagakSchema } from './model/schema'
 export type { SchemaOptions } from './model/schema'
 export { toJSON, fromJSON, toHtml, parseHtml } from './model/storage'
+
+/**
+ * 선택이 무엇 위에 있는지 묻는 자리 — **UI 가 DOM 을 안 걷어도 됩니다.**
+ *
+ * `docs/prosemirror-migration.md` 4단계입니다.
+ */
+export {
+  subscribeToModel,
+  selectionFacts,
+  alignmentOf,
+  listKindOf,
+  isInTableOf,
+  linkOf,
+  imageOf,
+  modelHandle,
+  modelState,
+  runModelCommand,
+} from './model/bridge'
+export type { ModelListener } from './model/bridge'
+export type {
+  Alignment,
+  ListKind,
+  LinkFacts,
+  ImageFacts,
+} from './model/selection'
 export {
   commands,
   isMarkActive,
@@ -138,6 +163,8 @@ export type {
   EditingArea,
   EditingAreaManager,
   FormattingState,
+  Highlighter,
+  HighlightRange,
 } from './core/types'
 
 export {

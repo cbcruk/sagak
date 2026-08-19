@@ -74,6 +74,18 @@ export function createHistoryPlugin(
       const { eventBus } = context
       const element = context.element as HTMLElement
 
+      /*
+       * **편집 영역이 자기 문서를 가지면 히스토리도 그쪽 것입니다.**
+       *
+       * 이 플러그인은 `innerHTML` 스냅샷을 찍고 되돌릴 때 통째로 되돌려
+       * 놓습니다. 문서 모델이 진실인 영역에서 그렇게 하면 모델과 DOM 이
+       * 어긋나고, 무엇보다 **입구가 둘**이 되어 한 번 누를 때 두 번
+       * 되돌아갑니다. 그래서 그런 영역에서는 아예 안 답니다.
+       */
+      if (context.editingAreaManager?.getCurrentArea()?.getStateHandle) {
+        return
+      }
+
       historyManager = new HistoryManager({ maxSize: maxHistorySize })
 
       captureSnapshot(element)
