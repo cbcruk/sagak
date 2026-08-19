@@ -133,7 +133,40 @@ const image: NodeSpec = {
       },
     },
   ],
-  toDOM: (node) => ['img', node.attrs],
+  /*
+   * 크기는 **스타일로** 나갑니다.
+   *
+   * `width` HTML 속성은 숫자만 받는데 제품이 다루는 값은 `'200px'` 처럼 단위가
+   * 붙습니다. 속성으로 내보내면 브라우저가 무시해 크기가 안 먹습니다.
+   * 읽을 때는 속성과 스타일 둘 다 받으므로(위 `getAttrs`) 밖에서 온 문서도
+   * 그대로 통과합니다.
+   */
+  toDOM: (node) => {
+    const { src, alt, width, height } = node.attrs as Record<
+      string,
+      string | null
+    >
+    const style = [
+      width && `width: ${withUnit(width)}`,
+      height && `height: ${withUnit(height)}`,
+    ]
+      .filter(Boolean)
+      .join('; ')
+
+    return [
+      'img',
+      {
+        src,
+        ...(alt ? { alt } : {}),
+        ...(style ? { style } : {}),
+      },
+    ]
+  },
+}
+
+/** `'200'` 처럼 단위 없는 값은 픽셀로 봅니다 — HTML 속성이 그 뜻입니다 */
+function withUnit(value: string): string {
+  return /^\d+(\.\d+)?$/.test(value) ? `${value}px` : value
 }
 
 const text: NodeSpec = { group: 'inline' }

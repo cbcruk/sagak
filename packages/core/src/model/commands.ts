@@ -1,7 +1,18 @@
 import { toggleMark, setBlockType } from 'prosemirror-commands'
 import { wrapInList, liftListItem } from 'prosemirror-schema-list'
+import {
+  addRowBefore,
+  addRowAfter,
+  deleteRow,
+  addColumnBefore,
+  addColumnAfter,
+  deleteColumn,
+  deleteTable,
+  isInTable,
+} from 'prosemirror-tables'
+import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { EditorState, Transaction } from 'prosemirror-state'
-import type { MarkType, NodeType } from 'prosemirror-model'
+import type { MarkType, Node as PMNode, NodeType } from 'prosemirror-model'
 import { sagakSchema } from './schema'
 
 /**
@@ -166,4 +177,154 @@ export const commands = {
 
     return true
   }) as Command,
+
+  /*
+   * 표는 `prosemirror-tables` 가 줍니다 — 셀 병합·열 너비까지 이미 아는
+   * 커맨드들이라 우리가 다시 지을 것이 없습니다.
+   */
+  addRowBefore,
+  addRowAfter,
+  deleteRow,
+  addColumnBefore,
+  addColumnAfter,
+  deleteColumn,
+  deleteTable,
+}
+
+/** 지금 캐럿이 표 안에 있는가 — 툴바가 "삽입" 과 "편집" 을 가르는 데 씁니다 */
+export { isInTable }
+
+/**
+ * 표를 넣습니다.
+ *
+ * 예전에는 `document.createElement('table')` 로 만들어 `range.insertNode` 로
+ * 꽂았습니다. 그러면 문단 **안에** `<table>` 이 들어가는 꼴이 되고, 스키마를
+ * 지나며 통째로 사라집니다. 모델에서는 애초에 그런 자리에 못 놓습니다.
+ */
+export function insertTable(rows: number, cols: number): Command {
+  return (state, dispatch) => {
+    const row = () =>
+      nodes.table_row.create(
+        null,
+        Array.from({ length: cols }, () => nodes.table_cell.createAndFill()!)
+      )
+
+    const table = nodes.table.create(
+      null,
+      Array.from({ length: rows }, row)
+    )
+
+    if (dispatch) {
+      const at = state.selection.from
+      const tr = state.tr.replaceSelectionWith(table)
+
+      /*
+       * 캐럿을 **첫 칸 안에** 둡니다.
+       *
+       * 그냥 넣으면 선택이 표 뒤에 남아, 표를 만들자마자 친 글자가 표 밑에
+       * 붙습니다. `near` 가 그 자리에서 앞으로 훑어 글을 쓸 수 있는 첫 자리를
+       * 찾아 줍니다.
+       */
+      dispatch(
+        tr.setSelection(TextSelection.near(tr.doc.resolve(at))).scrollIntoView()
+      )
+    }
+
+    return true
+  }
+}
+
+export interface ImageAttrs {
+  src: string
+  alt?: string | null
+  width?: string | null
+  height?: string | null
+}
+
+/**
+ * 지금 다루고 있는 이미지.
+ *
+ * 이미지를 통째로 고른 경우(`NodeSelection`)와 캐럿이 이미지 바로 옆에 있는
+ * 경우를 함께 봅니다 — 예전 `findImageAtSelection` 이 DOM 에서 하던
+ * "커서 앞뒤의 `<img>`" 와 같은 짐작이되, 자리가 정확합니다.
+ */
+export function imageAt(
+  state: EditorState
+): { pos: number; node: PMNode } | null {
+  const selection = state.selection
+
+  if (
+    selection instanceof NodeSelection &&
+    selection.node.type === nodes.image
+  ) {
+    return { pos: selection.from, node: selection.node }
+  }
+
+  const { $from } = selection
+  const before = $from.nodeBefore
+
+  if (before?.type === nodes.image) {
+    return { pos: $from.pos - before.nodeSize, node: before }
+  }
+
+  const after = $from.nodeAfter
+
+  if (after?.type === nodes.image) {
+    return { pos: $from.pos, node: after }
+  }
+
+  return null
+}
+
+/** 이미지의 속성을 고칩니다 — 준 것만 바꿉니다 */
+export function updateImage(attrs: Partial<ImageAttrs>): Command {
+  return (state, dispatch) => {
+    const found = imageAt(state)
+
+    if (!found) return false
+
+    if (dispatch) {
+      dispatch(
+        state.tr.setNodeMarkup(found.pos, undefined, {
+          ...found.node.attrs,
+          ...attrs,
+        })
+      )
+    }
+
+    return true
+  }
+}
+
+/** 이미지를 지웁니다 */
+export const deleteImage: Command = (state, dispatch) => {
+  const found = imageAt(state)
+
+  if (!found) return false
+
+  if (dispatch) {
+    dispatch(state.tr.delete(found.pos, found.pos + found.node.nodeSize))
+  }
+
+  return true
+}
+
+/** 이미지를 넣습니다 — 크기는 속성이고, 화면에 붙는 것은 스타일입니다 */
+export function insertImage(attrs: ImageAttrs): Command {
+  return (state, dispatch) => {
+    if (dispatch) {
+      dispatch(
+        state.tr.replaceSelectionWith(
+          nodes.image.create({
+            src: attrs.src,
+            alt: attrs.alt ?? null,
+            width: attrs.width ?? null,
+            height: attrs.height ?? null,
+          })
+        )
+      )
+    }
+
+    return true
+  }
 }

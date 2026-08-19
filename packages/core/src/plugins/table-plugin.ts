@@ -3,9 +3,26 @@ import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
+import { runModelCommand, modelState } from '@/model/bridge'
+import { commands, insertTable, isInTable } from '@/model/commands'
+import type { Command } from '@/model/commands'
 
 /**
- * 표 플러그인 설정 옵션
+ * 표.
+ *
+ * ## 무엇이 바뀌었나
+ *
+ * 이 파일은 767줄이었습니다. 표를 `document.createElement` 로 짓고,
+ * `range.insertNode` 로 꽂고, 행·열을 `<tr>`·`<td>` 를 직접 넣고 빼며
+ * 다뤘습니다.
+ *
+ * 편집 영역이 문서 모델을 갖게 되면서 그 길이 **막힌 정도가 아니라 틀렸습니다**
+ * — 문단 안에 `<table>` 을 꽂으면 스키마를 지나며 통째로 사라집니다.
+ *
+ * `prosemirror-tables` 가 그 일을 전부 알고 있습니다. 셀 병합·열 너비까지
+ * 다루는 커맨드들이라 우리 쪽은 **이벤트를 커맨드로 옮기는 것만** 남습니다.
+ * 마지막 행·열을 못 지우게 막는 것도 그쪽이 압니다 (`deleteRow` 가 마지막
+ * 행이면 표를 지웁니다 — 예전 동작과 다르지만 그게 더 자연스럽습니다).
  */
 export interface TablePluginOptions {
   /**
@@ -73,130 +90,6 @@ export interface TablePluginOptions {
    * @default 50
    */
   maxColumns?: number
-
-  /**
-   * 기본 표 테두리
-   * @default '1'
-   */
-  defaultBorder?: string
-
-  /**
-   * 기본 표 너비
-   * @default '100%'
-   */
-  defaultWidth?: string
-}
-
-/**
- * 지정된 크기의 표 요소를 생성합니다
- */
-function createTable(
-  rows: number,
-  cols: number,
-  options: { border?: string; width?: string } = {}
-): HTMLTableElement {
-  const { border = '1', width = '100%' } = options
-
-  const table = document.createElement('table')
-  table.border = border
-  table.style.width = width
-  table.style.borderCollapse = 'collapse'
-
-  const tbody = document.createElement('tbody')
-
-  for (let i = 0; i < rows; i++) {
-    const tr = document.createElement('tr')
-
-    for (let j = 0; j < cols; j++) {
-      const td = document.createElement('td')
-      td.style.border = '1px solid #ddd'
-      td.style.padding = '8px'
-      td.innerHTML = '<br>'
-
-      tr.appendChild(td)
-    }
-
-    tbody.appendChild(tr)
-  }
-
-  table.appendChild(tbody)
-
-  return table
-}
-
-/**
- * 현재 선택 영역을 포함하는 표 요소를 찾습니다
- */
-function findTableAtSelection(): HTMLTableElement | null {
-  const selection = window.getSelection()
-
-  if (!selection || !selection.anchorNode) {
-    return null
-  }
-
-  let node: Node | null = selection.anchorNode
-
-  while (node && node !== document.body) {
-    if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      (node as Element).tagName === 'TABLE'
-    ) {
-      return node as HTMLTableElement
-    }
-
-    node = node.parentNode
-  }
-
-  return null
-}
-
-/**
- * 현재 선택 영역을 포함하는 표 셀을 찾습니다
- */
-function findCellAtSelection(): HTMLTableCellElement | null {
-  const selection = window.getSelection()
-
-  if (!selection || !selection.anchorNode) {
-    return null
-  }
-
-  let node: Node | null = selection.anchorNode
-
-  while (node && node !== document.body) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element
-
-      if (element.tagName === 'TD' || element.tagName === 'TH') {
-        return element as HTMLTableCellElement
-      }
-    }
-
-    node = node.parentNode
-  }
-
-  return null
-}
-
-/**
- * 셀의 행 인덱스를 가져옵니다
- */
-function getRowIndex(cell: HTMLTableCellElement): number {
-  const row = cell.parentElement as HTMLTableRowElement
-
-  if (!row) return -1
-
-  const rows = Array.from(row.parentElement?.children || [])
-
-  return rows.indexOf(row)
-}
-
-/**
- * 셀의 열 인덱스를 가져옵니다
- */
-function getColumnIndex(cell: HTMLTableCellElement): number {
-  const cells = Array.from(cell.parentElement?.children || [])
-
-  return cells.indexOf(cell)
 }
 
 /**
@@ -204,8 +97,8 @@ function getColumnIndex(cell: HTMLTableCellElement): number {
  */
 function extractTableCreateData(
   data: unknown,
-  defaults: { rows: number; cols: number; border: string; width: string }
-): { rows: number; cols: number; border: string; width: string } {
+  defaults: { rows: number; cols: number }
+): { rows: number; cols: number } {
   if (!data || typeof data !== 'object') {
     return defaults
   }
@@ -219,21 +112,12 @@ function extractTableCreateData(
       : typeof dataObj.columns === 'number'
         ? dataObj.columns
         : defaults.cols
-  const border =
-    typeof dataObj.border === 'string' ? dataObj.border : defaults.border
-  const width =
-    typeof dataObj.width === 'string' ? dataObj.width : defaults.width
 
-  return {
-    rows,
-    cols,
-    border,
-    width,
-  }
+  return { rows, cols }
 }
 
 /**
- * 이벤트 데이터에서 위치 데이터를 추출합니다 (`'above'`/`'below'` 또는 `'left'`/`'right'`)
+ * 이벤트 데이터에서 위치를 추출합니다 (`'above'`/`'below'` 또는 `'left'`/`'right'`)
  */
 function extractPosition(data: unknown, defaultPosition: string): string {
   if (!data || typeof data !== 'object') {
@@ -250,28 +134,11 @@ function extractPosition(data: unknown, defaultPosition: string): string {
 /**
  * 표 플러그인 인스턴스를 생성합니다
  *
- * DOM을 직접 조작하여 에디터의 표를 관리합니다.
- *
- * @param options - 플러그인 설정 옵션
- * @returns 플러그인 인스턴스
- *
  * @example
  * ```typescript
- * const tablePlugin = createTablePlugin({
- *   defaultRows: 3,
- *   defaultColumns: 3
- * });
- *
- * await pluginManager.register(tablePlugin);
- *
- * // Create table
- * eventBus.emit('TABLE_CREATE', { rows: 3, cols: 3 });
- *
- * // Insert row (cursor must be in table)
- * eventBus.emit('TABLE_INSERT_ROW', { position: 'below' });
- *
- * // Delete table (cursor must be in table)
- * eventBus.emit('TABLE_DELETE');
+ * eventBus.emit('TABLE_CREATE', { rows: 3, cols: 3 })
+ * eventBus.emit('TABLE_INSERT_ROW', { position: 'below' })
+ * eventBus.emit('TABLE_DELETE')
  * ```
  */
 export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
@@ -287,8 +154,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     defaultColumns = 3,
     maxRows = 100,
     maxColumns = 50,
-    defaultBorder = '1',
-    defaultWidth = '100%',
   } = options
 
   const unsubscribers: Array<() => void> = []
@@ -299,6 +164,63 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:table')
       const selectionManager = context.selectionManager
+
+      /** 지금 캐럿이 표 안인가 — 행·열 명령의 전제입니다 */
+      const inTable = (): boolean => {
+        const state = modelState(context)
+
+        return !!state && isInTable(state)
+      }
+
+      /**
+       * 표 안에서만 되는 명령들의 `before` 가드.
+       *
+       * IME 조합 중이면 막고, 표 밖이면 막습니다. 예전에는 `findCellAtSelection`
+       * 이 DOM 을 거슬러 올라가며 `<td>` 를 찾았습니다.
+       */
+      const guard = (label: string) => (): boolean => {
+        if (isBlockedByComposition(selectionManager, checkComposition, label)) {
+          return false
+        }
+
+        if (!inTable()) {
+          logger.warn(`${label} blocked: No table cell selected`)
+          return false
+        }
+
+        return true
+      }
+
+      /** 커맨드 하나를 이벤트에 잇습니다 */
+      const bind = (
+        event: string,
+        label: string,
+        command: (data?: unknown) => Command,
+        announce: (data?: unknown) => Record<string, unknown>
+      ): void => {
+        unsubscribers.push(eventBus.on(event, 'before', guard(label)))
+        unsubscribers.push(
+          eventBus.on(event, 'on', (data?: unknown) => {
+            try {
+              eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
+
+              const done = runModelCommand(context, command(data))
+
+              if (done) {
+                eventBus.emit(CoreEvents.STYLE_CHANGED, {
+                  style: 'table',
+                  ...announce(data),
+                })
+              }
+
+              return done
+            } catch (error) {
+              reportError(error, `Failed to ${label}:`)
+              return false
+            }
+          })
+        )
+      }
 
       const unsubCreateBefore = eventBus.on(
         createEventName,
@@ -313,11 +235,10 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
           ) {
             return false
           }
+
           const { rows, cols } = extractTableCreateData(data, {
             rows: defaultRows,
             cols: defaultColumns,
-            border: defaultBorder,
-            width: defaultWidth,
           })
 
           if (rows < 1 || rows > maxRows) {
@@ -340,418 +261,81 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
 
       unsubscribers.push(unsubCreateBefore)
 
-      const unsubCreateOn = eventBus.on(
-        createEventName,
-        'on',
-        (data?: unknown) => {
+      unsubscribers.push(
+        eventBus.on(createEventName, 'on', (data?: unknown) => {
           try {
-            const { rows, cols, border, width } = extractTableCreateData(data, {
+            const { rows, cols } = extractTableCreateData(data, {
               rows: defaultRows,
               cols: defaultColumns,
-              border: defaultBorder,
-              width: defaultWidth,
             })
 
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const table = createTable(rows, cols, { border, width })
 
-            const selection = window.getSelection()
+            const done = runModelCommand(context, insertTable(rows, cols))
 
-            if (selection && selection.rangeCount > 0) {
-              const range = selection.getRangeAt(0)
-              range.deleteContents()
-              range.insertNode(table)
-
-              const firstCell = table.querySelector('td')
-
-              if (firstCell) {
-                range.selectNodeContents(firstCell)
-                range.collapse(true)
-                selection.removeAllRanges()
-                selection.addRange(range)
-              }
+            if (done) {
+              eventBus.emit(CoreEvents.STYLE_CHANGED, {
+                style: 'table',
+                action: 'create',
+                rows,
+                cols,
+              })
             }
 
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'table',
-              action: 'create',
-              rows,
-              cols,
-            })
-
-            return true
+            return done
           } catch (error) {
             reportError(error, 'Failed to create table:')
             return false
           }
-        }
+        })
       )
 
-      unsubscribers.push(unsubCreateOn)
-
-      const unsubInsertRowBefore = eventBus.on(
+      bind(
         insertRowEventName,
-        'before',
-        () => {
-          if (
-            isBlockedByComposition(
-              selectionManager,
-              checkComposition,
-              'Table insert row'
-            )
-          ) {
-            return false
-          }
-          const cell = findCellAtSelection()
-
-          if (!cell) {
-            logger.warn('Table insert row blocked: No table cell selected')
-            return false
-          }
-
-          return true
-        }
+        'Table insert row',
+        (data) =>
+          extractPosition(data, 'below') === 'above'
+            ? commands.addRowBefore
+            : commands.addRowAfter,
+        (data) => ({
+          action: 'insertRow',
+          position: extractPosition(data, 'below'),
+        })
       )
 
-      unsubscribers.push(unsubInsertRowBefore)
-
-      const unsubInsertRowOn = eventBus.on(
-        insertRowEventName,
-        'on',
-        (data?: unknown) => {
-          try {
-            const cell = findCellAtSelection()
-
-            if (!cell) return false
-
-            const table = findTableAtSelection()
-
-            if (!table) return false
-
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const position = extractPosition(data, 'below')
-            const currentRow = cell.parentElement as HTMLTableRowElement
-            const rowIndex = getRowIndex(cell)
-
-            const newRow = document.createElement('tr')
-            const colCount = currentRow.children.length
-
-            for (let i = 0; i < colCount; i++) {
-              const newCell = document.createElement('td')
-              newCell.style.border = '1px solid #ddd'
-              newCell.style.padding = '8px'
-              newCell.innerHTML = '<br>'
-              newRow.appendChild(newCell)
-            }
-
-            const tbody = currentRow.parentElement
-
-            if (tbody) {
-              if (position === 'above') {
-                tbody.insertBefore(newRow, currentRow)
-              } else {
-                const nextRow = currentRow.nextElementSibling
-
-                if (nextRow) {
-                  tbody.insertBefore(newRow, nextRow)
-                } else {
-                  tbody.appendChild(newRow)
-                }
-              }
-            }
-
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'table',
-              action: 'insertRow',
-              position,
-              rowIndex,
-            })
-
-            return true
-          } catch (error) {
-            reportError(error, 'Failed to insert row:')
-            return false
-          }
-        }
-      )
-
-      unsubscribers.push(unsubInsertRowOn)
-
-      const unsubDeleteRowBefore = eventBus.on(
+      bind(
         deleteRowEventName,
-        'before',
-        () => {
-          if (
-            isBlockedByComposition(
-              selectionManager,
-              checkComposition,
-              'Table delete row'
-            )
-          ) {
-            return false
-          }
-          const cell = findCellAtSelection()
-
-          if (!cell) {
-            logger.warn('Table delete row blocked: No table cell selected')
-            return false
-          }
-
-          return true
-        }
+        'Table delete row',
+        () => commands.deleteRow,
+        () => ({ action: 'deleteRow' })
       )
 
-      unsubscribers.push(unsubDeleteRowBefore)
-
-      const unsubDeleteRowOn = eventBus.on(deleteRowEventName, 'on', () => {
-        try {
-          const cell = findCellAtSelection()
-
-          if (!cell) return false
-
-          const row = cell.parentElement as HTMLTableRowElement
-          const tbody = row.parentElement
-
-          if (!tbody) return false
-
-          if (tbody.children.length <= 1) {
-            logger.warn('Cannot delete last row in table')
-            return false
-          }
-
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          const rowIndex = getRowIndex(cell)
-
-          row.remove()
-
-          eventBus.emit(CoreEvents.STYLE_CHANGED, {
-            style: 'table',
-            action: 'deleteRow',
-            rowIndex,
-          })
-
-          return true
-        } catch (error) {
-          reportError(error, 'Failed to delete row:')
-          return false
-        }
-      })
-
-      unsubscribers.push(unsubDeleteRowOn)
-
-      const unsubInsertColumnBefore = eventBus.on(
+      bind(
         insertColumnEventName,
-        'before',
-        () => {
-          if (
-            isBlockedByComposition(
-              selectionManager,
-              checkComposition,
-              'Table insert column'
-            )
-          ) {
-            return false
-          }
-          const cell = findCellAtSelection()
-
-          if (!cell) {
-            logger.warn('Table insert column blocked: No table cell selected')
-            return false
-          }
-
-          return true
-        }
+        'Table insert column',
+        (data) =>
+          extractPosition(data, 'right') === 'left'
+            ? commands.addColumnBefore
+            : commands.addColumnAfter,
+        (data) => ({
+          action: 'insertColumn',
+          position: extractPosition(data, 'right'),
+        })
       )
 
-      unsubscribers.push(unsubInsertColumnBefore)
-
-      const unsubInsertColumnOn = eventBus.on(
-        insertColumnEventName,
-        'on',
-        (data?: unknown) => {
-          try {
-            const cell = findCellAtSelection()
-
-            if (!cell) return false
-
-            const table = findTableAtSelection()
-
-            if (!table) return false
-
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const position = extractPosition(data, 'right')
-            const colIndex = getColumnIndex(cell)
-
-            const tbody = table.querySelector('tbody')
-
-            if (!tbody) return false
-
-            const rows = Array.from(tbody.children) as HTMLTableRowElement[]
-
-            rows.forEach((row) => {
-              const newCell = document.createElement('td')
-              newCell.style.border = '1px solid #ddd'
-              newCell.style.padding = '8px'
-              newCell.innerHTML = '<br>'
-
-              const cells = Array.from(row.children)
-
-              if (position === 'left') {
-                row.insertBefore(newCell, cells[colIndex])
-              } else {
-                const nextCell = cells[colIndex + 1]
-
-                if (nextCell) {
-                  row.insertBefore(newCell, nextCell)
-                } else {
-                  row.appendChild(newCell)
-                }
-              }
-            })
-
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'table',
-              action: 'insertColumn',
-              position,
-              colIndex,
-            })
-
-            return true
-          } catch (error) {
-            reportError(error, 'Failed to insert column:')
-            return false
-          }
-        }
-      )
-
-      unsubscribers.push(unsubInsertColumnOn)
-
-      const unsubDeleteColumnBefore = eventBus.on(
+      bind(
         deleteColumnEventName,
-        'before',
-        () => {
-          if (
-            isBlockedByComposition(
-              selectionManager,
-              checkComposition,
-              'Table delete column'
-            )
-          ) {
-            return false
-          }
-          const cell = findCellAtSelection()
-
-          if (!cell) {
-            logger.warn('Table delete column blocked: No table cell selected')
-            return false
-          }
-
-          return true
-        }
+        'Table delete column',
+        () => commands.deleteColumn,
+        () => ({ action: 'deleteColumn' })
       )
 
-      unsubscribers.push(unsubDeleteColumnBefore)
-
-      const unsubDeleteColumnOn = eventBus.on(
-        deleteColumnEventName,
-        'on',
-        () => {
-          try {
-            const cell = findCellAtSelection()
-
-            if (!cell) return false
-
-            const table = findTableAtSelection()
-
-            if (!table) return false
-
-            const colIndex = getColumnIndex(cell)
-
-            const row = cell.parentElement as HTMLTableRowElement
-
-            if (row.children.length <= 1) {
-              logger.warn('Cannot delete last column in table')
-              return false
-            }
-
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const tbody = table.querySelector('tbody')
-
-            if (!tbody) return false
-
-            const rows = Array.from(tbody.children) as HTMLTableRowElement[]
-
-            rows.forEach((row) => {
-              const cells = Array.from(row.children)
-              if (cells[colIndex]) {
-                cells[colIndex].remove()
-              }
-            })
-
-            eventBus.emit(CoreEvents.STYLE_CHANGED, {
-              style: 'table',
-              action: 'deleteColumn',
-              colIndex,
-            })
-
-            return true
-          } catch (error) {
-            reportError(error, 'Failed to delete column:')
-            return false
-          }
-        }
-      )
-
-      unsubscribers.push(unsubDeleteColumnOn)
-
-      const unsubDeleteTableBefore = eventBus.on(
+      bind(
         deleteTableEventName,
-        'before',
-        () => {
-          if (
-            isBlockedByComposition(
-              selectionManager,
-              checkComposition,
-              'Table delete'
-            )
-          ) {
-            return false
-          }
-          const table = findTableAtSelection()
-
-          if (!table) {
-            logger.warn('Table delete blocked: No table selected')
-            return false
-          }
-
-          return true
-        }
+        'Table delete',
+        () => commands.deleteTable,
+        () => ({ action: 'delete' })
       )
-
-      unsubscribers.push(unsubDeleteTableBefore)
-
-      const unsubDeleteTableOn = eventBus.on(deleteTableEventName, 'on', () => {
-        try {
-          const table = findTableAtSelection()
-
-          if (!table) return false
-
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          table.remove()
-
-          eventBus.emit(CoreEvents.STYLE_CHANGED, {
-            style: 'table',
-            action: 'delete',
-          })
-
-          return true
-        } catch (error) {
-          reportError(error, 'Failed to delete table:')
-          return false
-        }
-      })
-
-      unsubscribers.push(unsubDeleteTableOn)
     },
 
     destroy() {

@@ -5,6 +5,13 @@ export interface HorizontalRulePluginOptions extends BasePluginOptions {
   eventName?: string
 }
 
+/**
+ * 가로줄.
+ *
+ * `range.insertNode(hr)` 로 DOM 에 직접 꽂던 것을 커맨드 레지스트리로 넘깁니다.
+ * 생김새(테두리·여백)는 이제 스타일시트의 몫입니다 — 문서에 인라인 스타일로
+ * 박아 두면 스키마를 지날 때 어차피 떨어져 나갑니다.
+ */
 export const createHorizontalRulePlugin =
   definePlugin<HorizontalRulePluginOptions>({
     name: 'content:horizontal-rule',
@@ -20,33 +27,16 @@ export const createHorizontalRulePlugin =
       [options.eventName ?? ContentEvents.HORIZONTAL_RULE_INSERT]: ({
         emit,
         reportError,
+        runCommand,
       }) => {
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
+          const result = runCommand('insertHorizontalRule')
 
-          const selection = window.getSelection()
-          if (!selection || selection.rangeCount === 0) {
-            return false
+          if (result) {
+            emit(CoreEvents.STYLE_CHANGED, { style: 'horizontalRule' })
           }
 
-          const range = selection.getRangeAt(0)
-          range.deleteContents()
-
-          const hr = document.createElement('hr')
-          hr.style.border = 'none'
-          hr.style.borderTop = '1px solid #d4d4d4'
-          hr.style.margin = '1em 0'
-
-          range.insertNode(hr)
-
-          const newRange = document.createRange()
-          newRange.setStartAfter(hr)
-          newRange.collapse(true)
-          selection.removeAllRanges()
-          selection.addRange(newRange)
-
-          emit(CoreEvents.STYLE_CHANGED, { style: 'horizontalRule' })
-          return true
+          return result
         } catch (error) {
           reportError(error, 'Failed to insert horizontal rule:')
           return false

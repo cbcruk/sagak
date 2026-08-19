@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
 import { EventBus } from '@/core/event-bus'
-import { SelectionManager } from '@/core/selection-manager'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -602,7 +601,7 @@ describe('EditingAreaManager', () => {
   describe('설정 (구성 옵션 적용)', () => {
     /**
      * Why: 에디터의 외관과 동작을 사용자 요구에 맞게 커스터마이징해야 함
-     * How: 설정 객체를 통해 `className`, `minHeight`, `autoResize`, `EventBus`, `SelectionManager` 전달
+     * How: 설정 객체를 통해 `className`, `minHeight`, `autoResize`, `EventBus` 전달
      */
 
     it('사용자 정의 className을 적용해야 함', async () => {
@@ -620,9 +619,9 @@ describe('EditingAreaManager', () => {
       // When: 초기화
       await manager.initialize()
 
-      // Then: WYSIWYG 영역에 사용자 정의 클래스가 적용됨
+      /* PM 이 자기 클래스를 같이 답니다 — 우리 이름이 남아 있는지만 봅니다 */
       const wysiwygArea = manager.getCurrentArea()
-      expect(wysiwygArea?.getElement().className).toBe('custom-wysiwyg')
+      expect(wysiwygArea?.getElement().className).toContain('custom-wysiwyg')
     })
 
     it('minHeight를 적용해야 함', async () => {
@@ -655,27 +654,21 @@ describe('EditingAreaManager', () => {
       }).not.toThrow()
     })
 
-    it('SelectionManager를 WYSIWYG 영역에 전달해야 함', async () => {
-      // Given: SelectionManager가 포함된 config
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
-
-      const selectionManager = new SelectionManager(editableDiv)
-
-      const config: EditingAreaManagerConfig = {
-        container,
-        selectionManager,
-      }
-      manager = new EditingAreaManager(config)
+    /**
+     * Why: WYSIWYG 영역은 이제 `state.selection` 을 갖고 있어 `SelectionManager`
+     *      를 안 받습니다. 넘겨 주던 배선이 통째로 없어졌습니다.
+     * How: 영역이 자기 상태 창구를 내주는지로 확인합니다
+     */
+    it('WYSIWYG 영역이 자기 문서를 소유해야 함', async () => {
+      // Given: 기본 config
+      manager = new EditingAreaManager({ container })
 
       // When: 초기화
       await manager.initialize()
 
-      // Then: 오류 없이 WYSIWYG 모드로 초기화됨
-      expect(manager.getCurrentMode()).toBe('wysiwyg')
-
-      document.body.removeChild(editableDiv)
+      // Then: 상태 창구가 있고 빈 문서를 내줍니다
+      const handle = manager.getCurrentArea()?.getStateHandle?.()
+      expect(handle?.getState()?.doc.textContent).toBe('')
     })
 
     it('EventBus를 영역에 전달해야 함', async () => {
@@ -691,10 +684,9 @@ describe('EditingAreaManager', () => {
       manager = new EditingAreaManager(config)
       await manager.initialize()
 
-      // When: WYSIWYG 영역에서 input 이벤트 발생
-      const wysiwygArea = manager.getCurrentArea()
-      const element = wysiwygArea?.getElement() as HTMLDivElement
-      element.dispatchEvent(new Event('input', { bubbles: true }))
+      // When: WYSIWYG 영역의 문서가 바뀜
+      const handle = manager.getCurrentArea()!.getStateHandle!()
+      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
       // Then: 콘텐츠 변경 핸들러가 호출됨
       expect(handler).toHaveBeenCalled()

@@ -6,35 +6,54 @@ import {
   createFindReplacePlugin,
   FindReplacePlugin,
 } from '@/plugins/find-replace-plugin'
-import type { EditorContext } from '@/core/types'
+import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
+import type { EditorContext, EditingAreaManager } from '@/core/types'
 import type { FindData, ReplaceData } from '@/plugins/find-replace-plugin'
 
+/**
+ * 찾기는 이제 **문서 모델 위에서** 돕니다.
+ *
+ * 예전에는 맨 `contentEditable` div 하나를 놓고 그 안의 텍스트 노드를 훑었고,
+ * 강조도 그 자리에 `<span>` 을 끼워 넣어 만들었습니다. 그래서 검사도 div
+ * 하나면 됐습니다.
+ *
+ * 이제 검사가 편집 영역을 통째로 세웁니다. 강조는 **데코레이션**이라 화면에는
+ * `.find-highlight` 로 보이지만 문서에는 없고, 바꾸기는 트랜잭션이라
+ * `getRawContent()` 가 곧 결과입니다.
+ */
 describe('FindReplacePlugin', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
   let selectionManager: SelectionManager
-  let element: HTMLDivElement
+  let container: HTMLDivElement
+  let area: WysiwygArea
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(() => {
-    // Given: 편집 가능한 요소와 에디터 컨텍스트 생성
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    element.innerHTML = '<p>Hello World. Hello everyone. This is a test.</p>'
-    document.body.appendChild(element)
+    container = document.createElement('div')
+    document.body.appendChild(container)
 
     eventBus = new EventBus()
+    area = new WysiwygArea({ container, eventBus })
+    area.setRawContent('<p>Hello World. Hello everyone. This is a test.</p>')
+    element = area.getElement()
     selectionManager = new SelectionManager(element)
+
     context = {
       eventBus,
       selectionManager,
       config: { element },
+      editingAreaManager: {
+        getCurrentArea: () => area,
+      } as unknown as EditingAreaManager,
     }
     pluginManager = new PluginManager(context)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    area.destroy()
+    document.body.removeChild(container)
   })
 
   describe('플러그인 등록 (기본 초기화)', () => {
@@ -151,7 +170,7 @@ describe('FindReplacePlugin', () => {
 
     it('should find whole words only when specified', () => {
       // Given: 부분 일치 텍스트로 HTML 변경
-      element.innerHTML = '<p>Hello Helloworld world</p>'
+      area.setRawContent('<p>Hello Helloworld world</p>')
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -222,7 +241,7 @@ describe('FindReplacePlugin', () => {
     beforeEach(async () => {
       // Given: FindReplacePlugin 등록되고 검색 실행됨
       await pluginManager.register(FindReplacePlugin)
-      element.innerHTML = '<p>test test test</p>'
+      area.setRawContent('<p>test test test</p>')
 
       eventBus.emit('FIND', { query: 'test' })
     })
@@ -233,24 +252,29 @@ describe('FindReplacePlugin', () => {
      * 원래는 같아야 맞는데, 강조가 문서 순서와 반대로 들어가는 버그 덕분에
      * 우연히 통과하고 있었습니다. 의도대로 다시 씁니다.
      */
+    /**
+     * 강조는 **데코레이션**이라 다시 칠할 때마다 새 요소가 그려집니다.
+     * 예전 span 은 제자리에서 색만 바뀌었지만 이제는 매번 다시 물어야 합니다.
+     */
+    const colors = (): string[] =>
+      [...element.querySelectorAll<HTMLElement>('.find-highlight')].map(
+        (el) => el.style.backgroundColor
+      )
+
     it('should navigate to next match', () => {
       // Given: 강조 3개, 첫 번째가 현재 항목
-      const highlights = element.querySelectorAll(
-        '.find-highlight'
-      ) as NodeListOf<HTMLElement>
-      expect(highlights.length).toBe(3)
-
-      const currentColor = highlights[0].style.backgroundColor
-      const plainColor = highlights[1].style.backgroundColor
-      expect(currentColor).not.toBe(plainColor)
+      const before = colors()
+      expect(before.length).toBe(3)
+      expect(before[0]).not.toBe(before[1])
 
       // When: FIND_NEXT 이벤트 발행
       const result = eventBus.emit('FIND_NEXT')
       expect(result).toBe(true)
 
       // Then: 현재 항목이 두 번째로 옮겨가야 함
-      expect(highlights[1].style.backgroundColor).toBe(currentColor)
-      expect(highlights[0].style.backgroundColor).toBe(plainColor)
+      const after = colors()
+      expect(after[1]).toBe(before[0])
+      expect(after[0]).toBe(before[1])
     })
 
     it('should wrap around to first match after last', () => {
@@ -350,7 +374,7 @@ describe('FindReplacePlugin', () => {
     beforeEach(async () => {
       // Given: FindReplacePlugin 등록되고 검색 실행됨
       await pluginManager.register(FindReplacePlugin)
-      element.innerHTML = '<p>Hello World. Hello everyone.</p>'
+      area.setRawContent('<p>Hello World. Hello everyone.</p>')
 
       eventBus.emit('FIND', { query: 'Hello' })
     })
@@ -430,7 +454,7 @@ describe('FindReplacePlugin', () => {
     beforeEach(async () => {
       // Given: FindReplacePlugin 등록됨
       await pluginManager.register(FindReplacePlugin)
-      element.innerHTML = '<p>Hello World. Hello everyone. Hello!</p>'
+      area.setRawContent('<p>Hello World. Hello everyone. Hello!</p>')
     })
 
     it('should replace all matches', () => {
@@ -466,7 +490,7 @@ describe('FindReplacePlugin', () => {
 
     it('should replace all matches case-sensitively when specified', () => {
       // Given: 대소문자가 다른 텍스트로 HTML 변경
-      element.innerHTML = '<p>Hello hello HELLO</p>'
+      area.setRawContent('<p>Hello hello HELLO</p>')
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -496,7 +520,7 @@ describe('FindReplacePlugin', () => {
 
     it('should replace whole words only when specified', () => {
       // Given: 부분 일치 텍스트로 HTML 변경
-      element.innerHTML = '<p>Hello Helloworld</p>'
+      area.setRawContent('<p>Hello Helloworld</p>')
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -577,7 +601,7 @@ describe('FindReplacePlugin', () => {
     beforeEach(async () => {
       // Given: FindReplacePlugin 등록되고 검색 실행됨
       await pluginManager.register(FindReplacePlugin)
-      element.innerHTML = '<p>Hello World. Hello everyone.</p>'
+      area.setRawContent('<p>Hello World. Hello everyone.</p>')
 
       eventBus.emit('FIND', { query: 'Hello' })
     })
@@ -750,7 +774,7 @@ describe('FindReplacePlugin', () => {
 
     it('should find, navigate, and replace workflow', () => {
       // Given: 검색할 텍스트로 HTML 설정
-      element.innerHTML = '<p>foo bar foo bar</p>'
+      area.setRawContent('<p>foo bar foo bar</p>')
 
       // When: 검색 실행
       eventBus.emit('FIND', { query: 'foo' })
@@ -787,7 +811,7 @@ describe('FindReplacePlugin', () => {
 
     it('should handle complex text with special characters', () => {
       // Given: 특수문자가 포함된 텍스트로 HTML 설정
-      element.innerHTML = '<p>Price: $100. Discount: 50%. Total: $50.</p>'
+      area.setRawContent('<p>Price: $100. Discount: 50%. Total: $50.</p>')
 
       const styleChangedSpy = vi.fn()
       eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
@@ -818,7 +842,7 @@ describe('FindReplacePlugin', () => {
 
     it('should handle multiple find-replace cycles', () => {
       // Given: 치환할 텍스트로 HTML 설정
-      element.innerHTML = '<p>foo bar foo bar</p>'
+      area.setRawContent('<p>foo bar foo bar</p>')
 
       // When: 첫 번째 치환
       eventBus.emit('FIND', { query: 'foo' })

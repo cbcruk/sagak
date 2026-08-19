@@ -218,11 +218,15 @@ describe('더보기 메뉴', () => {
    */
   describe('줄 간격·자간은 하위 목록으로 들어갑니다', () => {
     it.each([
-      ['Line Height', 'Line Height', '2.0', 'lineHeight', '2'],
-      ['Letter Spacing', 'Letter Spacing', '0.2', 'letterSpacing', '0.2em'],
+      ['Line Height', 'Line Height', '2.0', 'lineHeight', '2', 'p'],
+      /*
+       * 자간은 **문단이 아니라 고른 글자**에 붙습니다 — 모델에서 인라인
+       * 마크이기 때문입니다 (`docs/prosemirror-migration.md` §7-1).
+       */
+      ['Letter Spacing', 'Letter Spacing', '0.2', 'letterSpacing', '0.2em', 'span'],
     ])(
       '%s 를 누르면 목록이 나오고, 고르면 먹습니다',
-      async (label, title, optionLabel, styleProp, expected) => {
+      async (label, title, optionLabel, styleProp, expected, selector) => {
         ed = await mountEditor('<p>hello</p>')
         await settle()
         selectAll(ed.editable)
@@ -245,9 +249,9 @@ describe('더보기 메뉴', () => {
 
         await click(item(optionLabel))
 
-        const block = ed.editable.querySelector('p') as HTMLElement
+        const target = ed.editable.querySelector(selector) as HTMLElement
         expect(
-          block.style[styleProp as 'lineHeight' | 'letterSpacing'],
+          target?.style[styleProp as 'lineHeight' | 'letterSpacing'],
           `${label} 이 안 먹었습니다`
         ).toBe(expected)
         expect(menu(), '고른 뒤에도 메뉴가 열려 있습니다').toBeNull()

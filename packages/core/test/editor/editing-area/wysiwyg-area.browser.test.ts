@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
-import { SelectionManager } from '@/core/selection-manager'
 import { EventBus } from '@/core/event-bus'
+import { TextSelection } from 'prosemirror-state'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -13,6 +13,11 @@ import { parseHtml, toHtml } from '@/model/storage'
  * 편집 영역이 주고받는 것은 이제 문서 모델이지만, 여기서 재려는 것은 모드
  * 사이에서 내용이 보존되는가이지 모델의 모양이 아닙니다. 그래서 경계에서만
  * 옮기고 검사 본문은 읽던 대로 둡니다.
+ *
+ * 다만 **어느 HTML 인지가 바뀌었습니다.** `getRawContent()` 는 더 이상
+ * `innerHTML` 이 아니라 모델을 직렬화한 것입니다. PM 이 그린 DOM 에는
+ * `ProseMirror` 클래스와 표시용 `<br>` 이 섞여 있어 그대로 읽으면 편집기
+ * 사정이 검사에 새어 들어옵니다.
  */
 const doc = (html: string) => parseHtml(html, sagakSchema, document)
 const asHtml = (node: PMNode) => toHtml(node, sagakSchema, document)
@@ -81,9 +86,13 @@ describe('WysiwygArea', () => {
       // When: WysiwygArea 생성
       wysiwygArea = new WysiwygArea(config)
 
-      // Then: 사용자 정의 클래스가 적용됨
+      /*
+       * PM 이 자기 클래스(`ProseMirror`)를 같이 답니다 — 스타일시트가 그
+       * 이름으로 걸려 있어 없으면 편집 표면이 망가집니다. 우리 이름이 남아
+       * 있는지만 봅니다.
+       */
       const div = wysiwygArea.getElement()
-      expect(div.className).toBe('custom-wysiwyg')
+      expect(div.className).toContain('custom-wysiwyg')
     })
 
     it('minHeight를 적용해야 함', () => {
@@ -121,9 +130,12 @@ describe('WysiwygArea', () => {
       // When: WysiwygArea 생성
       wysiwygArea = new WysiwygArea(config)
 
-      // Then: 빈 p 태그가 기본 콘텐츠로 설정됨
+      /*
+       * 빈 문단 하나입니다. 캐럿 자리를 만드는 `<br>` 은 PM 이 DOM 에만 넣고
+       * 모델에는 안 넣습니다 — 저장물에 안 남는다는 뜻입니다.
+       */
       const content = wysiwygArea.getRawContent()
-      expect(content).toBe('<p><br></p>')
+      expect(content).toBe('<p></p>')
     })
   })
 
@@ -175,11 +187,7 @@ describe('WysiwygArea', () => {
       // When: setContent로 빈 콘텐츠 설정
       await wysiwygArea.setContent(doc(''))
 
-      /*
-       * DOM 에는 `<br>` 이 남습니다 — 캐럿이 설 자리가 필요해서입니다. 모델을
-       * 거쳐 나온 값은 `<p></p>` 이고, 그 둘이 다른 것이 정상입니다.
-       */
-      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(wysiwygArea.getRawContent()).toBe('<p></p>')
       expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
@@ -190,7 +198,7 @@ describe('WysiwygArea', () => {
       await wysiwygArea.setContent(doc('<br>'))
 
       /* 채움용 `<br>` 이라 모델에는 안 들어갑니다 — 표시에만 있습니다 */
-      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(wysiwygArea.getRawContent()).toBe('<p></p>')
       expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
@@ -200,8 +208,7 @@ describe('WysiwygArea', () => {
       // When: setContent로 설정
       await wysiwygArea.setContent(doc('<p></p>'))
 
-      /* DOM 은 캐럿 자리로 `<br>` 을 채우고, 모델은 빈 문단 그대로입니다 */
-      expect(wysiwygArea.getRawContent()).toBe('<p><br></p>')
+      expect(wysiwygArea.getRawContent()).toBe('<p></p>')
       expect(asHtml(await wysiwygArea.getContent())).toBe('<p></p>')
     })
 
@@ -470,99 +477,135 @@ describe('WysiwygArea', () => {
     })
   })
 
-  describe('SelectionManager 통합 (CJK/IME 지원)', () => {
+  describe('선택과 삽입 — 모델 위에서', () => {
     /**
-     * Why: 한글 등 CJK 입력과 IME 조합 중 선택 영역 처리를 개선해야 함
-     * How: `SelectionManager`를 사용하여 한글 입력, 선택 영역 관리 개선
+     * Why: 예전에는 이 여섯이 `SelectionManager` 를 거쳐 DOM 을 직접 고쳤습니다.
+     *      PM 이 DOM 을 소유한 뒤로 그 길은 모델을 지나지 않아 위험합니다.
+     * How: `state.selection` 과 트랜잭션으로 옮기고, 결과를 **모델에서** 읽습니다
      */
 
-    it('insertHTML에 SelectionManager를 사용해야 함', () => {
-      // Given: SelectionManager가 설정된 WysiwygArea
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
-
-      const selectionManager = new SelectionManager(editableDiv)
-      const config: WysiwygAreaConfig = {
-        container,
-        selectionManager,
-      }
-      wysiwygArea = new WysiwygArea(config)
-
-      // When: insertHTML 호출
-      const result = wysiwygArea.insertHTML('<strong>Bold</strong>')
-
-      // Then: 결과가 반환됨
-      expect(result).toBeDefined()
-
-      document.body.removeChild(editableDiv)
+    beforeEach(() => {
+      wysiwygArea = new WysiwygArea({ container })
     })
 
-    it('insertText에 SelectionManager를 사용해야 함', () => {
-      // Given: SelectionManager가 설정된 WysiwygArea
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
+    /** 문서를 놓고 전체를 고릅니다 — 툴바를 누르기 직전 모양입니다 */
+    const selectAll = () => {
+      const handle = wysiwygArea.getStateHandle()
+      const state = handle.getState()!
 
-      const selectionManager = new SelectionManager(editableDiv)
-      const config: WysiwygAreaConfig = {
-        container,
-        selectionManager,
-      }
-      wysiwygArea = new WysiwygArea(config)
+      handle.dispatch(
+        state.tr.setSelection(
+          TextSelection.create(state.doc, 1, state.doc.content.size - 1)
+        )
+      )
+    }
 
-      // When: insertText 호출
-      const result = wysiwygArea.insertText('Hello')
+    it('선택 자리에 HTML 을 넣습니다', () => {
+      wysiwygArea.setRawContent('<p>가나다라</p>')
+      selectAll()
 
-      // Then: 결과가 반환됨
-      expect(result).toBeDefined()
-
-      document.body.removeChild(editableDiv)
+      expect(wysiwygArea.insertHTML('<strong>굵게</strong>')).toBe(true)
+      expect(wysiwygArea.getRawContent()).toBe('<p><strong>굵게</strong></p>')
     })
 
-    it('IME 입력 상태를 확인해야 함', () => {
-      // Given: SelectionManager가 설정된 WysiwygArea
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
+    it('선택 자리에 글자를 넣습니다', () => {
+      wysiwygArea.setRawContent('<p>가나다라</p>')
+      selectAll()
 
-      const selectionManager = new SelectionManager(editableDiv)
-      const config: WysiwygAreaConfig = {
-        container,
-        selectionManager,
-      }
-      wysiwygArea = new WysiwygArea(config)
-
-      // When: isComposing 호출
-      const isComposing = wysiwygArea.isComposing()
-
-      // Then: boolean 타입의 값이 반환됨
-      expect(typeof isComposing).toBe('boolean')
-
-      document.body.removeChild(editableDiv)
+      expect(wysiwygArea.insertText('마바')).toBe(true)
+      expect(wysiwygArea.getRawContent()).toBe('<p>마바</p>')
     })
 
-    it('선택 영역을 저장하고 복원해야 함', () => {
-      // Given: SelectionManager가 설정된 WysiwygArea
-      const editableDiv = document.createElement('div')
-      editableDiv.contentEditable = 'true'
-      document.body.appendChild(editableDiv)
+    it('선택된 글자와 HTML 을 읽습니다', () => {
+      wysiwygArea.setRawContent('<p><strong>가나</strong>다라</p>')
+      selectAll()
 
-      const selectionManager = new SelectionManager(editableDiv)
-      const config: WysiwygAreaConfig = {
-        container,
-        selectionManager,
-      }
-      wysiwygArea = new WysiwygArea(config)
+      expect(wysiwygArea.getSelectedText()).toBe('가나다라')
+      expect(wysiwygArea.getSelectedHTML()).toContain('<strong>가나</strong>')
+    })
 
-      // When: saveSelection → restoreSelection 호출
-      // Then: 오류 없이 실행됨
-      expect(() => {
-        wysiwygArea.saveSelection()
-        wysiwygArea.restoreSelection()
-      }).not.toThrow()
+    /**
+     * Why: 대화상자가 포커스를 가져가는 동안 자리를 붙들어야 합니다
+     * How: 노드가 아니라 **위치 정수 둘**이라 DOM 이 다시 그려져도 살아남습니다
+     */
+    it('선택을 저장하고 되돌립니다', () => {
+      wysiwygArea.setRawContent('<p>가나다라</p>')
+      selectAll()
+      wysiwygArea.saveSelection()
 
-      document.body.removeChild(editableDiv)
+      const handle = wysiwygArea.getStateHandle()
+      handle.dispatch(
+        handle.getState()!.tr.setSelection(
+          TextSelection.create(handle.getState()!.doc, 1)
+        )
+      )
+      expect(handle.getState()!.selection.empty).toBe(true)
+
+      wysiwygArea.restoreSelection()
+
+      expect(wysiwygArea.getSelectedText()).toBe('가나다라')
+    })
+
+    it('IME 조합 여부를 뷰에서 읽습니다', () => {
+      expect(wysiwygArea.isComposing()).toBe(false)
+    })
+  })
+
+  describe('되돌리기 — 뷰가 갖습니다', () => {
+    /**
+     * Why: 스냅샷 히스토리는 `innerHTML` 을 통째로 갈아 끼워 모델과 어긋납니다
+     * How: `prosemirror-history` 를 뷰에 달고, 버스의 `UNDO`/`REDO` 로만 부릅니다
+     */
+
+    let eventBus: EventBus
+
+    beforeEach(() => {
+      eventBus = new EventBus()
+      wysiwygArea = new WysiwygArea({ container, eventBus })
+    })
+
+    const type = (text: string) => {
+      const handle = wysiwygArea.getStateHandle()
+      handle.dispatch(handle.getState()!.tr.insertText(text, 1))
+    }
+
+    it('되돌리고 다시 합니다', () => {
+      type('가나')
+      expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
+
+      eventBus.emit('UNDO')
+      expect(wysiwygArea.getRawContent()).toBe('<p></p>')
+
+      eventBus.emit('REDO')
+      expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
+    })
+
+    it('되돌릴 수 있는지 알립니다', () => {
+      const seen: Array<{ canUndo: boolean; canRedo: boolean }> = []
+      eventBus.on('HISTORY_STATE_CHANGED', 'on', (state) => {
+        seen.push({ canUndo: state.canUndo, canRedo: state.canRedo })
+      })
+
+      type('가')
+
+      expect(seen.at(-1)).toEqual({ canUndo: true, canRedo: false })
+
+      eventBus.emit('UNDO')
+
+      expect(seen.at(-1)).toEqual({ canUndo: false, canRedo: true })
+    })
+
+    /**
+     * Why: 다른 문서를 열고 나서 이전 문서로 되돌아가면 안 됩니다
+     * How: `setContent` 는 상태를 새로 만듭니다 — 기록도 같이 새로 시작합니다
+     */
+    it('문서를 갈아 끼우면 기록이 비워집니다', () => {
+      type('가나')
+      wysiwygArea.setRawContent('<p>다른 문서</p>')
+
+      eventBus.emit('UNDO')
+
+      expect(wysiwygArea.getRawContent()).toBe('<p>다른 문서</p>')
     })
   })
 
@@ -581,9 +624,14 @@ describe('WysiwygArea', () => {
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
 
-      // When: input 이벤트 발생
-      const div = wysiwygArea.getElement()
-      div.dispatchEvent(new Event('input', { bubbles: true }))
+      /*
+       * **DOM 이벤트가 아니라 트랜잭션이 신호입니다.**
+       *
+       * 예전에는 `input` 을 듣고 "뭔가 바뀌었나 보다" 했습니다. 이제는 문서를
+       * 바꾼 트랜잭션 자신이 무엇이 바뀌었는지 알고 있어 짐작할 일이 없습니다.
+       */
+      const handle = wysiwygArea.getStateHandle()
+      handle.dispatch(handle.getState()!.tr.insertText('가', 1))
 
       // Then: WYSIWYG_CONTENT_CHANGED 이벤트가 발행됨
       expect(handler).toHaveBeenCalled()
@@ -596,29 +644,10 @@ describe('WysiwygArea', () => {
      * How: `innerHTML` 게터를 세어, 페이로드를 읽기 전에는 0 인지 확인
      */
     it('콘텐츠를 읽기 전에는 직렬화하지 않아야 함', () => {
-      // Given: innerHTML 접근을 세는 WysiwygArea
+      // Given: 내용이 있는 WysiwygArea
       const eventBus = new EventBus()
-      const config: WysiwygAreaConfig = { container, eventBus }
-      wysiwygArea = new WysiwygArea(config)
-
-      const div = wysiwygArea.getElement()
-      div.innerHTML = '<p>글자가 좀 있는 문단입니다</p>'
-
-      const descriptor = Object.getOwnPropertyDescriptor(
-        Element.prototype,
-        'innerHTML'
-      )!
-      let reads = 0
-      Object.defineProperty(div, 'innerHTML', {
-        configurable: true,
-        get() {
-          reads += 1
-          return descriptor.get!.call(this)
-        },
-        set(value: string) {
-          descriptor.set!.call(this, value)
-        },
-      })
+      wysiwygArea = new WysiwygArea({ container, eventBus })
+      wysiwygArea.setRawContent('<p>글자가 좀 있는 문단입니다</p>')
 
       let payload: { content: string } | undefined
       eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', (data) => {
@@ -626,18 +655,24 @@ describe('WysiwygArea', () => {
       })
 
       // When: 입력이 열 번 일어나되 아무도 content 를 읽지 않음
+      const handle = wysiwygArea.getStateHandle()
       for (let i = 0; i < 10; i += 1) {
-        div.dispatchEvent(new Event('input', { bubbles: true }))
+        handle.dispatch(handle.getState()!.tr.insertText('가', 1))
       }
 
-      // Then: 한 번도 직렬화되지 않아야 함
-      expect(reads).toBe(0)
+      /*
+       * Then: 페이로드에 **값이 아니라 게터**가 들어 있어야 합니다.
+       *
+       * 전에는 `innerHTML` 읽기 횟수를 셌지만 이제 직렬화는 모델에서 일어나
+       * 셀 자리가 없습니다. 대신 계약 자체를 봅니다 — 프로퍼티가 게터라는 것이
+       * 곧 "읽기 전에는 아무 일도 안 한다" 입니다.
+       */
+      const descriptor = Object.getOwnPropertyDescriptor(payload!, 'content')!
+      expect(typeof descriptor.get).toBe('function')
+      expect(descriptor.value).toBeUndefined()
 
       // 그리고 읽으면 그때 제대로 나와야 합니다 (계약은 그대로)
       expect(payload?.content).toContain('문단입니다')
-      expect(reads).toBe(1)
-
-      delete (div as unknown as Record<string, unknown>).innerHTML
     })
 
     it('포커스 이벤트를 발행해야 함', () => {

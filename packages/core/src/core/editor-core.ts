@@ -21,6 +21,7 @@ import {
   type EditorErrorData,
 } from './errors'
 import { CommandRegistry } from './command-registry'
+import { registerModelCommands } from '@/model/register'
 import { registerDefaultCommands } from './default-commands'
 
 /**
@@ -142,6 +143,7 @@ export class EditorCore {
   private selectionErrorReporter: ErrorReporter
   private onErrorUnsub?: () => void
   private commandRegistry: CommandRegistry
+  private unregisterModelCommands?: () => void
 
   /**
    * `EditorCore` 인스턴스를 생성합니다
@@ -200,6 +202,22 @@ export class EditorCore {
       legacyFallback: config.legacyFallback,
     })
     this.context.commandRegistry = this.commandRegistry
+
+    /*
+     * 모델 커맨드를 **미리** 얹습니다.
+     *
+     * 아직 편집 영역이 없으므로 `getState()` 는 `null` 이고, 그러면 모델
+     * 커맨드는 "처리하지 않았다" 고 답해 아래 층이 지금까지 하던 대로 합니다.
+     * 편집 영역이 생겨 상태를 내주기 시작하면 그때부터 모델 쪽이 맡습니다 —
+     * 갈아타기가 여기 한 줄에 들어 있습니다.
+     *
+     * 매번 현재 영역을 다시 묻는 이유는 **모드가 바뀌기 때문**입니다. 소스·텍스트
+     * 모드에는 모델이 없어 `null` 이 되고, WYSIWYG 로 돌아오면 다시 잡습니다.
+     */
+    this.unregisterModelCommands = registerModelCommands(this.commandRegistry, {
+      getState: () => this.modelStateHandle()?.getState() ?? null,
+      dispatch: (tr) => this.modelStateHandle()?.dispatch(tr),
+    })
 
     if (config.element) {
       this.selectionManager = new SelectionManager(
@@ -262,7 +280,6 @@ export class EditorCore {
         container: this.config.editingAreaContainer,
         initialMode: this.config.initialMode || 'wysiwyg',
         eventBus: this.eventBus,
-        selectionManager: this.selectionManager,
         minHeight: this.config.minHeight,
         autoResize: this.config.autoResize,
         spellCheck: this.config.spellCheck,
@@ -385,6 +402,13 @@ export class EditorCore {
    */
   getPluginManager(): PluginManager {
     return this.pluginManager
+  }
+
+  /**
+   * 지금 편집 영역이 자기 문서를 소유하면 그 창구를 돌려줍니다
+   */
+  private modelStateHandle() {
+    return this.editingAreaManager?.getCurrentArea()?.getStateHandle?.()
   }
 
   /**
@@ -744,6 +768,8 @@ export class EditorCore {
     this.onErrorUnsub = undefined
     this.focusRequestUnsub?.()
     this.focusRequestUnsub = undefined
+    this.unregisterModelCommands?.()
+    this.unregisterModelCommands = undefined
 
     this.pluginManager.destroyAll()
 

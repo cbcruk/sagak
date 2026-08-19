@@ -24,33 +24,17 @@ function extractLetterSpacing(data: unknown): string | null {
   return null
 }
 
-function getBlockParent(node: Node | null): HTMLElement | null {
-  const blockTags = [
-    'P',
-    'DIV',
-    'LI',
-    'H1',
-    'H2',
-    'H3',
-    'H4',
-    'H5',
-    'H6',
-    'BLOCKQUOTE',
-  ]
-
-  while (node) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as HTMLElement
-      if (blockTags.includes(element.tagName)) {
-        return element
-      }
-    }
-    node = node.parentNode
-  }
-
-  return null
-}
-
+/**
+ * 자간.
+ *
+ * 줄 간격과 같은 이유로 커맨드 레지스트리로 넘깁니다. 다만 **붙는 자리가
+ * 달라집니다** — 예전에는 걸친 블록의 `style.letterSpacing` 을 박았지만
+ * 모델에서 자간은 **인라인 마크**라 고른 글자에만 붙습니다
+ * (`docs/prosemirror-migration.md` §7-1 의 값 붙는 마크 여섯 중 하나).
+ *
+ * 문단 일부만 골라 자간을 줄 수 있다는 뜻이고, 반대로 문단 전체에 주려면
+ * 문단 전체를 골라야 합니다.
+ */
 export const createLetterSpacingPlugin =
   definePlugin<LetterSpacingPluginOptions>({
     name: 'text-style:letter-spacing',
@@ -64,7 +48,7 @@ export const createLetterSpacingPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: (
-        { emit, reportError },
+        { emit, reportError, runCommand },
         data?: unknown
       ) => {
         const letterSpacing = extractLetterSpacing(data)
@@ -74,60 +58,20 @@ export const createLetterSpacingPlugin =
           return false
         }
 
+        /* 툴바는 배수만 넘깁니다 — CSS 단위를 붙이는 자리는 여기입니다 */
+        const cssValue = letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
+
         try {
-          emit(CoreEvents.CAPTURE_SNAPSHOT)
+          const result = runCommand('letterSpacing', cssValue)
 
-          const selection = window.getSelection()
-          if (!selection || selection.rangeCount === 0) {
-            return false
-          }
-
-          const range = selection.getRangeAt(0)
-          const commonAncestor = range.commonAncestorContainer
-
-          const blocksToStyle = new Set<HTMLElement>()
-
-          if (range.collapsed) {
-            const block = getBlockParent(commonAncestor)
-            if (block) {
-              blocksToStyle.add(block)
-            }
-          } else {
-            const startBlock = getBlockParent(range.startContainer)
-            const endBlock = getBlockParent(range.endContainer)
-
-            if (startBlock) blocksToStyle.add(startBlock)
-            if (endBlock) blocksToStyle.add(endBlock)
-
-            if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
-              const element = commonAncestor as HTMLElement
-              const blockChildren = element.querySelectorAll(
-                'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
-              )
-              blockChildren.forEach((child) => {
-                if (selection.containsNode(child, true)) {
-                  blocksToStyle.add(child as HTMLElement)
-                }
-              })
-            }
-          }
-
-          const cssValue =
-            letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
-
-          blocksToStyle.forEach((block) => {
-            block.style.letterSpacing = cssValue
-          })
-
-          if (blocksToStyle.size > 0) {
+          if (result) {
             emit(CoreEvents.STYLE_CHANGED, {
               style: 'letterSpacing',
               value: letterSpacing,
             })
-            return true
           }
 
-          return false
+          return result
         } catch (error) {
           reportError(error, 'Failed to apply letter spacing:')
           return false

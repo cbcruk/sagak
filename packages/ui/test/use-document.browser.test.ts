@@ -15,7 +15,7 @@ import {
   save,
   saveAs,
 } from '../src/state/document-store'
-import { mountEditor, settle } from './harness'
+import { mountEditor, settle, setHtml } from './harness'
 import type { MountedEditor } from './harness'
 
 /**
@@ -118,8 +118,7 @@ async function mount(content = '<p>처음</p>'): Promise<void> {
  * 캐럿이 아니라 내용 변경 이벤트입니다.
  */
 async function type(html: string): Promise<void> {
-  ed!.editable.innerHTML = html
-  ed!.editable.dispatchEvent(new InputEvent('input', { bubbles: true }))
+  setHtml(ed!, html)
   await settle(6)
 }
 
@@ -175,8 +174,7 @@ describe('열려 있는 문서', () => {
     await settle(3)
 
     // 이벤트가 정리될 틈을 주지 않고 곧바로 저장합니다
-    ed!.editable.innerHTML = '<p>막 친 글</p>'
-    ed!.editable.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    setHtml(ed!, '<p>막 친 글</p>')
     await doc!.save()
     await settle(3)
 

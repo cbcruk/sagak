@@ -1,4 +1,5 @@
 import type { Node as PMNode } from 'prosemirror-model'
+import type { StateHandle } from '@/model/register'
 import type { EventBus } from './event-bus'
 import type { SelectionManager } from './selection-manager'
 import type { CommandRegistry } from './command-registry'
@@ -7,6 +8,35 @@ import type { CommandRegistry } from './command-registry'
  * 편집 모드
  */
 export type EditingMode = 'wysiwyg' | 'html' | 'text'
+
+/**
+ * 문서에 **손대지 않고** 칠하는 구간.
+ *
+ * 찾기 강조가 씁니다. 예전에는 `<span class="find-highlight">` 를 문서에
+ * 끼워 넣었는데, 편집 영역이 문서 모델을 갖게 되면서 그 span 이 **문서의
+ * 일부가 됩니다** — 스키마를 지나며 클래스는 떨어지고 배경색만 남아, 찾기를
+ * 한 번 했다고 글에 형광펜이 칠해졌습니다. 저장물에도 들어갑니다.
+ *
+ * 위치는 모델 좌표입니다.
+ */
+export interface HighlightRange {
+  from: number
+  to: number
+  className?: string
+  style?: string
+}
+
+/**
+ * 화면에만 있는 표시를 다루는 창구.
+ *
+ * 편집 영역이 문서 모델을 가질 때만 있습니다.
+ */
+export interface Highlighter {
+  set(ranges: HighlightRange[]): void
+  clear(): void
+  /** 그 자리가 보이게 굴립니다 — 선택은 안 건드립니다 */
+  scrollTo(pos: number): void
+}
 
 /**
  * 편집 영역 인터페이스
@@ -37,6 +67,18 @@ export interface EditingArea {
 
   /** 편집 영역이 표시되고 있는지 확인합니다 */
   isVisible(): boolean
+
+  /**
+   * 이 영역이 **자기 문서를 소유할 때만** 있습니다.
+   *
+   * 있으면 커맨드가 이 상태 위에서 돌고(`registerModelCommands`) 되돌리기도
+   * 이 영역의 것입니다. 없으면 예전 길(`execCommand` · 스냅샷 히스토리)이
+   * 그대로 맡습니다.
+   */
+  getStateHandle?(): StateHandle
+
+  /** 문서를 건드리지 않는 표시 — 찾기 강조가 씁니다 */
+  getHighlighter?(): Highlighter
 
   /** 리소스를 정리합니다 */
   destroy(): void

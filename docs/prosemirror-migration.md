@@ -8,6 +8,8 @@
 
 ## 요약 (결론 먼저)
 
+> **진행**: 0·1·2a·2b-1·2b-2 끝. 다음은 2c/4단계(선택 영역)입니다.
+
 1. **버스는 구속조건이 아니었습니다.** 명령 전달은 `commandRegistry` 가 precedence
    체인까지 갖춘 채 이미 있고, 알림은 `subscribe(state, tr)` 하나로 대체됩니다.
    진짜 구속조건은 **문서 모델이 없다**는 것입니다.
@@ -79,7 +81,8 @@
 <font color="#ff0000">빨강     →  <span style="color: rgb(255, 0, 0)">빨강
 ```
 
-목록 항목의 문단 감싸기는 `li > p` 여백 CSS 를 요구합니다. 레거시 정규화는 오히려
+목록 항목의 문단 감싸기는 `li > p` 여백 CSS 를 요구합니다 (2b-2 에서 넣었습니다 —
+안 넣으면 문단의 아래 여백이 항목마다 붙어 목록이 성기게 벌어집니다). 레거시 정규화는 오히려
 이득입니다 — `execCommand` 시절 문서가 한 번 통과하며 정리되고, `font size="5" → 24px`
 는 [최근에 바로잡은 스케일 표](../packages/ui/src/svelte/toolbar-select.specs.ts)를
 그대로 씁니다.
@@ -112,10 +115,14 @@
 [`spike-to-product.md`](./spike-to-product.md) 가 "DOM 을 진실로 삼는 표면" 으로 센
 두 숫자를 다시 쟀습니다.
 
-| | 그때 | 지금 |
-| --- | --- | --- |
-| `document.execCommand(` | 56건 / 36파일 | **5건 / 4파일** |
-| `getSelection(` | 43건 / 18파일 | **44건 / 19파일** |
+| | 그때 | 2b-1 | 2b-2 뒤 |
+| --- | --- | --- | --- |
+| `document.execCommand(` | 56건 / 36파일 | 5건 / 4파일 | **5건 / 4파일** |
+| `getSelection(` | 43건 / 18파일 | 44건 / 19파일 | **39건 / 20파일** |
+
+뷰를 갈아 끼워도 읽기 경로는 거의 안 줄었습니다. 줄어든 다섯은 편집 영역
+자신과 줄간격·자간·가로줄 플러그인이 쓰던 것이고, 나머지는 **툴바 쪽 20파일**에
+그대로 있습니다. 4단계가 여전히 제일 큰 덩어리입니다.
 
 **쓰기 경로는 정리됐고 읽기 경로는 그대로입니다.** `execCommand` 는
 [`legacy-exec-command.ts`](../packages/core/src/core/legacy-exec-command.ts) 의 최하위
@@ -180,7 +187,7 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 **손실 없음**이 아닌 클립보드가 나오면 그게 곧 고칠 거리이고, 픽스처로 복사해
 `paste.test.ts` 에 붙이면 회귀 검사가 됩니다.
 
-### 2단계 — 편집 표면 교체 (진행 중: 2a·2b-1 끝, 2b-2 남음)
+### 2단계 — 편집 표면 교체 (2a·2b-1·2b-2 끝, 2c 남음)
 
 셋으로 나눴습니다.
 
@@ -188,7 +195,7 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 | --- | --- | --- |
 | **2a** | 툴바 커맨드를 `EditorState` 위로 | ✔ `src/model/commands.ts` |
 | **2b-1** | 그 커맨드를 레지스트리에 얹기 | ✔ `src/model/register.ts` |
-| **2b-2** | `EditorView` 교체 | **남음** |
+| **2b-2** | `EditorView` 교체 | ✔ `modes/wysiwyg-area.ts` |
 | **2c** | 선택 영역 정리 | 남음 (4단계와 한 덩어리) |
 
 **왜 커맨드가 뷰보다 먼저인가.** `EditorView` 를 얹는 순간 PM 이 DOM 을 소유합니다.
@@ -199,22 +206,74 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 `registerModelCommands` 는 상태가 `null` 이면 `undefined` 를 돌려줍니다(= 처리하지 않음).
 그래서 등록해 둬도 아무것도 안 바뀌고, **뷰가 상태를 내주는 순간 갈아탑니다.**
 
-#### 2b-2 착수 조건과 할 일
+#### 2b-2 — 한 자리에서 없어진 것들
 
-1. `WysiwygArea` 재작성 — `EditorView` 소유, `dispatchTransaction` 에서
-   `WYSIWYG_CONTENT_CHANGED`·`WYSIWYG_SELECTION_CHANGED` 발행,
-   `installStoredMarks`(PM 의 `storedMarks` 가 대신)와 채움용 `<br>` 처리 제거
-2. `EditorCore` 가 그 뷰의 `StateHandle` 로 `registerModelCommands` 호출
-3. **wysiwyg 검사 41개 이관** — `getRawContent()` 로 DOM 마크업을 직접 보는 것들입니다.
-   PM 의 DOM 은 클래스·속성·trailing break 가 붙어 모양이 다르므로 상당수를
-   "DOM 이 이렇다" → **"모델이 이렇다"** 로 다시 써야 합니다
-4. `selectionManager` 위임 여섯(`insertHTML`·`insertText`·`getSelectedHTML`·
-   `getSelectedText`·`execCommand`·`focus` 의 `restoreSelection`)의 거취 — 2c 와 한
-   덩어리라 여기서 경계를 정해야 합니다
+`WysiwygArea` 는 `mount` 로 자기 요소를 `EditorView` 에 내줍니다. 그러고 나니
+**이 클래스가 하던 일 여럿이 통째로 사라졌습니다.**
 
-**중간에 초록이 안 되는 구간이 깁니다.** 지금까지 조각은 전부 각각 초록으로 끝났는데
-2b-2 는 처음부터 끝까지 한 번에 가는 편이 낫습니다 — 끊기면 무엇이 깨진 것인지 판별하기
-어려워집니다.
+| 없어진 것 | 대신 |
+| --- | --- |
+| `installStoredMarks` | PM 의 `storedMarks` |
+| 채움용 `<br>` 끼워 넣기 | PM 의 trailing break |
+| `selectionchange` 리스너 | 트랜잭션의 선택 변화 |
+| `SelectionManager` 위임 여섯 | `state.selection` |
+| 붙여넣기 소독기 | 스키마 |
+| 스냅샷 히스토리 | `prosemirror-history` |
+
+`getRawContent()` 의 뜻도 바뀌었습니다 — `innerHTML` 이 아니라 **모델을
+직렬화한 것**입니다. PM 이 그린 DOM 에는 `ProseMirror` 클래스와 표시용 `<br>` 이
+섞여 있어 그대로 내보내면 저장물에 편집기 사정이 새어 들어갑니다.
+
+#### 2b-2 — 예상 못 한 것: 플러그인 다섯이 딸려 왔습니다
+
+계획에는 없던 부분입니다. 뷰가 DOM 을 소유하는 순간, **DOM 을 직접 고치던
+플러그인들이 조용히 망가집니다.** PM 의 `DOMObserver` 가 바깥에서 난 변경을
+읽어 모델로 되돌리기 때문에 어떤 것은 살아남고(바꾸기·아래첨자) 어떤 것은
+사라집니다(문단 **안에** 꽂은 `<table>`). 그 경계가 눈에 안 보이는 것이 제일
+나쁩니다.
+
+| 플러그인 | 무엇이 문제였나 | 어떻게 |
+| --- | --- | --- |
+| 가로줄·줄간격·자간 | `getSelection()` 으로 블록에 스타일을 박음 | 커맨드 레지스트리로 (2a 커맨드가 이미 있었습니다) |
+| 표 | 문단 안에 `<table>` 을 꽂아 **통째로 사라짐** | `prosemirror-tables` — 767줄 → 320줄 |
+| 이미지 | `<img>` 를 만들어 꽂고 DOM 에서 되찾음 | `insertImage`·`updateImage`·`deleteImage` |
+| 찾기/바꾸기 | 강조 `<span>` 이 **문서의 일부가 됨** | 데코레이션 + 트랜잭션 |
+| 히스토리 | `innerHTML` 을 통째로 되돌려 놓음 | 편집 영역이 모델을 가지면 **안 답니다** |
+
+찾기 강조가 제일 고약했습니다. `<span class="find-highlight" style="background-color: …">`
+를 문서에 끼워 넣고 있었는데, 스키마를 지나며 클래스는 떨어지고 **배경색만
+남습니다.** 찾기를 한 번 했다고 글에 형광펜이 칠해지고 저장물에도 들어갑니다.
+데코레이션은 트랜잭션에 실려 오지만 `doc` 을 안 바꾸고 직렬화에도 안 나타납니다 —
+찾기 강조가 원래 그래야 하는 것입니다.
+
+#### 2b-2 — 히스토리의 입구는 하나입니다
+
+뷰에 `prosemirror-history` 를 답니다. 다만 **되돌리기 단축키는 안 답니다** —
+키보드 플러그인이 이미 `Ctrl+Z` 를 버스의 `UNDO` 로 옮기고 있어 둘 다 달면 한 번
+누를 때 두 번 되돌아갑니다. 버스가 유일한 입구입니다.
+
+`CAPTURE_SNAPSHOT` 은 뜻이 바뀌어 살아남았습니다. 찍어 둘 것이 없어졌으므로
+남는 뜻은 **"다음 변경을 앞의 것과 한 덩어리로 묶지 말라"** 이고, 그게
+`closeHistory` 입니다.
+
+#### 2b-2 — 잰 것
+
+한글 조합은 **제품의 편집 영역에서 다시 쟀습니다**
+([`wysiwyg-ime.browser.test.ts`](../packages/core/test/editor/editing-area/wysiwyg-ime.browser.test.ts)).
+스파이크가 잰 것은 `EditorView` 하나였고, 그 위에 버스 발행·히스토리 배선·
+데코레이션을 얹은 뒤에도 같은지는 따로 봐야 확인됩니다. CDP 의
+`Input.imeSetComposition` 으로 진짜 조합(ㅎ → 하 → 한)을 일으킵니다.
+
+```
+조합이 한 번만 들어가는가          ✔
+두 번 이어서 해도 안 겹치는가      ✔
+한 덩어리로 되돌아가는가            ✔
+조합 직후 서식이 안 깨뜨리는가      ✔
+내용 알림이 조합 결과를 싣는가      ✔
+```
+
+붙여넣기 소독기를 뗀 자리도 같은 파일에서 봅니다 — `<script>`·`onerror`·
+`javascript:` 주소가 **스키마에서** 걸립니다.
 
 ### 2단계 준비 — 스파이크 (완료)
 
@@ -265,10 +324,16 @@ cd spike/pm-schema && npx vite tools      # 붙여넣으면 그 자리에서 왕
 | 도메인 store 들 | 껍데기 유지, push → **pull** |
 | `fromBus` | **죽음** — 버스가 없습니다 |
 | `fromSelection` · `selection.ts` | **죽음** — `prosemirror-view` 의 일입니다 |
+| 검사 harness 의 `selectAll`·`placeCaret` | **포커스를 먼저 줍니다** (2b-2 에서 이미 고침) |
 | `toolbar-choice.ts` | **없어질 가능성** — 줄간격·자간이 노드 속성이 되면 읽힙니다 |
 
 그래서 남은 컴포넌트(`AutoSaveIndicator`·`FindReplaceDialog`)를 `fromBus` 로 옮기는
 작업은 **접습니다.** 버려질 코드를 쓰는 일입니다.
+
+2b-2 에서 UI 소스는 **한 줄도 안 고쳤습니다.** 고친 것은 검사 harness 하나입니다 —
+`prosemirror-view` 는 **포커스가 없는 동안의 DOM 선택을 무시합니다**(에디터 밖에서
+일어난 선택까지 문서 선택으로 받으면 안 되니까). harness 는 포커스 없이 범위만
+놓고 있었는데, 사람이 하는 순서는 원래 "편집 영역을 누르고 끄는" 것입니다.
 
 ## 7. 정한 것 — 스키마 결정 둘 (측정)
 
@@ -390,12 +455,35 @@ HTML 은 다시 스키마를 통과합니다. 스키마 밖의 손질은 반영�
 
 ## 10. 미결
 
-- **`li > p` 여백 CSS**
-- **번들 크기** — 스키마를 코어에 넣자 **233KB → 306KB (gzip 73 → 95KB)** 로 늘었습니다.
-  `prosemirror-model`·`schema-list`·`tables` 값이고 `prosemirror-view` 는 아직 안 들어갔습니다.
-  지금은 **제품이 안 쓰는데도 실려 있습니다** — `index.ts` 가 내보내니 앱이 끌고 옵니다.
-  2단계에서 실제로 쓰기 시작하면 값을 하지만, 안 쓰는 동안 매다는 게 맞는지는 별개입니다.
-  급하면 하위 경로(`sagak-core/model`)로 갈라 놓을 수 있습니다
+- **이미지의 정렬·테두리가 없어졌습니다.** 스키마의 이미지가 갖는 것은 주소·대체글·
+  너비·높이 넷입니다. `IMAGE_INSERT`/`IMAGE_UPDATE` 는 `alignment`·`border` 를 계속
+  **받지만 안 붙입니다.** 지금 제품의 다이얼로그가 그 둘을 안 보내므로 사용자에게
+  보이는 손실은 없지만, 되살리려면 스키마부터 늘려야 합니다. 이벤트 타입에
+  `@deprecated` 로 적어 뒀습니다
+- **표의 테두리·너비도 같습니다.** `TABLE_CREATE` 의 `border`·`width` 가 문서에
+  안 붙습니다 — 생김새는 스타일시트의 몫이 됐습니다
+- **자간이 문단에서 글자로 옮겨갔습니다.** 예전에는 걸친 블록의
+  `style.letterSpacing` 을 박았지만 모델에서 자간은 인라인 마크입니다. 문단
+  일부만 골라 줄 수 있게 됐고, 문단 전체에 주려면 전체를 골라야 합니다
+- **`sanitize` 옵션이 죽었습니다.** 2b-2 에서 소독기를 뗀 자리는 WYSIWYG 뿐이지만,
+  소스 모드도 이미 `parseHtml` 로 모델을 거치고 있어 **DOMPurify 를 부르는 곳이
+  하나도 안 남았습니다.** `createEditor({ sanitize: false })` 는 이제 아무 일도
+  안 합니다 — 지켜지지 않는 약속이라 타입에 `@deprecated` 로 적어 뒀습니다.
+  옵션과 `dompurify` 의존을 통째로 걷어낼지는 별도 결정입니다 (걷어내면 초기
+  청크가 더 줄어듭니다)
+- **번들 크기** — `prosemirror-view` 가 들어오며 자리도 갈렸습니다.
+
+  | | 크기 | gzip |
+  | --- | --- | --- |
+  | 스키마 넣기 전 | 233KB | 73KB |
+  | 스키마만 (2b-1) | 306KB | 95KB |
+  | 초기 청크 (지금) | **360KB** | **113KB** |
+  | `wysiwyg-area` 청크 (지금) | **114KB** | **36KB** |
+
+  편집 영역은 지연 로드라 갈라졌지만, 실제로는 곧바로 불러오므로 합해서
+  **474KB (gzip 149KB)** 로 보는 것이 맞습니다. `prosemirror-tables`·`commands` 가
+  플러그인을 통해 초기 청크로 끌려 들어간 것도 여기 섞여 있습니다 — 하위
+  경로(`sagak-core/model`)로 갈라 놓는 선택지는 그대로 남아 있습니다
 - **학습 목표와의 관계.** 이 저장소는 "배움의 도구" 라는 합의가 있습니다
   ([`session-doc-model-spike.md`](./session-doc-model-spike.md)). 남의 모델을 사는 것은
   그 배움을 없애는 게 아니라 **바꿉니다** — 짓는 배움에서 읽고 얹는 배움으로. 이건

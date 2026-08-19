@@ -1,4 +1,11 @@
 import { logger } from '@/core/logger'
+import { modelState, runModelCommand } from '@/model/bridge'
+import {
+  deleteImage,
+  imageAt,
+  insertImage,
+  updateImage,
+} from '@/model/commands'
 import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
@@ -100,11 +107,18 @@ export interface ImageData {
 
   /**
    * 이미지 정렬
+   *
+   * @deprecated **문서에 안 붙습니다.** 스키마의 이미지가 갖는 것은 주소·
+   * 대체글·너비·높이 넷이라 정렬은 표현할 자리가 없습니다. 지금 제품의
+   * 다이얼로그도 이 값을 보내지 않습니다 — 되살리려면 스키마부터 늘려야
+   * 합니다 (`docs/prosemirror-migration.md` §10).
    */
   alignment?: ImageAlignment
 
   /**
    * 이미지 테두리 (CSS 값: `'1px solid #000'` 등)
+   *
+   * @deprecated `alignment` 와 같은 이유로 문서에 안 붙습니다.
    */
   border?: string
 }
@@ -153,71 +167,6 @@ function isValidImageUrl(
     return true
   } catch {
     return false
-  }
-}
-
-/**
- * 현재 선택 영역에서 이미지 요소를 찾습니다
- */
-function findImageAtSelection(): HTMLImageElement | null {
-  const selection = window.getSelection()
-
-  if (!selection || !selection.anchorNode) {
-    return null
-  }
-
-  let node: Node | null = selection.anchorNode
-
-  if (node.nodeType === Node.TEXT_NODE) {
-    node = node.parentNode
-  }
-
-  if (
-    node &&
-    node.nodeType === Node.ELEMENT_NODE &&
-    (node as Element).tagName === 'IMG'
-  ) {
-    return node as HTMLImageElement
-  }
-
-  if (node && node.nodeType === Node.ELEMENT_NODE) {
-    const img = (node as Element).querySelector('img')
-
-    if (img) {
-      return img
-    }
-  }
-
-  return null
-}
-
-/**
- * 이미지에 정렬 스타일을 적용합니다
- */
-function applyImageAlignment(
-  img: HTMLImageElement,
-  alignment: ImageAlignment
-): void {
-  img.style.display = ''
-  img.style.marginLeft = ''
-  img.style.marginRight = ''
-
-  switch (alignment) {
-    case 'left':
-      img.style.display = 'block'
-      img.style.marginRight = 'auto'
-      break
-    case 'right':
-      img.style.display = 'block'
-      img.style.marginLeft = 'auto'
-      break
-    case 'center':
-      img.style.display = 'block'
-      img.style.marginLeft = 'auto'
-      img.style.marginRight = 'auto'
-      break
-    case 'none':
-      break
   }
 }
 
@@ -345,36 +294,26 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             }
 
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            const img = document.createElement('img')
-            img.src = data.src
 
-            if (data.width || defaultWidth) {
-              img.style.width = data.width || defaultWidth!
-            }
-            if (data.height || defaultHeight) {
-              img.style.height = data.height || defaultHeight!
-            }
-            if (data.alt) {
-              img.alt = data.alt
-            }
-            if (data.border) {
-              img.style.border = data.border
-            }
+            /*
+             * `테두리`·`정렬` 은 **모델에 자리가 없습니다.**
+             *
+             * 스키마의 이미지가 갖는 것은 주소·대체글·너비·높이 넷입니다. 지금
+             * 제품의 다이얼로그도 그 넷만 보내므로 잃는 것은 없지만, 이벤트로
+             * 직접 부르면 나머지는 조용히 빠집니다.
+             */
+            const inserted = runModelCommand(
+              context,
+              insertImage({
+                src: data.src,
+                alt: data.alt ?? null,
+                width: data.width || defaultWidth || null,
+                height: data.height || defaultHeight || null,
+              })
+            )
 
-            if (data.alignment) {
-              applyImageAlignment(img, data.alignment)
-            }
-
-            const selection = window.getSelection()
-            if (selection && selection.rangeCount > 0) {
-              const range = selection.getRangeAt(0)
-              range.deleteContents()
-              range.insertNode(img)
-
-              range.setStartAfter(img)
-              range.setEndAfter(img)
-              selection.removeAllRanges()
-              selection.addRange(range)
+            if (!inserted) {
+              return false
             }
 
             eventBus.emit(CoreEvents.STYLE_CHANGED, {
@@ -413,9 +352,9 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             return false
           }
 
-          const img = findImageAtSelection()
+          const state = modelState(context)
 
-          if (!img) {
+          if (!state || !imageAt(state)) {
             logger.warn('Image update blocked: No image selected')
             return false
           }
@@ -459,35 +398,18 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
               return false
             }
 
-            const img = findImageAtSelection()
-
-            if (!img) {
-              return false
-            }
-
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            if (data.src !== undefined) {
-              img.src = data.src
-            }
 
-            if (data.width !== undefined) {
-              img.style.width = data.width
-            }
+            const changed: Record<string, string | null> = {}
+            if (data.src !== undefined) changed.src = data.src
+            if (data.alt !== undefined) changed.alt = data.alt
+            if (data.width !== undefined) changed.width = data.width
+            if (data.height !== undefined) changed.height = data.height
 
-            if (data.height !== undefined) {
-              img.style.height = data.height
-            }
+            const done = runModelCommand(context, updateImage(changed))
 
-            if (data.alt !== undefined) {
-              img.alt = data.alt
-            }
-
-            if (data.border !== undefined) {
-              img.style.border = data.border
-            }
-
-            if (data.alignment !== undefined) {
-              applyImageAlignment(img, data.alignment)
+            if (!done) {
+              return false
             }
 
             eventBus.emit(CoreEvents.STYLE_CHANGED, {
@@ -514,9 +436,9 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
         ) {
           return false
         }
-        const img = findImageAtSelection()
+        const state = modelState(context)
 
-        if (!img) {
+        if (!state || !imageAt(state)) {
           logger.warn('Image delete blocked: No image selected')
           return false
         }
@@ -528,14 +450,13 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
 
       const unsubDeleteOn = eventBus.on(deleteEventName, 'on', () => {
         try {
-          const img = findImageAtSelection()
+          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-          if (!img) {
+          const done = runModelCommand(context, deleteImage)
+
+          if (!done) {
             return false
           }
-
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-          img.remove()
 
           eventBus.emit(CoreEvents.STYLE_CHANGED, {
             style: 'image',

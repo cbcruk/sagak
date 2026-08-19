@@ -3,14 +3,16 @@ import { EventBus } from '@/core/event-bus'
 import { PluginManager } from '@/core/plugin-manager'
 import { SelectionManager } from '@/core/selection-manager'
 import { FindReplacePlugin } from '@/plugins/find-replace-plugin'
-import type { EditorContext } from '@/core/types'
+import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
+import type { EditorContext, EditingAreaManager } from '@/core/types'
 
 /**
  * 문자소 클러스터 — `reference-codemirror-state.md` §3 점검.
  *
- * 찾기는 정규식 매치의 **코드유닛 오프셋**을 그대로 써서 텍스트 노드를
- * 자릅니다 (`highlightMatch` 의 `substring`). 질의가 결합 시퀀스의 일부와만
- * 일치하면 그 자리에서 클러스터가 쪼개집니다.
+ * 찾기는 정규식 매치의 **코드유닛 오프셋**을 그대로 위치로 씁니다. 질의가
+ * 결합 시퀀스의 일부와만 일치하면 그 자리에서 클러스터가 쪼개집니다 —
+ * 강조가 데코레이션이 된 뒤에도 그대로입니다. 자르는 자리가 DOM 에서 모델로
+ * 옮겨졌을 뿐입니다.
  *
  * 아래는 그것이 실제로 일어나는지 확인하는 테스트입니다. 고치기 전에
  * 무엇이 깨지는지부터 확정합니다.
@@ -24,26 +26,34 @@ const BASE = '\u{1F926}'
 describe('찾기 — 문자소 클러스터', () => {
   let eventBus: EventBus
   let pluginManager: PluginManager
-  let element: HTMLDivElement
+  let container: HTMLDivElement
+  let area: WysiwygArea
+  let element: HTMLElement
   let context: EditorContext
 
   beforeEach(async () => {
-    element = document.createElement('div')
-    element.contentEditable = 'true'
-    document.body.appendChild(element)
+    container = document.createElement('div')
+    document.body.appendChild(container)
 
     eventBus = new EventBus()
+    area = new WysiwygArea({ container, eventBus })
+    element = area.getElement()
+
     context = {
       eventBus,
       selectionManager: new SelectionManager(element),
       config: { element },
+      editingAreaManager: {
+        getCurrentArea: () => area,
+      } as unknown as EditingAreaManager,
     }
     pluginManager = new PluginManager(context)
     await pluginManager.register(FindReplacePlugin)
   })
 
   afterEach(() => {
-    document.body.removeChild(element)
+    area.destroy()
+    document.body.removeChild(container)
   })
 
   it('길이 계산 전제 확인', () => {
@@ -55,7 +65,7 @@ describe('찾기 — 문자소 클러스터', () => {
 
   it('이모지 앞뒤의 평범한 단어는 정상적으로 찾아야 함', () => {
     // Given: 이모지가 섞인 문서
-    element.innerHTML = `<p>hello ${FACEPALM} world</p>`
+    area.setRawContent(`<p>hello ${FACEPALM} world</p>`)
 
     // When: 평범한 단어를 찾는다
     eventBus.emit('FIND', { query: 'world' })
@@ -69,7 +79,7 @@ describe('찾기 — 문자소 클러스터', () => {
 
   it('결합 시퀀스 전체를 질의하면 통째로 잡아야 함', () => {
     // Given
-    element.innerHTML = `<p>a${FACEPALM}b</p>`
+    area.setRawContent(`<p>a${FACEPALM}b</p>`)
 
     // When
     eventBus.emit('FIND', { query: FACEPALM })
@@ -89,7 +99,7 @@ describe('찾기 — 문자소 클러스터', () => {
    */
   it('결합 시퀀스의 일부만 질의하면 일치로 치지 않아야 함', () => {
     // Given: 문자소 하나짜리 이모지만 있는 문서
-    element.innerHTML = `<p>${FACEPALM}</p>`
+    area.setRawContent(`<p>${FACEPALM}</p>`)
 
     // When: 그 앞부분(기본 이모지)만 찾는다
     eventBus.emit('FIND', { query: BASE })
@@ -101,7 +111,7 @@ describe('찾기 — 문자소 클러스터', () => {
 
   it('결합 시퀀스의 일부는 바꾸기로도 깨지지 않아야 함', () => {
     // Given
-    element.innerHTML = `<p>${FACEPALM}</p>`
+    area.setRawContent(`<p>${FACEPALM}</p>`)
 
     // When: 그 일부를 다른 글자로 바꾸려 한다
     eventBus.emit('REPLACE_ALL', { query: BASE, replacement: 'X' })
@@ -120,7 +130,7 @@ describe('찾기 — 문자소 클러스터', () => {
    */
   it('한글도 단어 단위로 찾아야 함', () => {
     // Given: 독립된 '사과' 둘과 '사과나무' 하나
-    element.innerHTML = '<p>사과 사과나무 사과</p>'
+    area.setRawContent('<p>사과 사과나무 사과</p>')
 
     // When
     eventBus.emit('FIND', { query: '사과', wholeWord: true })
@@ -132,7 +142,7 @@ describe('찾기 — 문자소 클러스터', () => {
   })
 
   it('단어 단위가 아니면 부분 일치도 잡아야 함', () => {
-    element.innerHTML = '<p>사과 사과나무 사과</p>'
+    area.setRawContent('<p>사과 사과나무 사과</p>')
 
     eventBus.emit('FIND', { query: '사과' })
 
@@ -140,7 +150,7 @@ describe('찾기 — 문자소 클러스터', () => {
   })
 
   it('영어 단어 단위는 그대로 동작해야 함', () => {
-    element.innerHTML = '<p>cat cats cat</p>'
+    area.setRawContent('<p>cat cats cat</p>')
 
     eventBus.emit('FIND', { query: 'cat', wholeWord: true })
 

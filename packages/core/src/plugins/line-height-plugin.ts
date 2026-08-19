@@ -24,33 +24,17 @@ function extractLineHeight(data: unknown): string | null {
   return null
 }
 
-function getBlockParent(node: Node | null): HTMLElement | null {
-  const blockTags = [
-    'P',
-    'DIV',
-    'LI',
-    'H1',
-    'H2',
-    'H3',
-    'H4',
-    'H5',
-    'H6',
-    'BLOCKQUOTE',
-  ]
-
-  while (node) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as HTMLElement
-      if (blockTags.includes(element.tagName)) {
-        return element
-      }
-    }
-    node = node.parentNode
-  }
-
-  return null
-}
-
+/**
+ * 줄 간격.
+ *
+ * 예전에는 여기서 `window.getSelection()` 을 읽고 걸친 블록을 손으로 모아
+ * `style.lineHeight` 를 직접 박았습니다. 편집 영역이 문서 모델을 갖게 되면서
+ * **그 일을 여기서 하면 안 됩니다** — DOM 을 고쳐도 모델은 모르고, 다음 저장
+ * 때 사라집니다.
+ *
+ * 커맨드 레지스트리로 넘깁니다. 줄 간격은 모델에서 **문단 속성**이라 선택이
+ * 걸친 블록마다 붙는 것도 그쪽이 압니다.
+ */
 export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
   name: 'text-style:line-height',
 
@@ -63,7 +47,7 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.LINE_HEIGHT_CHANGED]: (
-      { emit, reportError },
+      { emit, reportError, runCommand },
       data?: unknown
     ) => {
       const lineHeight = extractLineHeight(data)
@@ -74,61 +58,16 @@ export const createLineHeightPlugin = definePlugin<LineHeightPluginOptions>({
       }
 
       try {
-        emit(CoreEvents.CAPTURE_SNAPSHOT)
+        const result = runCommand('lineHeight', lineHeight)
 
-        const selection = window.getSelection()
-        if (!selection || selection.rangeCount === 0) {
-          return false
-        }
-
-        const range = selection.getRangeAt(0)
-        const commonAncestor = range.commonAncestorContainer
-
-        // Get all block elements in the selection
-        const blocksToStyle = new Set<HTMLElement>()
-
-        if (range.collapsed) {
-          // If no selection, apply to current block
-          const block = getBlockParent(commonAncestor)
-          if (block) {
-            blocksToStyle.add(block)
-          }
-        } else {
-          // Get start and end blocks
-          const startBlock = getBlockParent(range.startContainer)
-          const endBlock = getBlockParent(range.endContainer)
-
-          if (startBlock) blocksToStyle.add(startBlock)
-          if (endBlock) blocksToStyle.add(endBlock)
-
-          // If common ancestor is a block, check its children
-          if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
-            const element = commonAncestor as HTMLElement
-            const blockChildren = element.querySelectorAll(
-              'p, div, li, h1, h2, h3, h4, h5, h6, blockquote'
-            )
-            blockChildren.forEach((child) => {
-              if (selection.containsNode(child, true)) {
-                blocksToStyle.add(child as HTMLElement)
-              }
-            })
-          }
-        }
-
-        // Apply line-height to all affected blocks
-        blocksToStyle.forEach((block) => {
-          block.style.lineHeight = lineHeight
-        })
-
-        if (blocksToStyle.size > 0) {
+        if (result) {
           emit(CoreEvents.STYLE_CHANGED, {
             style: 'lineHeight',
             value: lineHeight,
           })
-          return true
         }
 
-        return false
+        return result
       } catch (error) {
         reportError(error, 'Failed to apply line height:')
         return false

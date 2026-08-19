@@ -138,6 +138,8 @@ export type {
   EditingArea,
   EditingAreaManager,
   FormattingState,
+  Highlighter,
+  HighlightRange,
 } from './core/types'
 
 export {
