@@ -4,32 +4,8 @@ import type { EditorContext, Plugin, EditingMode } from './core/types'
 import type { LogLevel } from './core/logger'
 import type { EditorErrorData } from './core/errors'
 
-import { createBoldPlugin } from './plugins/bold-plugin'
-import { createItalicPlugin } from './plugins/italic-plugin'
-import { createUnderlinePlugin } from './plugins/underline-plugin'
-import { createStrikePlugin } from './plugins/strike-plugin'
-import { createSubscriptPlugin } from './plugins/subscript-plugin'
-import { createSuperscriptPlugin } from './plugins/superscript-plugin'
-import { createFontFamilyPlugin } from './plugins/font-family-plugin'
-import { createFontSizePlugin } from './plugins/font-size-plugin'
-import { createTextColorPlugin } from './plugins/text-color-plugin'
-import { createBackgroundColorPlugin } from './plugins/background-color-plugin'
-import { createHeadingPlugin } from './plugins/heading-plugin'
-import { createParagraphPlugin } from './plugins/paragraph-plugin'
-import { createAlignmentPlugin } from './plugins/alignment-plugin'
-import { createOrderedListPlugin } from './plugins/ordered-list-plugin'
-import { createUnorderedListPlugin } from './plugins/unordered-list-plugin'
-import { createIndentPlugin } from './plugins/indent-plugin'
-import { createOutdentPlugin } from './plugins/outdent-plugin'
-import { createLinkPlugin } from './plugins/link-plugin'
-import { createTablePlugin } from './plugins/table-plugin'
-import { createImagePlugin } from './plugins/image-plugin'
 import { createFindReplacePlugin } from './plugins/find-replace-plugin'
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
-import { createHorizontalRulePlugin } from './plugins/horizontal-rule-plugin'
-import { createLineHeightPlugin } from './plugins/line-height-plugin'
-import { createLetterSpacingPlugin } from './plugins/letter-spacing-plugin'
-import { createSpecialCharacterPlugin } from './plugins/special-character-plugin'
 import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
 import { createImageResizePlugin } from './plugins/image-resize-plugin'
@@ -44,32 +20,8 @@ import {
  * Default plugins included in the editor
  */
 const defaultPlugins: Plugin[] = [
-  createBoldPlugin(),
-  createItalicPlugin(),
-  createUnderlinePlugin(),
-  createStrikePlugin(),
-  createSubscriptPlugin(),
-  createSuperscriptPlugin(),
-  createFontFamilyPlugin(),
-  createFontSizePlugin(),
-  createTextColorPlugin(),
-  createBackgroundColorPlugin(),
-  createHeadingPlugin(),
-  createParagraphPlugin(),
-  createAlignmentPlugin(),
-  createOrderedListPlugin(),
-  createUnorderedListPlugin(),
-  createIndentPlugin(),
-  createOutdentPlugin(),
-  createLinkPlugin(),
-  createTablePlugin(),
-  createImagePlugin(),
   createFindReplacePlugin(),
   createKeyboardShortcutsPlugin(),
-  createHorizontalRulePlugin(),
-  createLineHeightPlugin(),
-  createLetterSpacingPlugin(),
-  createSpecialCharacterPlugin(),
   createAutocompletePlugin(),
   createTableResizePlugin(),
   createImageResizePlugin(),

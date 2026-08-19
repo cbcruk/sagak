@@ -60,7 +60,7 @@ describe('자동 완성 — 언어 범위', () => {
     selection?.addRange(range)
 
     let shown: string[] | null = null
-    const unsub = eventBus.on('AUTOCOMPLETE_SHOW', 'on', (data: unknown) => {
+    const unsub = eventBus.on('AUTOCOMPLETE_SHOW', (data: unknown) => {
       shown = (data as { suggestions: string[] }).suggestions
     })
 

@@ -607,9 +607,7 @@ describe('툴바', () => {
       ed = await mountEditor()
       const sent: unknown[] = []
       const off = ed.context.eventBus.on(
-        ExportEvents.EXPORT_DOWNLOAD,
-        'after',
-        (payload?: unknown) => {
+        ExportEvents.EXPORT_DOWNLOAD, (payload?: unknown) => {
           sent.push(payload)
         }
       )

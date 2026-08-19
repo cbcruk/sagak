@@ -216,7 +216,7 @@ describe('EditorCore', () => {
       const core = new EditorCore()
       const handler = vi.fn()
 
-      core.getEventBus().on(CoreEvents.APP_READY, 'on', handler)
+      core.getEventBus().on(CoreEvents.APP_READY, handler)
 
       // When: run() 호출
       await core.run()
@@ -232,7 +232,7 @@ describe('EditorCore', () => {
       const core = new EditorCore()
       const handler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'on', handler)
+      core.getEventBus().on('TEST_MESSAGE', handler)
       await core.run()
 
       // When: 메시지 실행
@@ -248,7 +248,7 @@ describe('EditorCore', () => {
       const core = new EditorCore()
       const handler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'on', handler)
+      core.getEventBus().on('TEST_MESSAGE', handler)
       await core.run()
 
       // When: 인자와 함께 메시지 실행
@@ -264,8 +264,8 @@ describe('EditorCore', () => {
       const beforeHandler = vi.fn().mockReturnValue(false) // 취소
       const onHandler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'before', beforeHandler)
-      core.getEventBus().on('TEST_MESSAGE', 'on', onHandler)
+      core.getEventBus().on('TEST_MESSAGE', beforeHandler)
+      core.getEventBus().on('TEST_MESSAGE', onHandler)
 
       await core.run()
 
@@ -285,9 +285,9 @@ describe('EditorCore', () => {
       const onHandler = vi.fn()
       const afterHandler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'before', beforeHandler)
-      core.getEventBus().on('TEST_MESSAGE', 'on', onHandler)
-      core.getEventBus().on('TEST_MESSAGE', 'after', afterHandler)
+      core.getEventBus().on('TEST_MESSAGE', beforeHandler)
+      core.getEventBus().on('TEST_MESSAGE', onHandler)
+      core.getEventBus().on('TEST_MESSAGE', afterHandler)
 
       await core.run()
 
@@ -309,7 +309,7 @@ describe('EditorCore', () => {
       const core = new EditorCore()
       const handler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'on', handler)
+      core.getEventBus().on('TEST_MESSAGE', handler)
       await core.run()
 
       // When: 1초 지연 후 메시지 실행
@@ -334,7 +334,7 @@ describe('EditorCore', () => {
       const core = new EditorCore()
       const handler = vi.fn()
 
-      core.getEventBus().on('TEST_MESSAGE', 'on', handler)
+      core.getEventBus().on('TEST_MESSAGE', handler)
       await core.run()
 
       // When: 인자와 함께 지연 실행
@@ -357,8 +357,8 @@ describe('EditorCore', () => {
       const handler1 = vi.fn()
       const handler2 = vi.fn()
 
-      core.getEventBus().on('MESSAGE_1', 'on', handler1)
-      core.getEventBus().on('MESSAGE_2', 'on', handler2)
+      core.getEventBus().on('MESSAGE_1', handler1)
+      core.getEventBus().on('MESSAGE_2', handler2)
       await core.run()
 
       // When: 서로 다른 시간으로 지연 실행
@@ -386,7 +386,7 @@ describe('EditorCore', () => {
       const button = document.createElement('button')
       document.body.appendChild(button)
 
-      core.getEventBus().on('BUTTON_CLICKED', 'on', handler)
+      core.getEventBus().on('BUTTON_CLICKED', handler)
       await core.run()
 
       // When: 브라우저 이벤트 등록
@@ -408,7 +408,7 @@ describe('EditorCore', () => {
       const button = document.createElement('button')
       document.body.appendChild(button)
 
-      core.getEventBus().on('BUTTON_CLICKED', 'on', handler)
+      core.getEventBus().on('BUTTON_CLICKED', handler)
       await core.run()
 
       // When: 이벤트 등록 및 클릭
@@ -428,7 +428,7 @@ describe('EditorCore', () => {
       const button = document.createElement('button')
       document.body.appendChild(button)
 
-      core.getEventBus().on('BUTTON_CLICKED', 'on', handler)
+      core.getEventBus().on('BUTTON_CLICKED', handler)
       await core.run()
 
       // When: 커스텀 인자와 함께 이벤트 등록
@@ -452,7 +452,7 @@ describe('EditorCore', () => {
       const button = document.createElement('button')
       document.body.appendChild(button)
 
-      core.getEventBus().on('BUTTON_CLICKED', 'on', handler)
+      core.getEventBus().on('BUTTON_CLICKED', handler)
       await core.run()
 
       // When: 이벤트 등록
@@ -488,7 +488,7 @@ describe('EditorCore', () => {
 
         initialize(context) {
           // 메시지를 받아 다른 메시지 발행
-          context.eventBus.on('DO_SOMETHING', 'on', () => {
+          context.eventBus.on('DO_SOMETHING', () => {
             context.eventBus.emit('SOMETHING_DONE')
           })
         },
@@ -498,7 +498,7 @@ describe('EditorCore', () => {
       await core.run()
 
       const handler = vi.fn()
-      core.getEventBus().on('SOMETHING_DONE', 'on', handler)
+      core.getEventBus().on('SOMETHING_DONE', handler)
 
       // When: 메시지 실행
       core.exec('DO_SOMETHING')
@@ -581,7 +581,7 @@ describe('EditorCore', () => {
       await core.run()
 
       const eventBus = core.getEventBus()
-      eventBus.on('CUSTOM_EVENT', 'on', () => {})
+      eventBus.on('CUSTOM_EVENT', () => {})
       expect(eventBus.getEvents().length).toBeGreaterThan(0)
 
       // When: destroy() 호출
@@ -650,7 +650,7 @@ describe('EditorCore', () => {
         name: 'bold',
         initialize(context) {
           // BEFORE: IME 입력 중이면 취소
-          context.eventBus.on('BOLD_CLICKED', 'before', () => {
+          context.eventBus.on('BOLD_CLICKED', () => {
             if (context.composition?.isComposing()) {
               return false // 취소
             }
@@ -658,7 +658,7 @@ describe('EditorCore', () => {
           })
 
           // ON: Bold 토글
-          context.eventBus.on('BOLD_CLICKED', 'on', () => {
+          context.eventBus.on('BOLD_CLICKED', () => {
             document.execCommand('bold')
             context.eventBus.emit('STYLE_CHANGED', { style: 'bold' })
           })
@@ -671,7 +671,7 @@ describe('EditorCore', () => {
 
       // Then: 스타일 변경 이벤트 추적
       const styleHandler = vi.fn()
-      core.getEventBus().on('STYLE_CHANGED', 'on', styleHandler)
+      core.getEventBus().on('STYLE_CHANGED', styleHandler)
 
       // When: Bold 명령 실행
       const result = core.exec('BOLD_CLICKED')
@@ -691,7 +691,7 @@ describe('EditorCore', () => {
         initialize(context) {
           const history: string[] = []
 
-          context.eventBus.on('STYLE_CHANGED', 'after', (data: any) => {
+          context.eventBus.on('STYLE_CHANGED', (data: any) => {
             history.push(`style:${data.style}`)
             context.eventBus.emit('HISTORY_UPDATED', { history })
           })
@@ -702,7 +702,7 @@ describe('EditorCore', () => {
       const boldPlugin: Plugin = {
         name: 'bold',
         initialize(context) {
-          context.eventBus.on('BOLD_CLICKED', 'on', () => {
+          context.eventBus.on('BOLD_CLICKED', () => {
             context.eventBus.emit('STYLE_CHANGED', { style: 'bold' })
           })
         },
@@ -714,7 +714,7 @@ describe('EditorCore', () => {
 
       // Then: 히스토리 업데이트 추적
       const historyHandler = vi.fn()
-      core.getEventBus().on('HISTORY_UPDATED', 'on', historyHandler)
+      core.getEventBus().on('HISTORY_UPDATED', historyHandler)
 
       // When: Bold 실행
       core.exec('BOLD_CLICKED')
@@ -732,7 +732,7 @@ describe('EditorCore', () => {
       const boldPlugin: Plugin = {
         name: 'bold',
         initialize(context) {
-          context.eventBus.on('BOLD_CLICKED', 'before', () => {
+          context.eventBus.on('BOLD_CLICKED', () => {
             // IME 입력 중이면 차단
             if (context.composition?.isComposing()) {
               return false
@@ -740,7 +740,7 @@ describe('EditorCore', () => {
             return true
           })
 
-          context.eventBus.on('BOLD_CLICKED', 'on', () => {
+          context.eventBus.on('BOLD_CLICKED', () => {
             document.execCommand('bold')
           })
         },

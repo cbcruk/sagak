@@ -1,10 +1,5 @@
 import {
   CoreEvents,
-  TextStyleEvents,
-  FontEvents,
-  ParagraphEvents,
-  ContentEvents,
-  HistoryEvents,
   FindReplaceEvents,
   AutocompleteEvents,
   EditingAreaEvents,
@@ -16,18 +11,6 @@ import {
 } from './events'
 import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
-
-/**
- * 서식 상태 (툴바 활성 표시용)
- */
-export interface FormattingStatePayload {
-  isBold: boolean
-  isItalic: boolean
-  isUnderline: boolean
-  isStrikeThrough: boolean
-  isSubscript: boolean
-  isSuperscript: boolean
-}
 
 /**
  * 서식이 적용된 뒤 발행되는 알림
@@ -69,41 +52,6 @@ export interface ReplacePayload {
   wholeWord?: boolean
 }
 
-/**
- * 이미지 페이로드 (`ImageData`와 동일한 형태)
- *
- * 삽입은 `src`가 필수, 갱신은 전부 선택입니다.
- */
-export interface ImagePayload {
-  src: string
-  width?: string
-  height?: string
-  alt?: string
-  alignment?: string
-  border?: string
-}
-
-/**
- * 표 생성 페이로드 — 모든 필드가 선택이며 미지정 시 플러그인 기본값을 씁니다
- *
- * `cols`의 별칭으로 `columns`도 받습니다 (`extractTableCreateData` 참고).
- */
-export interface TableCreatePayload {
-  rows?: number
-  cols?: number
-  columns?: number
-
-  /**
-   * @deprecated **문서에 안 붙습니다.** 표의 테두리·너비는 생김새라
-   * 스타일시트의 몫입니다 — 이미지의 테두리와 같은 이유입니다
-   * (`docs/prosemirror-migration.md` §10).
-   */
-  border?: string
-
-  /** @deprecated `border` 와 같습니다 */
-  width?: string
-}
-
 /** 자동 저장 상태 */
 export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
@@ -142,56 +90,21 @@ export interface EditorEventMap {
   // --- 코어 ---
   [CoreEvents.APP_READY]: void
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
-  [CoreEvents.CAPTURE_SNAPSHOT]: void
   [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
 
   // --- 텍스트 스타일 (페이로드 없음) ---
-  [TextStyleEvents.BOLD_CLICKED]: void
-  [TextStyleEvents.ITALIC_CLICKED]: void
-  [TextStyleEvents.UNDERLINE_CLICKED]: void
-  [TextStyleEvents.STRIKE_CLICKED]: void
-  [TextStyleEvents.TOGGLE_SUBSCRIPT]: void
-  [TextStyleEvents.TOGGLE_SUPERSCRIPT]: void
 
   // --- 폰트 ---
-  [FontEvents.FONT_FAMILY_CHANGED]: { fontFamily: string }
-  [FontEvents.FONT_SIZE_CHANGED]: { fontSize: string | number }
-  [FontEvents.TEXT_COLOR_CHANGED]: { color: string }
-  [FontEvents.BACKGROUND_COLOR_CHANGED]: { color: string }
-  [FontEvents.LINE_HEIGHT_CHANGED]: { lineHeight: string | number }
-  [FontEvents.LETTER_SPACING_CHANGED]: { letterSpacing: string | number }
 
   // --- 문단 ---
   /** 객체형과 맨값을 모두 받습니다 (`extractHeadingLevel` 참고) */
-  [ParagraphEvents.HEADING_CHANGED]: { level: number } | number
-  [ParagraphEvents.FORMAT_PARAGRAPH]: void
   /** 객체형과 맨값을 모두 받습니다 (`extractAlignment` 참고) */
-  [ParagraphEvents.ALIGNMENT_CHANGED]: { align: string } | string
-  [ParagraphEvents.INDENT_CLICKED]: void
-  [ParagraphEvents.OUTDENT_CLICKED]: void
-  [ParagraphEvents.ORDERED_LIST_CLICKED]: void
-  [ParagraphEvents.UNORDERED_LIST_CLICKED]: void
 
   // --- 콘텐츠 ---
   /** 객체형과 URL 문자열을 모두 받습니다 */
-  [ContentEvents.LINK_CHANGED]: { url: string; target?: string } | string
-  [ContentEvents.LINK_REMOVED]: void
-  [ContentEvents.IMAGE_INSERT]: ImagePayload
-  [ContentEvents.IMAGE_UPDATE]: Partial<ImagePayload>
-  [ContentEvents.IMAGE_DELETE]: void
-  [ContentEvents.TABLE_CREATE]: TableCreatePayload | void
-  [ContentEvents.TABLE_INSERT_ROW]: { position?: string } | void
-  [ContentEvents.TABLE_DELETE_ROW]: void
-  [ContentEvents.TABLE_INSERT_COLUMN]: { position?: string } | void
-  [ContentEvents.TABLE_DELETE_COLUMN]: void
-  [ContentEvents.TABLE_DELETE]: void
-  [ContentEvents.HORIZONTAL_RULE_INSERT]: void
-  [ContentEvents.SPECIAL_CHARACTER_INSERT]: { character: string }
 
   // --- 히스토리 ---
-  [HistoryEvents.UNDO]: void
-  [HistoryEvents.REDO]: void
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: FindPayload
@@ -265,7 +178,6 @@ export type PayloadOf<E extends string> = E extends KnownEventName
  *
  * 버스 하나가 두 가지 일을 겸하고 있는데 이름으로는 구분되지 않습니다.
  * `_CHANGED` 16종을 발행처로 갈라 보면 **7종은 화면이 코어에게 보내는 요청**
- * (`FONT_FAMILY_CHANGED`, `HEADING_CHANGED`, `ALIGNMENT_CHANGED`, `LINK_CHANGED`
  * …)이고 9종만 코어가 화면에게 보내는 통지입니다. 같은 접미사가 정반대 방향에
  * 쓰입니다.
  *
@@ -299,53 +211,18 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
   [CoreEvents.APP_READY]: 'notify',
   [CoreEvents.STYLE_CHANGED]: 'notify',
-  [CoreEvents.CAPTURE_SNAPSHOT]: 'request',
   [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
 
   // --- 텍스트 스타일 ---
-  [TextStyleEvents.BOLD_CLICKED]: 'request',
-  [TextStyleEvents.ITALIC_CLICKED]: 'request',
-  [TextStyleEvents.UNDERLINE_CLICKED]: 'request',
-  [TextStyleEvents.STRIKE_CLICKED]: 'request',
-  [TextStyleEvents.TOGGLE_SUBSCRIPT]: 'request',
-  [TextStyleEvents.TOGGLE_SUPERSCRIPT]: 'request',
 
   // --- 폰트 (전부 `_CHANGED` 지만 전부 요청입니다) ---
-  [FontEvents.FONT_FAMILY_CHANGED]: 'request',
-  [FontEvents.FONT_SIZE_CHANGED]: 'request',
-  [FontEvents.TEXT_COLOR_CHANGED]: 'request',
-  [FontEvents.BACKGROUND_COLOR_CHANGED]: 'request',
-  [FontEvents.LINE_HEIGHT_CHANGED]: 'request',
-  [FontEvents.LETTER_SPACING_CHANGED]: 'request',
 
   // --- 문단 ---
-  [ParagraphEvents.HEADING_CHANGED]: 'request',
-  [ParagraphEvents.FORMAT_PARAGRAPH]: 'request',
-  [ParagraphEvents.ALIGNMENT_CHANGED]: 'request',
-  [ParagraphEvents.INDENT_CLICKED]: 'request',
-  [ParagraphEvents.OUTDENT_CLICKED]: 'request',
-  [ParagraphEvents.ORDERED_LIST_CLICKED]: 'request',
-  [ParagraphEvents.UNORDERED_LIST_CLICKED]: 'request',
 
   // --- 콘텐츠 ---
-  [ContentEvents.LINK_CHANGED]: 'request',
-  [ContentEvents.LINK_REMOVED]: 'request',
-  [ContentEvents.IMAGE_INSERT]: 'request',
-  [ContentEvents.IMAGE_UPDATE]: 'request',
-  [ContentEvents.IMAGE_DELETE]: 'request',
-  [ContentEvents.TABLE_CREATE]: 'request',
-  [ContentEvents.TABLE_INSERT_ROW]: 'request',
-  [ContentEvents.TABLE_DELETE_ROW]: 'request',
-  [ContentEvents.TABLE_INSERT_COLUMN]: 'request',
-  [ContentEvents.TABLE_DELETE_COLUMN]: 'request',
-  [ContentEvents.TABLE_DELETE]: 'request',
-  [ContentEvents.HORIZONTAL_RULE_INSERT]: 'request',
-  [ContentEvents.SPECIAL_CHARACTER_INSERT]: 'request',
 
   // --- 히스토리 ---
-  [HistoryEvents.UNDO]: 'request',
-  [HistoryEvents.REDO]: 'request',
 
   // --- 찾기/바꾸기 ---
   [FindReplaceEvents.FIND]: 'request',

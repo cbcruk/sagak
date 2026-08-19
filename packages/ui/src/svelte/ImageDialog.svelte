@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Image as ImageIcon, Link as LinkIcon, Upload } from 'lucide'
-  import { ContentEvents, imageOf } from 'sagak-core'
+  import { imageOf } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import {
@@ -59,10 +60,9 @@
     mode === 'url' ? src.trim().length > 0 : previewUrl !== null
   )
 
-  const event = $derived(
-    mode === 'file' || !isEditing
-      ? ContentEvents.IMAGE_INSERT
-      : ContentEvents.IMAGE_UPDATE
+  /** 새로 넣는가 고치는가 — 파일 갈래는 늘 새로 넣습니다 */
+  const command = $derived(
+    mode === 'file' || !isEditing ? 'insertImage' : 'updateImage'
   )
 
   function resetUpload(): void {
@@ -106,11 +106,11 @@
       const preview = previewUrl
       const name = selectedFile?.name
       restoreThen(() => {
-        editor.eventBus.emit(ContentEvents.IMAGE_INSERT, {
+        exec(editor, 'insertImage', {
           src: preview,
-          alt: alt.trim() || name,
-          width: width.trim() || undefined,
-          height: height.trim() || undefined,
+          alt: alt.trim() || name || null,
+          width: width.trim() || null,
+          height: height.trim() || null,
         })
       })
       return
@@ -127,16 +127,20 @@
 
     const payload = {
       src: trimmed,
-      alt: alt.trim(),
-      width: width.trim() || undefined,
-      height: height.trim() || undefined,
+      alt: alt.trim() || null,
+      width: width.trim() || null,
+      height: height.trim() || null,
     }
-    const target = event
-    restoreThen(() => editor.eventBus.emit(target, payload))
+    const target = command
+
+    restoreThen(() => {
+      if (target === 'insertImage') exec(editor, 'insertImage', payload)
+      else exec(editor, 'updateImage', payload)
+    })
   }
 
   function remove(): void {
-    restoreThen(() => editor.eventBus.emit(ContentEvents.IMAGE_DELETE))
+    restoreThen(() => void exec(editor, 'deleteImage'))
   }
 
   /**

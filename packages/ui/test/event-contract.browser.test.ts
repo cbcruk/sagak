@@ -5,6 +5,16 @@ import { mountEditor, settle, type MountedEditor } from './harness'
 /**
  * 이벤트 계약 — 요청에는 처리자가 있어야 합니다.
  *
+ * ## 76 → 33 종
+ *
+ * 서식 32종이 통째로 없어졌습니다. 굵게·글꼴·정렬·목록·표·이미지·링크가 전부
+ * 커맨드가 됐고, 툴바는 커맨드 레지스트리를 직접 부릅니다. 이름이 문자열이던
+ * 것이 타입이 되면서 **오타를 컴파일러가 잡습니다** — 이 검사가 있던 이유의
+ * 절반이 그렇게 없어졌습니다.
+ *
+ * 남은 것은 커맨드가 아닌 일들입니다 — 되돌리기·찾기·자동 저장·자동 완성,
+ * 그리고 밖에서 붙을 확장점.
+ *
  * 버스 하나가 요청(`request`)과 통지(`notify`) 를 겸하는데 이름으로는 구분되지
  * 않습니다. `_CHANGED` 16종 중 7종이 화면→코어 요청이고 9종만 코어→화면
  * 통지입니다. 그 구분을 `EVENT_KIND` 에 적어 뒀고, 여기서 **반증 가능하게**
@@ -56,19 +66,19 @@ describe('이벤트 계약', () => {
     // 어느 단계에 붙었든 처리자면 됩니다
     const unhandled = requests.filter(
       (name) =>
-        !eventBus.hasHandlers(name, 'before') &&
-        !eventBus.hasHandlers(name, 'on') &&
-        !eventBus.hasHandlers(name, 'after')
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name)
     )
 
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 68종 전부를 덮어야 함', async () => {
+  it('분류가 33종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(68)
+    expect(total).toBe(33)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 
@@ -106,9 +116,9 @@ describe('이벤트 계약', () => {
     const { eventBus } = ed.context
     const unheard = byKind('notify').filter(
       (name) =>
-        !eventBus.hasHandlers(name, 'before') &&
-        !eventBus.hasHandlers(name, 'on') &&
-        !eventBus.hasHandlers(name, 'after')
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name) &&
+        !eventBus.hasHandlers(name)
     )
 
     const surprises = unheard.filter((n) => !EXTENSION_POINTS.includes(n))

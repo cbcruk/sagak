@@ -104,7 +104,7 @@ describe('FindReplacePlugin', () => {
     it('should find text and highlight matches', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       const findData: FindData = {
         query: 'Hello',
@@ -131,7 +131,7 @@ describe('FindReplacePlugin', () => {
     it('should find text case-insensitively by default', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 소문자로 검색
       eventBus.emit('FIND', { query: 'hello' })
@@ -150,7 +150,7 @@ describe('FindReplacePlugin', () => {
     it('should find text case-sensitively when specified', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 대소문자 구분 검색
       eventBus.emit('FIND', {
@@ -174,7 +174,7 @@ describe('FindReplacePlugin', () => {
       area.setRawContent('<p>Hello Helloworld world</p>')
 
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 단어 단위 검색
       eventBus.emit('FIND', {
@@ -212,7 +212,7 @@ describe('FindReplacePlugin', () => {
     it('should handle no matches found', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 존재하지 않는 텍스트 검색
       eventBus.emit('FIND', { query: 'nonexistent' })
@@ -329,7 +329,7 @@ describe('FindReplacePlugin', () => {
     it('이동할 때마다 현재 인덱스를 실어 보내야 함', () => {
       // Given: 결과 3개에서 첫 번째가 선택된 상태
       const spy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', spy)
+      eventBus.on('STYLE_CHANGED', spy)
 
       const indexOfLastCall = (): number =>
         spy.mock.calls[spy.mock.calls.length - 1][0].matchIndex
@@ -350,7 +350,7 @@ describe('FindReplacePlugin', () => {
     it('이동 통지에 전체 개수도 함께 실어야 함', () => {
       // Given: 결과 3개
       const spy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', spy)
+      eventBus.on('STYLE_CHANGED', spy)
 
       // When: 다음으로 이동
       eventBus.emit('FIND_NEXT')
@@ -383,7 +383,7 @@ describe('FindReplacePlugin', () => {
     it('should replace current match', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       const replaceData: ReplaceData = {
         query: 'Hello',
@@ -461,7 +461,7 @@ describe('FindReplacePlugin', () => {
     it('should replace all matches', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       const replaceData: ReplaceData = {
         query: 'Hello',
@@ -494,7 +494,7 @@ describe('FindReplacePlugin', () => {
       area.setRawContent('<p>Hello hello HELLO</p>')
 
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 대소문자 구분 일괄 치환
       eventBus.emit('REPLACE_ALL', {
@@ -524,7 +524,7 @@ describe('FindReplacePlugin', () => {
       area.setRawContent('<p>Hello Helloworld</p>')
 
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 단어 단위 일괄 치환
       eventBus.emit('REPLACE_ALL', {
@@ -551,7 +551,7 @@ describe('FindReplacePlugin', () => {
     it('should handle replace all with no matches', () => {
       // Given: 이벤트 리스너 준비
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 존재하지 않는 텍스트 치환
       eventBus.emit('REPLACE_ALL', {
@@ -613,7 +613,7 @@ describe('FindReplacePlugin', () => {
       expect(highlights.length).toBe(2)
 
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: CLEAR_FIND 이벤트 발행
       const result = eventBus.emit('CLEAR_FIND')
@@ -813,7 +813,7 @@ describe('FindReplacePlugin', () => {
       area.setRawContent('<p>Price: $100. Discount: 50%. Total: $50.</p>')
 
       const styleChangedSpy = vi.fn()
-      eventBus.on('STYLE_CHANGED', 'on', styleChangedSpy)
+      eventBus.on('STYLE_CHANGED', styleChangedSpy)
 
       // When: 특수문자 검색
       eventBus.emit('FIND', { query: '$' })

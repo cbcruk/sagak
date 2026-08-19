@@ -540,7 +540,7 @@ describe('PluginManager', () => {
       const plugin: Plugin = {
         name: 'event-plugin',
         initialize(ctx) {
-          ctx.eventBus.on('TEST', 'on', () => {
+          ctx.eventBus.on('TEST', () => {
             calls.push('handled')
           })
         },
@@ -597,7 +597,7 @@ describe('PluginManager', () => {
       const plugin: Plugin = {
         name: 'cleanup-plugin',
         initialize(ctx) {
-          const unsub = ctx.eventBus.on('EVENT', 'on', () => {})
+          const unsub = ctx.eventBus.on('EVENT', () => {})
           unsubscribes.push(unsub)
         },
         destroy() {

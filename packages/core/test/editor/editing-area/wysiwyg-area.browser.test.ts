@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 import { EventBus } from '@/core/event-bus'
 import { TextSelection } from 'prosemirror-state'
-import { undoDepth, redoDepth } from 'prosemirror-history'
+import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
 import type { WysiwygAreaConfig } from '@/editor/editing-area/modes/wysiwyg-area'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -276,7 +276,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 SHOWN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_SHOWN', 'on', handler)
+      eventBus.on('WYSIWYG_AREA_SHOWN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -292,7 +292,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 HIDDEN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_AREA_HIDDEN', 'on', handler)
+      eventBus.on('WYSIWYG_AREA_HIDDEN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -570,14 +570,20 @@ describe('WysiwygArea', () => {
       handle.dispatch(handle.getState()!.tr.insertText(text, 1))
     }
 
+    /** 되돌리기도 커맨드입니다 — 다른 것과 같은 문으로 들어옵니다 */
+    const history = (command: typeof undo): void => {
+      const handle = wysiwygArea.getStateHandle()
+      command(handle.getState()!, handle.dispatch)
+    }
+
     it('되돌리고 다시 합니다', () => {
       type('가나')
       expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
 
-      eventBus.emit('UNDO')
+      history(undo)
       expect(wysiwygArea.getRawContent()).toBe('<p></p>')
 
-      eventBus.emit('REDO')
+      history(redo)
       expect(wysiwygArea.getRawContent()).toBe('<p>가나</p>')
     })
 
@@ -599,7 +605,7 @@ describe('WysiwygArea', () => {
       type('가')
       expect(depth()).toEqual({ undo: 1, redo: 0 })
 
-      eventBus.emit('UNDO')
+      history(undo)
       expect(depth()).toEqual({ undo: 0, redo: 1 })
     })
 
@@ -611,7 +617,7 @@ describe('WysiwygArea', () => {
       type('가나')
       wysiwygArea.setRawContent('<p>다른 문서</p>')
 
-      eventBus.emit('UNDO')
+      history(undo)
 
       expect(wysiwygArea.getRawContent()).toBe('<p>다른 문서</p>')
     })
@@ -627,7 +633,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 CONTENT_CHANGED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', handler)
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -658,7 +664,7 @@ describe('WysiwygArea', () => {
       wysiwygArea.setRawContent('<p>글자가 좀 있는 문단입니다</p>')
 
       let payload: { content: string } | undefined
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', (data) => {
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', (data) => {
         payload = data
       })
 
@@ -687,7 +693,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 FOCUSED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_FOCUSED', 'on', handler)
+      eventBus.on('WYSIWYG_FOCUSED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -704,7 +710,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 BLURRED 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_BLURRED', 'on', handler)
+      eventBus.on('WYSIWYG_BLURRED', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)
@@ -721,7 +727,7 @@ describe('WysiwygArea', () => {
       // Given: EventBus와 KEYDOWN 핸들러가 설정된 WysiwygArea
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_KEYDOWN', 'on', handler)
+      eventBus.on('WYSIWYG_KEYDOWN', handler)
 
       const config: WysiwygAreaConfig = { container, eventBus }
       wysiwygArea = new WysiwygArea(config)

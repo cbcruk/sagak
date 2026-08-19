@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Omega } from 'lucide'
-  import { ContentEvents } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import { categories } from '../components/special-character-dialog/special-character-dialog.shared'
@@ -52,9 +52,7 @@
   function insert(character: string): void {
     dialogEl.close()
     requestAnimationFrame(() => {
-      editor.eventBus.emit(ContentEvents.SPECIAL_CHARACTER_INSERT, {
-        character,
-      })
+      exec(editor, 'insertText', character)
     })
   }
 </script>

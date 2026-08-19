@@ -189,7 +189,7 @@ describe('EditingAreaManager', () => {
       // Given: EventBus와 MODE_CHANGED 핸들러가 설정된 새 매니저
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', handler)
+      eventBus.on('EDITING_AREA_MODE_CHANGED', handler)
 
       manager.destroy()
 
@@ -629,7 +629,7 @@ describe('EditingAreaManager', () => {
       // Given: EventBus와 콘텐츠 변경 핸들러가 설정된 config
       const eventBus = new EventBus()
       const handler = vi.fn()
-      eventBus.on('WYSIWYG_CONTENT_CHANGED', 'on', handler)
+      eventBus.on('WYSIWYG_CONTENT_CHANGED', handler)
 
       const config: EditingAreaManagerConfig = {
         container,

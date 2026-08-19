@@ -1,7 +1,8 @@
 import type { Readable } from 'svelte/store'
-import { HistoryEvents, historyDepthOf } from 'sagak-core'
+import { historyDepthOf } from 'sagak-core'
 import type { EditorContext } from 'sagak-core'
 import { fromState } from './from-state'
+import { exec } from './exec'
 
 /**
  * 실행 취소·다시 실행.
@@ -47,11 +48,12 @@ export function historyStore(editor: EditorContext): Readable<HistoryState> {
 /**
  * 되돌리기·다시 하기는 **상태가 아니라 명령**이라 store 가 아닙니다.
  *
- * 들고 있을 값이 없으니 버스로 보내는 함수입니다.
+ * 다른 커맨드와 같은 문으로 들어갑니다 — 문서를 고치는 일인데 예전에는
+ * 버스로만 들어와서 조합 가드도 따로 안 지났습니다.
  */
 export function historyCommands(editor: EditorContext): HistoryCommands {
   return {
-    undo: () => editor.eventBus.emit(HistoryEvents.UNDO),
-    redo: () => editor.eventBus.emit(HistoryEvents.REDO),
+    undo: () => void exec(editor, 'undo'),
+    redo: () => void exec(editor, 'redo'),
   }
 }

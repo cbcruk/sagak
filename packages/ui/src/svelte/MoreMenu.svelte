@@ -14,7 +14,7 @@
   } from 'lucide'
   import { ChevronRight, ChevronLeft, Check } from 'lucide'
   import type { IconNode } from 'lucide'
-  import { ContentEvents, TextStyleEvents } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import { choiceStore } from '../state/toolbar-choice'
@@ -79,20 +79,17 @@
   const { editor, onOpenDialog }: Props = $props()
 
   /**
-   * 쏘는 이벤트를 **실제로 있는 셋으로 좁혀** 둡니다.
+   * 부르는 커맨드를 **실제로 있는 셋으로 좁혀** 둡니다.
    *
-   * `string` 으로 두면 오타가 통과하고, 발행할 때 `as never` 같은 캐스팅이
-   * 필요해집니다 — 이벤트 맵의 타입 검사를 스스로 꺼 버리는 셈입니다.
+   * `string` 으로 두면 오타가 통과합니다. 예전에는 이벤트 이름이었고 이제는
+   * 커맨드 이름입니다 — 어휘가 하나가 되면서 좁히는 일도 커맨드 맵이 합니다.
    */
-  type MenuEvent =
-    | typeof ContentEvents.HORIZONTAL_RULE_INSERT
-    | typeof TextStyleEvents.TOGGLE_SUBSCRIPT
-    | typeof TextStyleEvents.TOGGLE_SUPERSCRIPT
+  type MenuCommand = 'insertHorizontalRule' | 'subscript' | 'superscript'
 
   interface Item {
     node: IconNode
     label: string
-    emit?: MenuEvent
+    run?: MenuCommand
     /** 이벤트 대신 다이얼로그를 여는 항목 */
     dialog?: DialogName
     /** 이벤트 대신 하위 목록으로 들어가는 항목 */
@@ -109,7 +106,7 @@
         {
           node: Minus,
           label: 'Horizontal Rule',
-          emit: ContentEvents.HORIZONTAL_RULE_INSERT,
+          run: 'insertHorizontalRule',
         },
         { node: Type, label: 'Special Character', dialog: 'special-character' },
       ],
@@ -120,12 +117,12 @@
         {
           node: Subscript,
           label: 'Subscript',
-          emit: TextStyleEvents.TOGGLE_SUBSCRIPT,
+          run: 'subscript',
         },
         {
           node: Superscript,
           label: 'Superscript',
-          emit: TextStyleEvents.TOGGLE_SUPERSCRIPT,
+          run: 'superscript',
         },
       ],
     },
@@ -190,7 +187,7 @@
      * 잡힙니다.
      */
     close()
-    if (item.emit) editor.eventBus.emit(item.emit)
+    if (item.run) exec(editor, item.run)
     if (item.dialog) onOpenDialog?.(item.dialog)
   }
 

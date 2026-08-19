@@ -1,7 +1,9 @@
 import { logger } from './logger'
 import { CoreEvents } from './events'
 import type { EventBus } from './event-bus'
+import type { CommandArgs, CommandName } from './command-map'
 import type { CompositionTracker } from './composition'
+import type { EditingArea } from './types'
 
 /**
  * 커맨드 실행 컨텍스트
@@ -10,6 +12,8 @@ import type { CompositionTracker } from './composition'
  */
 export interface CommandContext {
   eventBus: EventBus
+  /** 지금 편집 영역 — 커맨드 경계가 되돌리기·포커스를 챙기는 데 씁니다 */
+  editingAreaManager?: { getCurrentArea(): EditingArea | undefined }
   composition?: CompositionTracker
   element?: HTMLElement
 }
@@ -22,7 +26,7 @@ export interface CommandContext {
  */
 export type CommandHandler = (
   ctx: CommandContext,
-  value?: string
+  value?: unknown
 ) => boolean | undefined
 
 /**
@@ -94,6 +98,11 @@ export class CommandRegistry {
     return this.context.composition?.isComposing() ?? false
   }
 
+  /** 지금 편집 영역 — 커맨드 경계가 되돌리기·포커스를 챙기는 데 씁니다 */
+  editingArea() {
+    return this.context.editingAreaManager?.getCurrentArea()
+  }
+
   /**
    * 실행 컨텍스트를 교체합니다 (예: `element`/`composition` 변경 시)
    */
@@ -159,12 +168,12 @@ export class CommandRegistry {
    * @param value 커맨드 값 (예: 색상, 폰트 크기)
    * @returns 커맨드 결과 (처리한 핸들러가 없으면 `false`)
    */
-  run(name: string, value?: string): boolean {
+  run<K extends CommandName>(name: K, ...args: CommandArgs<K>): boolean {
     const list = this.handlers.get(name)
     if (!list) return false
 
     for (const { handler } of list) {
-      const result = handler(this.context, value)
+      const result = handler(this.context, args[0])
       if (result !== undefined) return result
     }
 
@@ -261,24 +270,32 @@ export class CommandRegistry {
  * **"가드를 제자리에 놓으면 단계가 남을 이유를 잃는다"** 였던 이유이기도
  * 합니다.
  */
-export function runCommand(
+export function runCommand<K extends CommandName>(
   registry: CommandRegistry,
   eventBus: EventBus,
-  name: string,
-  value?: string
+  name: K,
+  ...args: CommandArgs<K>
 ): boolean {
   if (registry.isComposing()) {
     logger.warn(`${name} blocked: IME composition in progress`)
     return false
   }
 
-  eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
+  const area = registry.editingArea()
 
-  const result = registry.run(name, value)
+  /* 되돌리기가 여기서 끊깁니다 — 예전에는 버스를 한 바퀴 돌았습니다 */
+  area?.closeHistoryGroup?.()
+
+  const result = registry.run(name, ...args)
 
   if (result) {
-    eventBus.emit(CoreEvents.STYLE_CHANGED, { style: name, value })
-    eventBus.emit(CoreEvents.FOCUS_REQUESTED)
+    eventBus.emit(CoreEvents.STYLE_CHANGED, { style: name, value: args[0] })
+
+    /*
+     * 툴바 버튼을 누르면 포커스가 그 버튼에 남습니다. 커맨드는 문서 상태로
+     * 도니까 먹긴 하지만, 이어지는 타이핑이 편집 영역에 안 닿습니다.
+     */
+    area?.focus()
   }
 
   return result

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Link } from 'lucide'
-  import { ContentEvents, linkOf } from 'sagak-core'
+  import { linkOf } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
   import { editorState } from '../state/editor-state'
@@ -70,13 +71,13 @@
       return
     }
     restoreThen(() => {
-      editor.eventBus.emit(ContentEvents.LINK_CHANGED, { url: trimmed })
+      exec(editor, 'createLink', trimmed)
     })
   }
 
   function remove(): void {
     restoreThen(() => {
-      editor.eventBus.emit(ContentEvents.LINK_REMOVED)
+      exec(editor, 'unlink')
     })
   }
 </script>

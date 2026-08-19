@@ -1,5 +1,6 @@
 import type { Plugin, EditorContext } from '@/core'
-import { ContentEvents, CoreEvents } from '@/core'
+import { runModelCommand } from '@/model/bridge'
+import { insertImage } from '@/model/commands'
 
 export interface ImageUploadPluginOptions {
   /**
@@ -130,14 +131,12 @@ export function createImageUploadPlugin(
 
   async function insertImageFromFile(
     file: File,
-    eventBus: EditorContext['eventBus']
+    context: EditorContext
   ): Promise<void> {
-    const url = await processFile(file, eventBus)
+    const url = await processFile(file, context.eventBus)
+
     if (url) {
-      eventBus.emit(ContentEvents.IMAGE_INSERT, {
-        src: url,
-        alt: file.name,
-      })
+      runModelCommand(context, insertImage({ src: url, alt: file.name }))
     }
   }
 
@@ -176,8 +175,7 @@ export function createImageUploadPlugin(
 
         for (const file of Array.from(files)) {
           if (file.type.startsWith('image/')) {
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            await insertImageFromFile(file, eventBus)
+            await insertImageFromFile(file, context)
           }
         }
       }
@@ -193,8 +191,7 @@ export function createImageUploadPlugin(
             e.preventDefault()
             const file = item.getAsFile()
             if (file) {
-              eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-              await insertImageFromFile(file, eventBus)
+              await insertImageFromFile(file, context)
             }
             break
           }
@@ -202,13 +199,10 @@ export function createImageUploadPlugin(
       }
 
       const unsubUploadFromFile = eventBus.on(
-        ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE,
-        'on',
-        (args?: unknown) => {
+        ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE, (args?: unknown) => {
           const data = args as { file: File } | undefined
           if (data?.file) {
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
-            void insertImageFromFile(data.file, eventBus)
+            void insertImageFromFile(data.file, context)
           }
         }
       )

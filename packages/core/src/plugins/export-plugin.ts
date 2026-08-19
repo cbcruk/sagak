@@ -271,9 +271,7 @@ export function createExportPlugin(options: ExportPluginOptions = {}): Plugin {
       }
 
       const unsubDownload = eventBus.on(
-        ExportEvents.EXPORT_DOWNLOAD,
-        'on',
-        (args?: unknown) => {
+        ExportEvents.EXPORT_DOWNLOAD, (args?: unknown) => {
           const data = args as ExportDownloadData | undefined
           if (!data) return
 

@@ -11,7 +11,7 @@ import {
   DOMSerializer,
   type Node as PMNode,
 } from 'prosemirror-model'
-import { history, undo, redo, closeHistory } from 'prosemirror-history'
+import { history, closeHistory } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap } from 'prosemirror-commands'
 import {
@@ -21,7 +21,7 @@ import {
 } from 'prosemirror-schema-list'
 import { logger } from '@/core/logger'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
-import { CoreEvents, HistoryEvents, WysiwygEvents, type EventBus } from '@/core'
+import { WysiwygEvents, type EventBus } from '@/core'
 import type { Highlighter, HighlightRange } from '@/core/types'
 import { sagakSchema } from '@/model/schema'
 import { toHtml, parseHtml } from '@/model/storage'
@@ -179,7 +179,6 @@ export class WysiwygArea implements EditingArea {
     )
 
     this.listenToDomEvents()
-    this.listenToHistoryEvents()
 
   }
 
@@ -595,42 +594,18 @@ export class WysiwygArea implements EditingArea {
   }
 
   /**
-   * 되돌리기·다시 하기는 **버스로 들어옵니다.**
+   * 되돌리기 기록을 **여기서 끊습니다.**
    *
-   * 키보드 플러그인이 `Ctrl+Z` 를 여기로 옮기고, 툴바 버튼도 같은 이벤트를
-   * 씁니다. 그래서 뷰에는 단축키를 안 답니다 — 입구가 둘이면 한 번에 두 번
-   * 되돌아갑니다.
+   * 스냅샷 히스토리에서는 지금 상태를 통째로 찍어 두는 일(`CAPTURE_SNAPSHOT`)
+   * 이었지만, 모델에는 찍을 것이 없습니다 — 바뀐 것은 트랜잭션 자신이 알고
+   * 있습니다. 남는 뜻은 **다음 변경을 앞의 것과 한 덩어리로 묶지 말라**이고,
+   * 그게 `closeHistory` 입니다.
+   *
+   * 커맨드 경계가 커맨드를 돌리기 직전에 부릅니다 — 예전에는 버스를 한 바퀴
+   * 돌았습니다.
    */
-  private listenToHistoryEvents(): void {
-    if (!this.eventBus) {
-      return
-    }
-
-    const bus = this.eventBus
-    const run = (command: typeof undo): (() => boolean) => {
-      return () => {
-        return command(this.view.state, (tr) => this.view.dispatch(tr))
-      }
-    }
-
-    this.unsubscribers.push(
-      bus.on(HistoryEvents.UNDO, 'on', run(undo)),
-      bus.on(HistoryEvents.REDO, 'on', run(redo)),
-
-      /*
-       * `CAPTURE_SNAPSHOT` 은 **"여기서 끊어라"** 입니다.
-       *
-       * 스냅샷 히스토리에서는 지금 상태를 통째로 찍어 두는 일이었지만, 모델에는
-       * 찍을 것이 없습니다 — 바뀐 것은 트랜잭션 자신이 알고 있습니다. 남는 뜻은
-       * **다음 변경을 앞의 것과 한 덩어리로 묶지 말라**이고, 그게 `closeHistory`
-       * 입니다.
-       */
-      bus.on(CoreEvents.CAPTURE_SNAPSHOT, 'on', () => {
-        this.view.dispatch(closeHistory(this.view.state.tr))
-
-        return true
-      })
-    )
+  closeHistoryGroup(): void {
+    this.view.dispatch(closeHistory(this.view.state.tr))
   }
 
   /**

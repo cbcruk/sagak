@@ -408,7 +408,7 @@ export function createFindReplacePlugin(
       }
 
       unsubscribers.push(
-        eventBus.on(findEventName, 'before', (data?: unknown) => {
+        eventBus.on(findEventName, (data?: unknown) => {
 
           if (!isFindData(data)) {
             logger.warn('Find blocked: Invalid find data')
@@ -420,12 +420,6 @@ export function createFindReplacePlugin(
             return false
           }
 
-          return true
-        })
-      )
-
-      unsubscribers.push(
-        eventBus.on(findEventName, 'on', (data?: unknown) => {
           try {
             const current = state()
 
@@ -473,13 +467,13 @@ export function createFindReplacePlugin(
         }
       }
 
-      unsubscribers.push(eventBus.on(findNextEventName, 'on', step(1, 'next')))
+      unsubscribers.push(eventBus.on(findNextEventName, step(1, 'next')))
       unsubscribers.push(
-        eventBus.on(findPreviousEventName, 'on', step(-1, 'previous'))
+        eventBus.on(findPreviousEventName, step(-1, 'previous'))
       )
 
       unsubscribers.push(
-        eventBus.on(replaceEventName, 'before', (data?: unknown) => {
+        eventBus.on(replaceEventName, (data?: unknown) => {
 
           if (!isReplaceData(data)) {
             logger.warn('Replace blocked: Invalid replace data')
@@ -491,12 +485,6 @@ export function createFindReplacePlugin(
             return false
           }
 
-          return true
-        })
-      )
-
-      unsubscribers.push(
-        eventBus.on(replaceEventName, 'on', (data?: unknown) => {
           try {
             const handle = modelHandle(context)
             const current = handle?.getState()
@@ -509,7 +497,6 @@ export function createFindReplacePlugin(
               return false
             }
 
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             const target = currentMatches[currentMatchIndex]
             let tr = current.tr
@@ -553,7 +540,7 @@ export function createFindReplacePlugin(
       )
 
       unsubscribers.push(
-        eventBus.on(replaceAllEventName, 'before', (data?: unknown) => {
+        eventBus.on(replaceAllEventName, (data?: unknown) => {
 
           if (!isReplaceData(data)) {
             logger.warn('Replace all blocked: Invalid replace data')
@@ -565,12 +552,6 @@ export function createFindReplacePlugin(
             return false
           }
 
-          return true
-        })
-      )
-
-      unsubscribers.push(
-        eventBus.on(replaceAllEventName, 'on', (data?: unknown) => {
           try {
             const handle = modelHandle(context)
             const current = handle?.getState()
@@ -591,7 +572,6 @@ export function createFindReplacePlugin(
               return true
             }
 
-            eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             const done = runModelCommand(context, (state, dispatch) => {
               /* 뒤에서부터 갑니다 — 앞쪽 자리가 그대로 유효합니다 */
@@ -619,7 +599,7 @@ export function createFindReplacePlugin(
       )
 
       unsubscribers.push(
-        eventBus.on(clearFindEventName, 'on', () => {
+        eventBus.on(clearFindEventName, () => {
           try {
             clear()
             emitFindState('clear')

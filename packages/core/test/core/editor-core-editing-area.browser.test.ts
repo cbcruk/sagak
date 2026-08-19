@@ -567,7 +567,7 @@ describe('EditorCore - EditingArea Integration', () => {
       // When: 모드 변경 이벤트 구독
       const eventBus = core.getEventBus()
 
-      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', () => {
+      eventBus.on('EDITING_AREA_MODE_CHANGED', () => {
         events.push('mode_changed')
       })
 
@@ -592,7 +592,7 @@ describe('EditorCore - EditingArea Integration', () => {
 
       const eventBus = core.getEventBus()
 
-      eventBus.on('EDITING_AREA_MODE_CHANGED', 'on', () => {
+      eventBus.on('EDITING_AREA_MODE_CHANGED', () => {
         eventCount++
       })
 

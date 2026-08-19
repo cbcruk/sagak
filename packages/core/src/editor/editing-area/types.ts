@@ -144,6 +144,11 @@ export interface EditingArea {
   getHighlighter?(): Highlighter
 
   /**
+   * 되돌리기 기록을 여기서 끊습니다 — 커맨드 경계가 부릅니다
+   */
+  closeHistoryGroup?(): void
+
+  /**
    * 상태가 바뀔 때마다 알립니다 — 자기 문서를 소유하는 영역만 있습니다.
    *
    * 트랜잭션 하나가 곧 "무엇이 바뀌었나" 의 답이라, 구독하는 쪽이 DOM 이벤트를
@@ -231,49 +236,9 @@ export interface EditingAreaManagerConfig {
 /**
  * 모드 변경 이벤트 데이터
  */
-export interface ModeChangeEvent {
-  /**
-   * 이전 모드
-   */
-  from: EditingMode
-
-  /**
-   * 새 모드
-   */
-  to: EditingMode
-
-  /**
-   * 전송되는 콘텐츠
-   */
-  content: IRContent
-}
-
 /**
  * 콘텐츠 변경 이벤트 데이터
  */
-export interface ContentChangeEvent {
-  /**
-   * 현재 편집 모드
-   */
-  mode: EditingMode
-
-  /**
-   * 새 콘텐츠
-   */
-  content: IRContent
-}
-
 /**
  * 크기 조정 이벤트 데이터
  */
-export interface ResizeEvent {
-  /**
-   * 새 높이 (픽셀)
-   */
-  height: number
-
-  /**
-   * 새 너비 (픽셀)
-   */
-  width: number
-}

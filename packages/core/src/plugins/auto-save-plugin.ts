@@ -163,7 +163,6 @@ export function createAutoSavePlugin(
       const replaceContent = (next: string): void => {
         if (readContent() === next) return
 
-        eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
         writeContent(next)
       }
 
@@ -207,27 +206,21 @@ export function createAutoSavePlugin(
       }
 
       const unsubContentChanged = eventBus.on(
-        WysiwygEvents.WYSIWYG_CONTENT_CHANGED,
-        'after',
-        () => {
+        WysiwygEvents.WYSIWYG_CONTENT_CHANGED, () => {
           scheduleSave()
         }
       )
       unsubscribers.push(unsubContentChanged)
 
       const unsubStyleChanged = eventBus.on(
-        CoreEvents.STYLE_CHANGED,
-        'after',
-        () => {
+        CoreEvents.STYLE_CHANGED, () => {
           scheduleSave()
         }
       )
       unsubscribers.push(unsubStyleChanged)
 
       const unsubRestore = eventBus.on(
-        AutoSaveEvents.AUTO_SAVE_RESTORE,
-        'on',
-        () => {
+        AutoSaveEvents.AUTO_SAVE_RESTORE, () => {
           if (!element) return
 
           void (async () => {
@@ -247,9 +240,7 @@ export function createAutoSavePlugin(
       unsubscribers.push(unsubRestore)
 
       const unsubClear = eventBus.on(
-        AutoSaveEvents.AUTO_SAVE_CLEAR,
-        'on',
-        () => {
+        AutoSaveEvents.AUTO_SAVE_CLEAR, () => {
           /*
            * **저장소만 비웁니다.** 쓰던 글은 건드리지 않습니다.
            *

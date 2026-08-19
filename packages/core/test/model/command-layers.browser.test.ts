@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createEditor, type Editor } from '@/create-editor'
 import { TextSelection } from 'prosemirror-state'
 import type { EditorState } from 'prosemirror-state'
+import type { CommandName } from '@/core/command-map'
 
 /**
  * **아래 층이 아직 잡히는가.**
@@ -28,7 +29,7 @@ let execCalls: string[]
 let originalExec: typeof document.execCommand
 
 /** 툴바가 부르는 이름 전부 — 값이 필요한 것은 값까지 */
-const COMMANDS: Array<[string, string?]> = [
+const COMMANDS: Array<[CommandName, string?]> = [
   ['bold'],
   ['italic'],
   ['underline'],
@@ -140,7 +141,7 @@ describe('커맨드 층 — 아래로 새는 것이 있는가', () => {
           : '<p>가나다라</p>'
       )
 
-      if (!registry.run(name, value)) {
+      if (!(registry.run as (n: string, v?: string) => boolean)(name, value)) {
         unhandled.push(name)
       }
     }

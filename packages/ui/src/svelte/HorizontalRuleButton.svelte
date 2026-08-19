@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Minus } from 'lucide'
-  import { ContentEvents } from 'sagak-core'
+  import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
 
@@ -39,7 +39,7 @@
   const ICON_SIZE = 16
 
   function insert(): void {
-    editor.eventBus.emit(ContentEvents.HORIZONTAL_RULE_INSERT)
+    exec(editor, 'insertHorizontalRule')
   }
 </script>
 

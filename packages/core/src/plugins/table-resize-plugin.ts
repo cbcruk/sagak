@@ -177,7 +177,6 @@ export function createTableResizePlugin(
         if (result) {
           e.preventDefault()
 
-          eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
           const widths = getColumnWidths(table)
 
@@ -231,9 +230,7 @@ export function createTableResizePlugin(
       document.addEventListener('mouseup', handleMouseUp)
 
       const unsubWysiwygShown = eventBus.on(
-        WysiwygEvents.WYSIWYG_AREA_SHOWN,
-        'on',
-        () => {
+        WysiwygEvents.WYSIWYG_AREA_SHOWN, () => {
           const tables = element.querySelectorAll('table')
 
           tables.forEach((table) => {

@@ -1,7 +1,7 @@
 import type { Readable } from 'svelte/store'
-import { TextStyleEvents } from 'sagak-core'
 import type { EditorContext } from 'sagak-core'
 import { fromState } from './from-state'
+import { exec } from './exec'
 
 /**
  * 굵게·기울임·밑줄·취소선의 켜짐 상태.
@@ -29,7 +29,7 @@ export interface FormattingState {
 }
 
 export type FormattingCommands = {
-  [K in keyof typeof TOGGLES]: () => void
+  [K in Toggle]: () => void
 }
 
 const NOTHING: FormattingState = {
@@ -40,16 +40,13 @@ const NOTHING: FormattingState = {
 }
 
 /*
- * 쏘는 이벤트를 **실제로 있는 넷으로 좁혀** 둡니다 — `FormatToggles` 에 있던
- * `ToggleEvent` 가 하던 일입니다. `string` 으로 두면 발행할 때 `as never` 가
- * 필요해지고, 그건 이벤트 맵의 타입 검사를 스스로 끄는 셈입니다.
+ * **이름이 곧 커맨드입니다.**
+ *
+ * 예전에는 `bold` 라는 개념에 이름이 둘이었습니다 — 버스의 `BOLD_CLICKED` 와
+ * 커맨드의 `bold`. 그 사이를 플러그인이 이어 줬는데, 그 층이 없어지면서
+ * 이름도 하나가 됐습니다.
  */
-const TOGGLES = {
-  bold: TextStyleEvents.BOLD_CLICKED,
-  italic: TextStyleEvents.ITALIC_CLICKED,
-  underline: TextStyleEvents.UNDERLINE_CLICKED,
-  strikeThrough: TextStyleEvents.STRIKE_CLICKED,
-} as const
+type Toggle = 'bold' | 'italic' | 'underline' | 'strikeThrough'
 
 function read(editor: EditorContext): FormattingState {
   const registry = editor.commandRegistry
@@ -73,9 +70,9 @@ export function formattingStore(
 /** 토글은 상태가 아니라 명령이라 store 밖입니다 (`historyCommands` 와 같습니다) */
 export function formattingCommands(editor: EditorContext): FormattingCommands {
   return {
-    bold: () => editor.eventBus.emit(TOGGLES.bold),
-    italic: () => editor.eventBus.emit(TOGGLES.italic),
-    underline: () => editor.eventBus.emit(TOGGLES.underline),
-    strikeThrough: () => editor.eventBus.emit(TOGGLES.strikeThrough),
+    bold: () => void exec(editor, 'bold'),
+    italic: () => void exec(editor, 'italic'),
+    underline: () => void exec(editor, 'underline'),
+    strikeThrough: () => void exec(editor, 'strikeThrough'),
   }
 }

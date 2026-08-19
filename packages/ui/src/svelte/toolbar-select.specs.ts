@@ -1,4 +1,4 @@
-import { FontEvents, ParagraphEvents } from 'sagak-core'
+import { exec } from '../state/exec'
 import type { EditorContext } from 'sagak-core'
 
 /**
@@ -121,9 +121,7 @@ export const FONT_SIZE: ToolbarSelectSpec = {
    */
   query: (editor) => editor.commandRegistry?.queryValue('fontSizeCss'),
   unlisted: (css) => String(Math.round(parseFloat(css))),
-  apply: (editor, fontSize) => {
-    editor.eventBus.emit(FontEvents.FONT_SIZE_CHANGED, { fontSize })
-  },
+  apply: (editor, fontSize) => void exec(editor, 'fontSize', fontSize),
 }
 
 export const LINE_HEIGHT: ToolbarSelectSpec = {
@@ -137,9 +135,7 @@ export const LINE_HEIGHT: ToolbarSelectSpec = {
     { label: '3.0', value: '3' },
   ],
   initialValue: '1.5',
-  apply: (editor, lineHeight) => {
-    editor.eventBus.emit(FontEvents.LINE_HEIGHT_CHANGED, { lineHeight })
-  },
+  apply: (editor, lineHeight) => void exec(editor, 'lineHeight', lineHeight),
 }
 
 export const LETTER_SPACING: ToolbarSelectSpec = {
@@ -153,9 +149,13 @@ export const LETTER_SPACING: ToolbarSelectSpec = {
     { label: '0.3', value: '0.3' },
   ],
   initialValue: '0',
-  apply: (editor, letterSpacing) => {
-    editor.eventBus.emit(FontEvents.LETTER_SPACING_CHANGED, { letterSpacing })
-  },
+  /* 툴바는 배수만 고릅니다 — CSS 단위를 붙이는 자리가 여기입니다 */
+  apply: (editor, letterSpacing) =>
+    void exec(
+      editor,
+      'letterSpacing',
+      letterSpacing === '0' ? 'normal' : `${letterSpacing}em`
+    ),
 }
 
 /**
@@ -174,13 +174,6 @@ export const HEADING: ToolbarSelectSpec = {
     { label: 'Heading 6', value: '6' },
   ],
   initialValue: 'p',
-  apply: (editor, value) => {
-    if (value === 'p') {
-      editor.eventBus.emit(ParagraphEvents.FORMAT_PARAGRAPH)
-      return
-    }
-    editor.eventBus.emit(ParagraphEvents.HEADING_CHANGED, {
-      level: parseInt(value, 10),
-    })
-  },
+  apply: (editor, value) =>
+    void exec(editor, 'formatBlock', value === 'p' ? '<p>' : `<h${value}>`),
 }
