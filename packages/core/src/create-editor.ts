@@ -1,7 +1,6 @@
 import type { DocumentJSON } from '@/model/storage'
 import { EditorCore } from './core/editor-core'
 import type { EditorContext, Plugin, EditingMode } from './core/types'
-import type { SanitizeOption } from './editor/editing-area/sanitizer'
 import type { LogLevel } from './core/logger'
 import type { EditorErrorData } from './core/errors'
 
@@ -111,15 +110,6 @@ export interface CreateEditorOptions {
    * Enable spell check (default: true)
    */
   spellCheck?: boolean
-
-  /**
-   * HTML sanitization for paste and setContent
-   *
-   * @deprecated **아무 데도 안 쓰입니다.** 소독은 스키마가 합니다 — 스키마 밖의
-   * 것은 문서에 존재할 수 없습니다. `false` 를 줘도 정화가 꺼지지 않습니다
-   * (`docs/prosemirror-migration.md` §10).
-   */
-  sanitize?: SanitizeOption
 
   /**
    * Library log level (default: 'warn'); use 'silent' to suppress logs
@@ -238,7 +228,6 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
-    sanitize,
     logLevel,
     onError,
     legacyFallback,
@@ -263,7 +252,6 @@ export function createEditor(options: CreateEditorOptions): Editor {
     minHeight,
     autoResize,
     spellCheck,
-    sanitize,
     logLevel,
     onError,
     legacyFallback,

@@ -92,7 +92,15 @@ export interface TableCreatePayload {
   rows?: number
   cols?: number
   columns?: number
+
+  /**
+   * @deprecated **문서에 안 붙습니다.** 표의 테두리·너비는 생김새라
+   * 스타일시트의 몫입니다 — 이미지의 테두리와 같은 이유입니다
+   * (`docs/prosemirror-migration.md` §10).
+   */
   border?: string
+
+  /** @deprecated `border` 와 같습니다 */
   width?: string
 }
 

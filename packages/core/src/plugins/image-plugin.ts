@@ -108,17 +108,16 @@ export interface ImageData {
   /**
    * 이미지 정렬
    *
-   * @deprecated **문서에 안 붙습니다.** 스키마의 이미지가 갖는 것은 주소·
-   * 대체글·너비·높이 넷이라 정렬은 표현할 자리가 없습니다. 지금 제품의
-   * 다이얼로그도 이 값을 보내지 않습니다 — 되살리려면 스키마부터 늘려야
-   * 합니다 (`docs/prosemirror-migration.md` §10).
+   * 정렬은 **글이 어디에 놓이는가**라는 문서의 뜻이라 모델이 압니다 —
+   * 문단의 정렬과 같은 자리입니다.
    */
   alignment?: ImageAlignment
 
   /**
    * 이미지 테두리 (CSS 값: `'1px solid #000'` 등)
    *
-   * @deprecated `alignment` 와 같은 이유로 문서에 안 붙습니다.
+   * @deprecated **문서에 안 붙습니다.** 테두리는 생김새라 스타일시트의
+   * 몫입니다 (`docs/prosemirror-migration.md` §10).
    */
   border?: string
 }
@@ -296,11 +295,8 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             /*
-             * `테두리`·`정렬` 은 **모델에 자리가 없습니다.**
-             *
-             * 스키마의 이미지가 갖는 것은 주소·대체글·너비·높이 넷입니다. 지금
-             * 제품의 다이얼로그도 그 넷만 보내므로 잃는 것은 없지만, 이벤트로
-             * 직접 부르면 나머지는 조용히 빠집니다.
+             * 테두리만 모델에 자리가 없습니다 — 생김새는 스타일시트의
+             * 몫입니다. 정렬은 문단의 정렬과 같은 자리라 모델이 압니다.
              */
             const inserted = runModelCommand(
               context,
@@ -309,6 +305,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
                 alt: data.alt ?? null,
                 width: data.width || defaultWidth || null,
                 height: data.height || defaultHeight || null,
+                align: data.alignment ?? null,
               })
             )
 
@@ -405,6 +402,7 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
             if (data.alt !== undefined) changed.alt = data.alt
             if (data.width !== undefined) changed.width = data.width
             if (data.height !== undefined) changed.height = data.height
+            if (data.alignment !== undefined) changed.align = data.alignment
 
             const done = runModelCommand(context, updateImage(changed))
 
