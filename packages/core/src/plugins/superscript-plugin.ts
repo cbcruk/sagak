@@ -1,4 +1,4 @@
-import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createSuperscriptPlugin = definePlugin<SuperscriptPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.TOGGLE_SUPERSCRIPT]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('superscript')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'superscript' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute superscript command:')

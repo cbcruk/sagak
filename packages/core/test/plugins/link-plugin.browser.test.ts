@@ -115,7 +115,7 @@ describe('LinkPlugin', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'link',
+        style: 'createLink',
         value: 'https://example.com',
       })
 
@@ -177,8 +177,7 @@ describe('LinkPlugin', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'link',
-        value: null,
+        style: 'unlink',
       })
 
       vi.restoreAllMocks()
@@ -449,7 +448,7 @@ describe('LinkPlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Link blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
@@ -471,7 +470,7 @@ describe('LinkPlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Unlink blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 

@@ -1,5 +1,4 @@
 import { logger } from '@/core/logger'
-import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
@@ -149,7 +148,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     insertColumnEventName = ContentEvents.TABLE_INSERT_COLUMN,
     deleteColumnEventName = ContentEvents.TABLE_DELETE_COLUMN,
     deleteTableEventName = ContentEvents.TABLE_DELETE,
-    checkComposition = true,
     defaultRows = 3,
     defaultColumns = 3,
     maxRows = 100,
@@ -163,7 +161,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:table')
-      const composition = context.composition
 
       /** 지금 캐럿이 표 안인가 — 행·열 명령의 전제입니다 */
       const inTable = (): boolean => {
@@ -179,9 +176,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
        * 이 DOM 을 거슬러 올라가며 `<td>` 를 찾았습니다.
        */
       const guard = (label: string) => (): boolean => {
-        if (isBlockedByComposition(composition, checkComposition, label)) {
-          return false
-        }
 
         if (!inTable()) {
           logger.warn(`${label} blocked: No table cell selected`)
@@ -226,15 +220,6 @@ export function createTablePlugin(options: TablePluginOptions = {}): Plugin {
         createEventName,
         'before',
         (data?: unknown) => {
-          if (
-            isBlockedByComposition(
-              composition,
-              checkComposition,
-              'Table create'
-            )
-          ) {
-            return false
-          }
 
           const { rows, cols } = extractTableCreateData(data, {
             rows: defaultRows,

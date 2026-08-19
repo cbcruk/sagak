@@ -1,4 +1,4 @@
-import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createItalicPlugin = definePlugin<ItalicPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.ITALIC_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('italic')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'italic' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute italic command:')

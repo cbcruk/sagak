@@ -102,11 +102,11 @@ describe('색상 플러그인 통합 (텍스트와 배경 색상 조합)', () =>
       // Then: STYLE_CHANGED 이벤트가 각 변경에 대해 발생해야 함
       expect(styleChangedSpy).toHaveBeenCalledTimes(2)
       expect(styleChangedSpy).toHaveBeenNthCalledWith(1, {
-        style: 'textColor',
+        style: 'foreColor',
         value: '#0000FF',
       })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(2, {
-        style: 'backgroundColor',
+        style: 'backColor',
         value: '#00FFFF',
       })
 

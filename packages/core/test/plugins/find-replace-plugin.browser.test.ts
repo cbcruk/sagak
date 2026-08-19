@@ -656,23 +656,21 @@ describe('FindReplacePlugin', () => {
       await pluginManager.register(FindReplacePlugin)
     })
 
-    it('should block find during IME composition', () => {
-      // Given: console.warn spy 준비, IME 조합 시작
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
+    /**
+     * Why: **찾기는 문서를 안 바꿉니다.**
+     * How: 조합 가드는 문서를 고치는 길에 있습니다 (`runCommand` ·
+     *      `runModelCommand`). 찾기는 읽고 화면에 칠할 뿐이라 지나가지
+     *      않습니다 — 예전에는 플러그인마다 가드를 걸어서 이것까지 막고
+     *      있었습니다.
+     */
+    it('찾기는 조합 중에도 됩니다 — 문서를 안 바꿉니다', () => {
       element.dispatchEvent(new CompositionEvent('compositionstart'))
-      expect(composition.isComposing()).toBe(true)
 
-      // When: 조합 중 FIND 이벤트 발행
-      const result = eventBus.emit('FIND', { query: 'test' })
+      const result = eventBus.emit('FIND', { query: 'Hello' })
 
-      // Then: 차단되고 경고가 출력되어야 함
-      expect(result).toBe(false)
-      expect(consoleWarn).toHaveBeenCalledWith(
-        'Find blocked: IME composition in progress'
-      )
+      expect(result).toBe(true)
 
-      consoleWarn.mockRestore()
+      element.dispatchEvent(new CompositionEvent('compositionend'))
     })
 
     it('should block replace during IME composition', () => {
@@ -692,7 +690,7 @@ describe('FindReplacePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Replace blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()
@@ -713,7 +711,7 @@ describe('FindReplacePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Replace all blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()

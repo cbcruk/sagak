@@ -134,7 +134,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발생함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'backgroundColor',
+        style: 'backColor',
         value: '#00FFFF',
       })
 
@@ -442,7 +442,7 @@ describe('BackgroundColorPlugin (배경 색상 설정)', () => {
       // Then: 명령이 차단됨
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Background color blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 

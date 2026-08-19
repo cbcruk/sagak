@@ -6,7 +6,6 @@ import {
   insertImage,
   updateImage,
 } from '@/model/commands'
-import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import { ContentEvents, CoreEvents } from '@/core'
@@ -211,7 +210,6 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
     insertEventName = ContentEvents.IMAGE_INSERT,
     updateEventName = ContentEvents.IMAGE_UPDATE,
     deleteEventName = ContentEvents.IMAGE_DELETE,
-    checkComposition = true,
     validateUrl = true,
     allowedProtocols = ['http:', 'https:', 'data:'],
     maxWidth = 1920,
@@ -228,23 +226,12 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:image')
-      const composition = context.composition
 
       const unsubInsertBefore = eventBus.on(
         insertEventName,
         'before',
         (args?: unknown) => {
           const data = args as ImageData | undefined
-
-          if (
-            isBlockedByComposition(
-              composition,
-              checkComposition,
-              'Image insert'
-            )
-          ) {
-            return false
-          }
           if (!data || !data.src) {
             logger.warn('Image insert blocked: No src provided')
             return false
@@ -334,16 +321,6 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
         'before',
         (args?: unknown) => {
           const data = args as Partial<ImageData> | undefined
-
-          if (
-            isBlockedByComposition(
-              composition,
-              checkComposition,
-              'Image update'
-            )
-          ) {
-            return false
-          }
           if (!data) {
             logger.warn('Image update blocked: No data provided')
             return false
@@ -425,15 +402,6 @@ export function createImagePlugin(options: ImagePluginOptions = {}): Plugin {
       unsubscribers.push(unsubUpdateOn)
 
       const unsubDeleteBefore = eventBus.on(deleteEventName, 'before', () => {
-        if (
-          isBlockedByComposition(
-            composition,
-            checkComposition,
-            'Image delete'
-          )
-        ) {
-          return false
-        }
         const state = modelState(context)
 
         if (!state || !imageAt(state)) {

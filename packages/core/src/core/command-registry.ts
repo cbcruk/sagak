@@ -1,3 +1,4 @@
+import { logger } from './logger'
 import { CoreEvents } from './events'
 import type { EventBus } from './event-bus'
 import type { CompositionTracker } from './composition'
@@ -84,6 +85,13 @@ export class CommandRegistry {
    */
   constructor(context: CommandContext) {
     this.context = context
+  }
+
+  /**
+   * 지금 IME 조합 중인가 — 커맨드를 막을지 판단하는 자리입니다
+   */
+  isComposing(): boolean {
+    return this.context.composition?.isComposing() ?? false
   }
 
   /**
@@ -231,22 +239,27 @@ export class CommandRegistry {
 }
 
 /**
- * 스냅샷 캡처 후 커맨드를 실행하는 헬퍼
+ * 커맨드를 부르는 **하나뿐인 문**입니다.
  *
- * 커맨드 실행 전후의 두 가지 규약을 여기 한 곳에 담습니다.
+ * 커맨드 하나를 돌릴 때마다 되풀이되는 규약 넷을 여기 한 자리에 담습니다.
  *
- * - 실행 전 `CAPTURE_SNAPSHOT` — 히스토리가 직전 상태를 저장합니다.
- * - 성공 후 `FOCUS_REQUESTED` — 편집 영역으로 포커스를 되돌립니다.
- *   툴바 버튼을 누르면 포커스가 그 버튼에 남아, 커맨드는 저장된 선택 영역으로
- *   동작하지만 이어지는 타이핑이 편집 영역에 닿지 않습니다.
+ * | | |
+ * | --- | --- |
+ * | 조합 중이면 막기 | 한글을 조립하는 중에 서식이 끼어들면 글자가 끊깁니다 |
+ * | `CAPTURE_SNAPSHOT` | 되돌리기가 여기서 끊깁니다 |
+ * | `STYLE_CHANGED` | 무엇이 바뀌었는지 알립니다 |
+ * | `FOCUS_REQUESTED` | 툴바 버튼에 남은 포커스를 편집 영역으로 |
  *
- * 서식 플러그인이 `document.execCommand`를 직접 호출하던 자리를 대체합니다.
+ * ## 가드가 여기 있는 것이 요지입니다
  *
- * @param registry 커맨드 레지스트리
- * @param eventBus 스냅샷·포커스 이벤트를 발행할 이벤트 버스
- * @param name 커맨드 이름
- * @param value 커맨드 값
- * @returns 커맨드 결과
+ * [`event-bus-refactor.md`](../../../../docs/event-bus-refactor.md) 가 센 것 —
+ * `before` 단계 35개가 **전부 같은 IME 가드로 시작**했습니다. 레퍼런스
+ * 에디터들이 IME 를 덜 다루는 게 아니라 **가드를 디스패치 경계 한 곳에**
+ * 두는데, 이 저장소는 그 자리를 못 찾아 커맨드마다 복사했습니다.
+ *
+ * 그 자리가 여기입니다. 그 문서의 결론이 "버스를 교체하자" 가 아니라
+ * **"가드를 제자리에 놓으면 단계가 남을 이유를 잃는다"** 였던 이유이기도
+ * 합니다.
  */
 export function runCommand(
   registry: CommandRegistry,
@@ -254,10 +267,17 @@ export function runCommand(
   name: string,
   value?: string
 ): boolean {
+  if (registry.isComposing()) {
+    logger.warn(`${name} blocked: IME composition in progress`)
+    return false
+  }
+
   eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
+
   const result = registry.run(name, value)
 
   if (result) {
+    eventBus.emit(CoreEvents.STYLE_CHANGED, { style: name, value })
     eventBus.emit(CoreEvents.FOCUS_REQUESTED)
   }
 

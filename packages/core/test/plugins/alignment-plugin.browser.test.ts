@@ -173,8 +173,7 @@ describe('AlignmentPlugin', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'alignment',
-        value: 'center',
+        style: 'justifyCenter',
       })
 
       vi.restoreAllMocks()
@@ -350,7 +349,7 @@ describe('AlignmentPlugin', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Alignment blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 

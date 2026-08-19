@@ -98,12 +98,12 @@ describe('글꼴 플러그인 통합 (글꼴과 크기 조합)', () => {
       // Then: STYLE_CHANGED 이벤트가 각 변경에 대해 발생해야 함
       expect(styleChangedSpy).toHaveBeenCalledTimes(2)
       expect(styleChangedSpy).toHaveBeenNthCalledWith(1, {
-        style: 'fontFamily',
+        style: 'fontName',
         value: 'Helvetica',
       })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(2, {
         style: 'fontSize',
-        value: 3,
+          value: '3',
       })
 
       vi.restoreAllMocks()

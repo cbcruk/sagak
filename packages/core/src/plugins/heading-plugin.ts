@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -106,7 +106,7 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.HEADING_CHANGED]: (
-      { options: opts, emit, reportError, runCommand },
+      { options: opts, reportError, runCommand },
       data?: unknown
     ) => {
       const level = extractHeadingLevel(data)
@@ -139,13 +139,6 @@ export const createHeadingPlugin = definePlugin<HeadingPluginOptions>({
 
       try {
         const result = runCommand('formatBlock', `<h${level}>`)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'heading',
-            value: level,
-          })
-        }
 
         return result
       } catch (error) {

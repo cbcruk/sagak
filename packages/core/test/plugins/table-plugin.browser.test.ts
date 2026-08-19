@@ -515,7 +515,7 @@ describe('TablePlugin', () => {
       // Then: 차단되고 경고가 출력되어야 함
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Table create blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
 
       consoleWarn.mockRestore()

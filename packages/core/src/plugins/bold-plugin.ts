@@ -1,4 +1,4 @@
-import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createBoldPlugin = definePlugin<BoldPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.BOLD_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('bold')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'bold' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute bold command:')

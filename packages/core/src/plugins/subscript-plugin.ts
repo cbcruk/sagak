@@ -1,4 +1,4 @@
-import { definePlugin, CoreEvents, TextStyleEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createSubscriptPlugin = definePlugin<SubscriptPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.TOGGLE_SUBSCRIPT]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('subscript')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'subscript' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute subscript command:')

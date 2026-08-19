@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -103,7 +103,7 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.ALIGNMENT_CHANGED]: (
-      { options: opts, emit, reportError, runCommand },
+      { options: opts, reportError, runCommand },
       data?: unknown
     ) => {
       const align = extractAlignment(data)
@@ -130,13 +130,6 @@ export const createAlignmentPlugin = definePlugin<AlignmentPluginOptions>({
       try {
         const command = ALIGNMENT_COMMANDS[align]
         const result = runCommand(command)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'alignment',
-            value: align,
-          })
-        }
 
         return result
       } catch (error) {

@@ -1,4 +1,4 @@
-import { definePlugin, TextStyleEvents, CoreEvents } from '@/core'
+import { definePlugin, TextStyleEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createStrikePlugin = definePlugin<StrikePluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? TextStyleEvents.STRIKE_CLICKED]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('strikeThrough')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'strike' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute strike command:')

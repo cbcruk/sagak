@@ -1,4 +1,4 @@
-import { definePlugin, ParagraphEvents, CoreEvents } from '@/core'
+import { definePlugin, ParagraphEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -44,15 +44,11 @@ export const createParagraphPlugin = definePlugin<ParagraphPluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? ParagraphEvents.FORMAT_PARAGRAPH]: ({
-      emit,
       reportError,
       runCommand,
     }) => {
       try {
         const result = runCommand('formatBlock', '<p>')
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, { style: 'paragraph' })
-        }
         return result
       } catch (error) {
         reportError(error, 'Failed to execute paragraph format command:')

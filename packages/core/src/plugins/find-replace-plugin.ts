@@ -1,10 +1,9 @@
 import type { Node as PMNode } from 'prosemirror-model'
 import { logger } from '@/core/logger'
-import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext, Highlighter } from '@/core'
 import { FindReplaceEvents, CoreEvents } from '@/core'
-import { modelHandle } from '@/model/bridge'
+import { modelHandle, runModelCommand } from '@/model/bridge'
 
 /**
  * 찾기/바꾸기 플러그인 설정 옵션
@@ -323,7 +322,6 @@ export function createFindReplacePlugin(
     replaceEventName = FindReplaceEvents.REPLACE,
     replaceAllEventName = FindReplaceEvents.REPLACE_ALL,
     clearFindEventName = FindReplaceEvents.CLEAR_FIND,
-    checkComposition = true,
     highlightColor = '#ffff00',
     currentHighlightColor = '#ff9900',
   } = options
@@ -344,7 +342,6 @@ export function createFindReplacePlugin(
         eventBus,
         'plugin:utility:find-replace'
       )
-      const composition = context.composition
 
       /**
        * 편집 영역은 **부를 때마다 다시 묻습니다.**
@@ -412,11 +409,6 @@ export function createFindReplacePlugin(
 
       unsubscribers.push(
         eventBus.on(findEventName, 'before', (data?: unknown) => {
-          if (
-            isBlockedByComposition(composition, checkComposition, 'Find')
-          ) {
-            return false
-          }
 
           if (!isFindData(data)) {
             logger.warn('Find blocked: Invalid find data')
@@ -488,15 +480,6 @@ export function createFindReplacePlugin(
 
       unsubscribers.push(
         eventBus.on(replaceEventName, 'before', (data?: unknown) => {
-          if (
-            isBlockedByComposition(
-              composition,
-              checkComposition,
-              'Replace'
-            )
-          ) {
-            return false
-          }
 
           if (!isReplaceData(data)) {
             logger.warn('Replace blocked: Invalid replace data')
@@ -529,13 +512,17 @@ export function createFindReplacePlugin(
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
             const target = currentMatches[currentMatchIndex]
-            const tr = current.tr.insertText(
-              data.replacement,
-              target.from,
-              target.to
-            )
+            let tr = current.tr
 
-            handle.dispatch(tr)
+            /* 문서를 고치므로 조합 가드를 지납니다 */
+            const done = runModelCommand(context, (state, dispatch) => {
+              tr = state.tr.insertText(data.replacement, target.from, target.to)
+              dispatch?.(tr)
+
+              return true
+            })
+
+            if (!done) return false
 
             /*
              * 남은 일치는 **다시 찾지 않고 자리만 옮깁니다.**
@@ -567,15 +554,6 @@ export function createFindReplacePlugin(
 
       unsubscribers.push(
         eventBus.on(replaceAllEventName, 'before', (data?: unknown) => {
-          if (
-            isBlockedByComposition(
-              composition,
-              checkComposition,
-              'Replace all'
-            )
-          ) {
-            return false
-          }
 
           if (!isReplaceData(data)) {
             logger.warn('Replace all blocked: Invalid replace data')
@@ -615,14 +593,20 @@ export function createFindReplacePlugin(
 
             eventBus.emit(CoreEvents.CAPTURE_SNAPSHOT)
 
-            /* 뒤에서부터 갑니다 — 앞쪽 자리가 그대로 유효합니다 */
-            const tr = current.tr
+            const done = runModelCommand(context, (state, dispatch) => {
+              /* 뒤에서부터 갑니다 — 앞쪽 자리가 그대로 유효합니다 */
+              const tr = state.tr
 
-            for (let i = matches.length - 1; i >= 0; i -= 1) {
-              tr.insertText(data.replacement, matches[i].from, matches[i].to)
-            }
+              for (let i = matches.length - 1; i >= 0; i -= 1) {
+                tr.insertText(data.replacement, matches[i].from, matches[i].to)
+              }
 
-            handle.dispatch(tr)
+              dispatch?.(tr)
+
+              return true
+            })
+
+            if (!done) return false
             clear()
             emitFindState('replaceAll', { replaceCount: matches.length })
 

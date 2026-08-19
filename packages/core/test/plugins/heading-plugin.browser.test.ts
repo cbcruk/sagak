@@ -154,8 +154,8 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'heading',
-        value: 2,
+        style: 'formatBlock',
+          value: '<h2>',
       })
 
       vi.restoreAllMocks()
@@ -392,7 +392,7 @@ describe('HeadingPlugin (제목 서식 적용)', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Heading blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 

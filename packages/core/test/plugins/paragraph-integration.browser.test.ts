@@ -137,12 +137,11 @@ describe('문단 플러그인 통합 (복합 문단 포맷)', () => {
       // Then: STYLE_CHANGED 이벤트가 각 포맷에 대해 발생해야 함
       expect(styleChangedSpy).toHaveBeenCalledTimes(3)
       expect(styleChangedSpy).toHaveBeenNthCalledWith(1, {
-        style: 'heading',
-        value: 1,
+        style: 'formatBlock',
+          value: '<h1>',
       })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(2, {
-        style: 'alignment',
-        value: 'right',
+        style: 'justifyRight',
       })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(3, {
         style: 'indent',

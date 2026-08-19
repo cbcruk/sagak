@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 /**
@@ -130,7 +130,7 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
 
   handlers: (options) => ({
     [options.eventName ?? FontEvents.FONT_SIZE_CHANGED]: (
-      { options: opts, emit, reportError, runCommand },
+      { options: opts, reportError, runCommand },
       data?: unknown
     ) => {
       const parsed = extractFontSize(data)
@@ -159,13 +159,6 @@ export const createFontSizePlugin = definePlugin<FontSizePluginOptions>({
         const value =
           parsed.kind === 'legacy' ? String(parsed.size) : parsed.value
         const result = runCommand('fontSize', value)
-
-        if (result) {
-          emit(CoreEvents.STYLE_CHANGED, {
-            style: 'fontSize',
-            value: parsed.kind === 'legacy' ? parsed.size : parsed.value,
-          })
-        }
 
         return result
       } catch (error) {

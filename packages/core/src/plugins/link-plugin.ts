@@ -1,5 +1,4 @@
 import { logger } from '@/core/logger'
-import { isBlockedByComposition } from '@/core/composition-guard'
 import { createErrorReporter } from '@/core/errors'
 import type { Plugin, EditorContext } from '@/core'
 import {
@@ -203,7 +202,6 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
   const {
     eventName = ContentEvents.LINK_CHANGED,
     unlinkEventName = ContentEvents.LINK_REMOVED,
-    checkComposition = true,
     validateUrl = true,
     requireProtocol = false,
     allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'],
@@ -218,7 +216,6 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
     initialize(context: EditorContext) {
       const { eventBus } = context
       const reportError = createErrorReporter(eventBus, 'plugin:content:link')
-      const composition = context.composition
 
       const commandRegistry =
         context.commandRegistry ?? createDefaultCommandRegistry(context)
@@ -226,11 +223,6 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
         runCmd(commandRegistry, eventBus, name, value)
 
       const unsubBefore = eventBus.on(eventName, 'before', (data?: unknown) => {
-        if (
-          isBlockedByComposition(composition, checkComposition, 'Link')
-        ) {
-          return false
-        }
         const { url } = extractLinkData(data)
 
         if (!url) {
@@ -299,11 +291,6 @@ export function createLinkPlugin(options: LinkPluginOptions = {}): Plugin {
       unsubscribers.push(unsubOn)
 
       const unsubUnlinkBefore = eventBus.on(unlinkEventName, 'before', () => {
-        if (
-          isBlockedByComposition(composition, checkComposition, 'Unlink')
-        ) {
-          return false
-        }
         return true
       })
 

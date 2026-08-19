@@ -96,7 +96,7 @@ describe('OrderedListPlugin', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'orderedList',
+        style: 'insertOrderedList',
       })
 
       vi.restoreAllMocks()
@@ -143,7 +143,7 @@ describe('OrderedListPlugin', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Ordered list blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
@@ -350,7 +350,7 @@ describe('UnorderedListPlugin', () => {
 
       // Then: STYLE_CHANGED 이벤트가 발행되어야 함
       expect(styleChangedSpy).toHaveBeenCalledWith({
-        style: 'unorderedList',
+        style: 'insertUnorderedList',
       })
 
       vi.restoreAllMocks()
@@ -397,7 +397,7 @@ describe('UnorderedListPlugin', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Unordered list blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
@@ -603,10 +603,10 @@ describe('List Plugins Integration', () => {
       // Then: 각각 별도의 STYLE_CHANGED 이벤트 발행
       expect(styleChangedSpy).toHaveBeenCalledTimes(2)
       expect(styleChangedSpy).toHaveBeenNthCalledWith(1, {
-        style: 'orderedList',
+        style: 'insertOrderedList',
       })
       expect(styleChangedSpy).toHaveBeenNthCalledWith(2, {
-        style: 'unorderedList',
+        style: 'insertUnorderedList',
       })
 
       vi.restoreAllMocks()

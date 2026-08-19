@@ -139,7 +139,7 @@ describe('IndentPlugin', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Indent blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 
@@ -397,7 +397,7 @@ describe('OutdentPlugin', () => {
       // Then: 차단되고 경고 발생
       expect(result).toBe(false)
       expect(consoleWarn).toHaveBeenCalledWith(
-        'Outdent blocked: IME composition in progress'
+        expect.stringContaining('IME composition in progress')
       )
       expect(execCommandSpy).not.toHaveBeenCalled()
 

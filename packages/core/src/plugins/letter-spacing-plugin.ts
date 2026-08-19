@@ -1,5 +1,5 @@
 import { logger } from '@/core/logger'
-import { definePlugin, FontEvents, CoreEvents } from '@/core'
+import { definePlugin, FontEvents } from '@/core'
 import type { BasePluginOptions } from '@/core'
 
 export interface LetterSpacingPluginOptions extends BasePluginOptions {
@@ -48,7 +48,7 @@ export const createLetterSpacingPlugin =
 
     handlers: (options) => ({
       [options.eventName ?? FontEvents.LETTER_SPACING_CHANGED]: (
-        { emit, reportError, runCommand },
+        { reportError, runCommand },
         data?: unknown
       ) => {
         const letterSpacing = extractLetterSpacing(data)
@@ -63,13 +63,6 @@ export const createLetterSpacingPlugin =
 
         try {
           const result = runCommand('letterSpacing', cssValue)
-
-          if (result) {
-            emit(CoreEvents.STYLE_CHANGED, {
-              style: 'letterSpacing',
-              value: letterSpacing,
-            })
-          }
 
           return result
         } catch (error) {
