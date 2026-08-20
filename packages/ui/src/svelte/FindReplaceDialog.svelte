@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Search } from 'lucide'
   import { findReplace } from 'sagak-core'
-  import type { EditorContext, FindState } from 'sagak-core'
+  import type { EditorContext, FindReplace, FindState } from 'sagak-core'
   import { icon } from '../elements/icon'
 
   /**
@@ -49,8 +49,13 @@
 
   const hasQuery = $derived(!!findText.trim())
 
-  /* 에디터가 갈리면 찾기 객체도 따라갑니다 — 에디터당 하나로 캐시됩니다 */
-  const find = $derived(findReplace(editor))
+  /**
+   * 쓸 때마다 부릅니다 — 에디터당 하나로 캐시되어 있어 값싼 조회입니다.
+   *
+   * `$derived` 로 붙들어 두면 **컴포넌트가 정리되는 도중에 사라집니다.**
+   * `close` 는 정리 순서 뒤에도 오므로 그때 `find` 가 `undefined` 였습니다.
+   */
+  const find = (): FindReplace => findReplace(editor)
 
   function show(state: FindState): void {
     matchCount = state.matches
@@ -63,20 +68,28 @@
     wholeWord?: boolean
   }): void {
     if (!findText.trim()) return
-    show(find.find(findText, { caseSensitive, wholeWord, ...override }))
+    show(find().find(findText, { caseSensitive, wholeWord, ...override }))
   }
 
   function replace(all: boolean): void {
     if (!findText.trim()) return
     show(
       all
-        ? find.replaceAll(findText, replaceText, { caseSensitive, wholeWord })
-        : find.replace(replaceText)
+        ? find().replaceAll(findText, replaceText, { caseSensitive, wholeWord })
+        : find().replace(replaceText)
     )
   }
 
+  /**
+   * **정리 중에도 옵니다.**
+   *
+   * 컴포넌트가 떨어져 나가면서 `<dialog>` 가 닫히면 `close` 가 한 번 더
+   * 오는데, 그때는 `editor` 가 이미 없습니다. 치울 것도 없으므로 나갑니다.
+   */
   function onClose(): void {
-    show(find.clear())
+    if (!editor) return
+
+    show(find().clear())
   }
 
   export function open(): void {
@@ -86,7 +99,7 @@
   function onFindKeydown(e: KeyboardEvent): void {
     if (e.key !== 'Enter') return
     e.preventDefault()
-    if (matchCount > 0) show(find.next())
+    if (matchCount > 0) show(find().next())
     else runFind()
   }
 </script>
@@ -165,7 +178,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => show(find.previous())}
+      onclick={() => show(find().previous())}
       disabled={matchCount === 0}
     >
       ↑ Prev
@@ -174,7 +187,7 @@
       type="button"
       k="button"
       variant="outline"
-      onclick={() => show(find.next())}
+      onclick={() => show(find().next())}
       disabled={matchCount === 0}
     >
       ↓ Next

@@ -327,10 +327,22 @@ export class WysiwygArea implements EditingArea {
     }
   }
 
+  /**
+   * **붙인 것이 앞에 섭니다.**
+   *
+   * `prosemirror-view` 는 앞쪽 플러그인의 `handleKeyDown` 을 먼저 부르고,
+   * 하나가 `true` 를 돌려주면 거기서 멈춥니다. 뒤에 두면 `baseKeymap` 이
+   * 이미 먹은 키는 영영 못 봅니다 — 실제로 **자동 완성의 Enter 확정이 그렇게
+   * 죽어 있었습니다.** `splitBlock` 이 문단에서 언제나 `true` 라, 제안이 떠
+   * 있어도 Enter 는 줄바꿈이 됐습니다 (Tab 은 목록 밖에서 `sinkListItem` 이
+   * `false` 를 돌려줘 우연히 살아 있었습니다).
+   *
+   * 붙는 쪽이 안 맞는 키를 `false` 로 흘려보내는 것은 그쪽 책임입니다.
+   */
   private reconfigure(): void {
     this.view.updateState(
       this.view.state.reconfigure({
-        plugins: [...editingPlugins(), ...this.extraPlugins],
+        plugins: [...this.extraPlugins, ...editingPlugins()],
       })
     )
   }
@@ -527,7 +539,7 @@ export class WysiwygArea implements EditingArea {
   private replaceDocument(doc: PMNode): void {
     const next = EditorState.create({
       doc,
-      plugins: [...editingPlugins(), ...this.extraPlugins],
+      plugins: [...this.extraPlugins, ...editingPlugins()],
     })
 
     this.view.updateState(next)

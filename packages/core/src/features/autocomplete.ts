@@ -1,38 +1,79 @@
 import { Plugin as PMPlugin } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import type { Plugin, EditorContext } from '@/core'
-import { AutocompleteEvents } from '@/core'
 
 /**
- * Autocomplete suggestion data
+ * 자동 완성 — **모듈 API 입니다.**
+ *
+ * ## 찾기와 반대 방향입니다
+ *
+ * 찾기/바꾸기는 UI 가 먼저 말을 겁니다 — 그래서 메서드를 부르고 답을 그 자리
+ * 에서 받으면 끝났습니다. 자동 완성은 **코어가 먼저 말을 겁니다.** 사용자가
+ * 치는 것을 보다가 "지금 이 낱말들을 띄워라" 라고 알려야 합니다. 그래서 여기는
+ * `subscribe` 가 있습니다.
+ *
+ * 그것이 이벤트여야 한다는 뜻은 아닙니다. 듣는 쪽은 팝오버 하나이고, 무엇을
+ * 띄울지 정하는 쪽도 하나입니다.
+ *
+ * ## 고른 항목이 코어에 있습니다
+ *
+ * 예전에는 **몇 번째가 강조되어 있는가를 팝오버가 들고 있었습니다.** 그래서
+ * 키보드로 확정할 때 —
+ *
+ * 1. 코어가 `AUTOCOMPLETE_APPLY` 를 빈 채로 쏘고,
+ * 2. 팝오버가 그것을 받아 지금 고른 단어를 실어 **같은 이름으로 다시** 쏘고,
+ * 3. 코어가 그것을 받아 문서에 넣었습니다.
+ *
+ * 한 이름이 양쪽 방향으로 쓰였고, 그래서 자기가 보낸 것을 자기가 다시 받는
+ * 것을 막는 가드(`페이로드가 있으면 흘려보냅니다`)가 필요했습니다. 그 가드를
+ * 지우면 마우스로 고른 순간 확정이 두 번 나갑니다 — 검사가 그것을 못 박아
+ * 두고 있었습니다.
+ *
+ * 목록의 주인이 코어이므로 **번호의 주인도 코어**입니다. 왕복이 없어지고
+ * 가드도 함께 없어집니다.
  */
-export interface AutocompleteSuggestion {
-  word: string
-  prefix: string
-  position: { x: number; y: number }
-}
-
-/**
- * Autocomplete plugin options
- */
-export interface AutocompletePluginOptions {
+export interface AutocompleteOptions {
   /**
-   * Minimum characters to trigger autocomplete
+   * 제안을 띄우기 시작하는 글자 수
    * @default 2
    */
   minChars?: number
 
   /**
-   * Maximum number of suggestions to show
+   * 최대 몇 개까지
    * @default 5
    */
   maxSuggestions?: number
 
   /**
-   * Delay in ms before showing suggestions
+   * 마지막 입력 뒤 몇 ms 를 기다렸다가
    * @default 100
    */
   delay?: number
+}
+
+/** 지금 떠 있는 제안. 안 떠 있으면 `null` 입니다 */
+export interface AutocompleteState {
+  suggestions: string[]
+  /** 사용자가 여기까지 쳤습니다 */
+  prefix: string
+  /** 팝오버를 띄울 화면 좌표 */
+  position: { x: number; y: number }
+  /** 지금 고른 것 */
+  index: number
+}
+
+export interface Autocomplete {
+  /** 위아래로 옮깁니다 — 끝에서 돌아옵니다 */
+  move(delta: number): void
+  /** 마우스가 지나간 항목을 고릅니다 */
+  highlight(index: number): void
+  /** 넣습니다. 번호를 주면 그것을, 안 주면 지금 고른 것을 */
+  apply(index?: number): boolean
+  /** 닫습니다 */
+  dismiss(): void
+  /** 떴다 · 바뀌었다 · 닫혔다 — 지금 값을 곧바로 한 번 줍니다 */
+  subscribe(listener: (state: AutocompleteState | null) => void): () => void
 }
 
 /**
@@ -195,17 +236,129 @@ function applyAutocomplete(
 }
 
 /**
- * Create autocomplete plugin
+ * 에디터 하나에 하나입니다.
+ *
+ * 팝오버(`subscribe`)와 플러그인(입력을 보는 쪽)이 **같은 것**을 잡아야
+ * 하는데 둘의 순서가 정해져 있지 않아, 어느 쪽이 먼저 부르든 만들어 줍니다.
+ */
+interface Session {
+  state: AutocompleteState | null
+  listeners: Set<(state: AutocompleteState | null) => void>
+  /** 붙어 있는 뷰 — 플러그인이 돌 때만 있습니다 */
+  view: EditorView | null
+  /** 갈아 끼울 자리 */
+  range: { from: number; to: number } | null
+}
+
+const sessions = new WeakMap<EditorContext, Session>()
+
+function sessionOf(context: EditorContext): Session {
+  const existing = sessions.get(context)
+
+  if (existing) return existing
+
+  const session: Session = {
+    state: null,
+    listeners: new Set(),
+    view: null,
+    range: null,
+  }
+
+  sessions.set(context, session)
+
+  return session
+}
+
+function publish(session: Session, next: AutocompleteState | null): void {
+  session.state = next
+
+  for (const listener of session.listeners) listener(next)
+}
+
+const modules = new WeakMap<EditorContext, Autocomplete>()
+
+export function autocomplete(context: EditorContext): Autocomplete {
+  const existing = modules.get(context)
+
+  if (existing) return existing
+
+  const session = sessionOf(context)
+
+  const module: Autocomplete = {
+    move(delta) {
+      const { state } = session
+
+      if (!state || state.suggestions.length === 0) return
+
+      const count = state.suggestions.length
+
+      publish(session, {
+        ...state,
+        index: (state.index + delta + count) % count,
+      })
+    },
+
+    highlight(index) {
+      const { state } = session
+
+      if (!state || index < 0 || index >= state.suggestions.length) return
+      if (index === state.index) return
+
+      publish(session, { ...state, index })
+    },
+
+    apply(index) {
+      const { state, view, range } = session
+
+      if (!state || !view || !range) return false
+
+      const at = index ?? state.index
+      const word = state.suggestions[at]
+
+      if (!word) return false
+
+      applyAutocomplete(view, range.from, range.to, word)
+      publish(session, null)
+
+      return true
+    },
+
+    dismiss() {
+      if (session.state === null) return
+
+      publish(session, null)
+    },
+
+    subscribe(listener) {
+      session.listeners.add(listener)
+      listener(session.state)
+
+      return () => {
+        session.listeners.delete(listener)
+      }
+    },
+  }
+
+  modules.set(context, module)
+
+  return module
+}
+
+/**
+ * 입력을 보는 쪽.
+ *
+ * 이쪽은 **에디터와 생사를 같이하는 일꾼**이라 플러그인 자리가 맞습니다 —
+ * 바깥 UI 와의 대화가 아닙니다. `replaceDefaultPlugins` 로 통째로 끌 수 있는
+ * 것도 그대로입니다.
  */
 export function createAutocompletePlugin(
-  options: AutocompletePluginOptions = {}
+  options: AutocompleteOptions = {}
 ): Plugin {
   const { minChars = 2, maxSuggestions = 5, delay = 100 } = options
 
   const unsubscribers: Array<() => void> = []
   let words = new Set<string>()
   let timeoutId: ReturnType<typeof setTimeout> | null = null
-  let isAutocompleteVisible = false
   /** 마지막으로 사전을 만든 원문 — 같으면 다시 만들지 않습니다 */
   let lastText: string | null = null
 
@@ -213,11 +366,14 @@ export function createAutocompletePlugin(
     name: 'utility:autocomplete',
 
     initialize(context: EditorContext) {
-      const { eventBus, element } = context
+      const { element } = context
 
       if (!element) {
         return
       }
+
+      const session = sessionOf(context)
+      const module = autocomplete(context)
 
       /**
        * 사전을 다시 만듭니다 — **글이 바뀌었을 때만.**
@@ -237,27 +393,15 @@ export function createAutocompletePlugin(
         words = extractWords(text)
       }
 
-      const hideAutocomplete = (): void => {
-        if (isAutocompleteVisible) {
-          isAutocompleteVisible = false
-          currentRange = null
-          eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_HIDE)
-        }
-      }
-
-      /** 지금 붙어 있는 뷰 — PM 플러그인 안에서 받습니다 */
-      let view: EditorView | null = null
-      let currentRange: { from: number; to: number } | null = null
-
       const showSuggestions = (): void => {
-        const wordInfo = view ? currentWordInfo(view) : null
+        const wordInfo = session.view ? currentWordInfo(session.view) : null
 
-        currentRange = wordInfo
+        session.range = wordInfo
           ? { from: wordInfo.from, to: wordInfo.to }
           : null
 
         if (!wordInfo || wordInfo.prefix.length < minChars) {
-          hideAutocomplete()
+          module.dismiss()
           return
         }
 
@@ -268,16 +412,15 @@ export function createAutocompletePlugin(
         )
 
         if (suggestions.length === 0) {
-          hideAutocomplete()
+          module.dismiss()
           return
         }
 
-        isAutocompleteVisible = true
-
-        eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_SHOW, {
+        publish(session, {
           suggestions,
           prefix: wordInfo.prefix,
           position: wordInfo.position,
+          index: 0,
         })
       }
 
@@ -296,34 +439,35 @@ export function createAutocompletePlugin(
           area.addPlugin(
             new PMPlugin({
               view: (editorView) => {
-                view = editorView
+                session.view = editorView
 
                 return {
                   destroy: () => {
-                    view = null
+                    session.view = null
                   },
                 }
               },
 
               props: {
                 handleKeyDown: (_view, event) => {
-                  if (!isAutocompleteVisible) return false
+                  if (session.state === null) return false
 
                   if (event.key === 'Escape') {
-                    hideAutocomplete()
+                    module.dismiss()
                     return true
                   }
 
                   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                    eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_SELECT, {
-                      direction: event.key === 'ArrowDown' ? 'next' : 'prev',
-                    })
+                    module.move(event.key === 'ArrowDown' ? 1 : -1)
                     return true
                   }
 
+                  /*
+                   * 곧바로 넣습니다 — 예전에는 여기서 팝오버에게 "지금 고른
+                   * 것이 무엇이냐" 를 물어야 했습니다.
+                   */
                   if (event.key === 'Enter' || event.key === 'Tab') {
-                    eventBus.emit(AutocompleteEvents.AUTOCOMPLETE_APPLY)
-                    return true
+                    return module.apply()
                   }
 
                   return false
@@ -358,7 +502,7 @@ export function createAutocompletePlugin(
                   blur: () => {
                     /* 제안을 누르는 중일 수 있어 한 박자 기다립니다 */
                     setTimeout(() => {
-                      hideAutocomplete()
+                      module.dismiss()
                     }, 150)
 
                     return false
@@ -370,28 +514,11 @@ export function createAutocompletePlugin(
         )
       }
 
-
-
-      const unsubApply = eventBus.on(
-        AutocompleteEvents.AUTOCOMPLETE_APPLY, (data?: unknown) => {
-          if (!data || typeof data !== 'object' || !('word' in data)) {
-            return
-          }
-
-          const { word } = data as { word: string }
-
-          if (view && currentRange) {
-            applyAutocomplete(view, currentRange.from, currentRange.to, word)
-          }
-
-          hideAutocomplete()
-        }
-      )
-
-
       updateWords()
 
-      unsubscribers.push(unsubApply)
+      unsubscribers.push(() => {
+        module.dismiss()
+      })
     },
 
     destroy() {

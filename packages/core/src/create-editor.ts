@@ -5,7 +5,7 @@ import type { LogLevel } from './core/logger'
 import type { EditorErrorData } from './core/errors'
 
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
-import { createAutocompletePlugin } from './plugins/autocomplete-plugin'
+import { createAutocompletePlugin } from './features/autocomplete'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
 import { createImageResizePlugin } from './plugins/image-resize-plugin'
 import { createImageUploadPlugin } from './plugins/image-upload-plugin'
