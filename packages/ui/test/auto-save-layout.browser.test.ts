@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { AutoSaveEvents } from 'sagak-core'
+import { autoSave } from 'sagak-core'
 import {
   mountEditor,
   settle,
@@ -38,15 +38,20 @@ afterEach(() => {
 
 const STATES = ['pending', 'saving', 'saved', 'error', 'idle'] as const
 
+/**
+ * 상태를 손으로 세웁니다.
+ *
+ * 예전에는 `AUTO_SAVE_STATUS_CHANGED` 를 버스에 쏘았습니다. 지금은 같은 일이
+ * `report` 입니다 — **밖에서 저장하는 경우를 위한 문**이고, 여기 검사가 그
+ * 문의 첫 사용처입니다. 재려는 것은 저장 엔진이 아니라 **표시의 레이아웃**
+ * 이므로 상태를 직접 세우는 것이 맞습니다.
+ */
 async function setStatus(
-  bus: MountedEditor['context']['eventBus'],
+  editor: MountedEditor['context'],
   status: (typeof STATES)[number],
   timestamp?: number
 ): Promise<void> {
-  bus.emit(AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED, {
-    status,
-    timestamp,
-  } as never)
+  autoSave(editor).report(status, timestamp)
   await settle()
 }
 
@@ -150,7 +155,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
 
     for (const status of STATES) {
       await setStatus(
-        ed.context.eventBus,
+        ed.context,
         status,
         status === 'saved' ? Date.now() : undefined
       )
@@ -163,7 +168,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
     await settle()
 
     // lastSaved 가 있어야 버튼이 나옵니다
-    await setStatus(ed.context.eventBus, 'saved', Date.now())
+    await setStatus(ed.context, 'saved', Date.now())
 
     const button = (): HTMLElement =>
       ed!.root.querySelector('[data-scope="auto-save"] button') as HTMLElement
@@ -171,7 +176,7 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
     const initial = button().getBoundingClientRect().left
 
     for (const status of STATES) {
-      await setStatus(ed.context.eventBus, status)
+      await setStatus(ed.context, status)
       expect(
         button().getBoundingClientRect().left,
         `${status} 에서 버튼이 움직였습니다`
@@ -196,14 +201,14 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
       ).getBoundingClientRect().width
 
     await setStatus(
-      ed.context.eventBus,
+      ed.context,
       'saved',
       new Date(2000, 0, 1, 9, 5).getTime()
     )
     const morning = slot()
 
     await setStatus(
-      ed.context.eventBus,
+      ed.context,
       'saved',
       new Date(2000, 0, 1, 22, 45).getTime()
     )
@@ -248,13 +253,13 @@ describe('자동 저장 표시는 레이아웃을 밀지 않습니다', () => {
           '[data-scope="editing-area"]'
         ) as HTMLElement
 
-        await setStatus(ed.context.eventBus, 'idle')
+        await setStatus(ed.context, 'idle')
         const height = bar.getBoundingClientRect().height
         const top = area.getBoundingClientRect().top
 
         for (const status of STATES) {
           await setStatus(
-            ed.context.eventBus,
+            ed.context,
             status,
             status === 'saved' ? Date.now() : undefined
           )

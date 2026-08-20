@@ -12,8 +12,8 @@ import { createImageUploadPlugin } from './features/image-upload'
 import { createExportPlugin } from './plugins/export-plugin'
 import {
   createAutoSavePlugin,
-  type AutoSavePluginOptions,
-} from './plugins/auto-save-plugin'
+  type AutoSaveOptions,
+} from './features/auto-save'
 
 /**
  * Default plugins included in the editor
@@ -90,7 +90,7 @@ export interface CreateEditorOptions {
   /**
    * Auto-save configuration (false to disable, true for defaults, or options object)
    */
-  autoSave?: boolean | AutoSavePluginOptions
+  autoSave?: boolean | AutoSaveOptions
 }
 
 /**

@@ -1,7 +1,6 @@
 import {
   CoreEvents,
   EditingAreaEvents,
-  AutoSaveEvents,
   ExportEvents,
   ImageResizeEvents,
 } from './events'
@@ -33,16 +32,6 @@ export interface StyleChangedPayload {
   rowIndex?: number
   colIndex?: number
   position?: string
-}
-
-/** 자동 저장 상태 */
-export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
-
-/** `AUTO_SAVE_STATUS_CHANGED` 페이로드 */
-export interface AutoSaveEventData {
-  status: AutoSaveStatus
-  timestamp?: number
-  error?: Error
 }
 
 /** 내보내기 형식 */
@@ -91,10 +80,6 @@ export interface EditorEventMap {
 
   // --- WYSIWYG 영역 ---
 
-  // --- 자동 저장 ---
-  [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: AutoSaveEventData
-  [AutoSaveEvents.AUTO_SAVE_RESTORE]: void
-  [AutoSaveEvents.AUTO_SAVE_CLEAR]: void
 
   // --- 내보내기 ---
   [ExportEvents.EXPORT_DOWNLOAD]: ExportDownloadData
@@ -175,10 +160,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
 
   // --- WYSIWYG 영역 (전부 일어난 일의 보고) ---
 
-  // --- 자동 저장 ---
-  [AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED]: 'notify',
-  [AutoSaveEvents.AUTO_SAVE_RESTORE]: 'request',
-  [AutoSaveEvents.AUTO_SAVE_CLEAR]: 'request',
 
   // --- 내보내기 ---
   [ExportEvents.EXPORT_DOWNLOAD]: 'request',
