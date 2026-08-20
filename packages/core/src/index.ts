@@ -121,8 +121,6 @@ export type {
 } from './core/types'
 
 export { createAutocompletePlugin } from './features/autocomplete'
-export { createTableResizePlugin } from './plugins/table-resize-plugin'
-export type { TableResizePluginOptions } from './plugins/table-resize-plugin'
 export { createAutoSavePlugin, autoSave } from './features/auto-save'
 export type {
   AutoSave,
@@ -130,11 +128,8 @@ export type {
   AutoSaveState,
   AutoSaveStatus,
 } from './features/auto-save'
-export {
-  createImageResizePlugin,
-  ImageResizeEvents,
-} from './plugins/image-resize-plugin'
-export type { ImageResizePluginOptions } from './plugins/image-resize-plugin'
+export { createImageResizePlugin } from './features/image-resize'
+export type { ImageResizeOptions } from './features/image-resize'
 export {
   createImageUploadPlugin,
   imageUpload,

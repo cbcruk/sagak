@@ -91,13 +91,11 @@ export const ExportEvents = {
   EXPORT_DOWNLOAD: 'EXPORT_DOWNLOAD',
 } as const
 
-/**
- * 이미지 크기 조절 플러그인 이벤트
+/*
+ * 이미지 조절 둘도 여기 없습니다. 아무도 안 들었고, 짝이 되는 콜백조차
+ * 없었습니다 — 확장점으로 열어 둔 것이 아니라 **아무 데도 안 닿은 배선**
+ * 이었습니다. 조절이 실제로 남기는 것은 이제 문서의 `width`·`height` 입니다.
  */
-export const ImageResizeEvents = {
-  IMAGE_RESIZE_START: 'IMAGE_RESIZE_START',
-  IMAGE_RESIZE_END: 'IMAGE_RESIZE_END',
-} as const
 
 /*
  * 이미지 업로드 넷도 여기 없습니다 — `imageUpload(context)` 입니다
@@ -113,7 +111,6 @@ export const EditorEvents = {
   ...CoreEvents,
   ...EditingAreaEvents,
   ...ExportEvents,
-  ...ImageResizeEvents,
 } as const
 
 /**

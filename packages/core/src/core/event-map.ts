@@ -2,7 +2,6 @@ import {
   CoreEvents,
   EditingAreaEvents,
   ExportEvents,
-  ImageResizeEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
@@ -59,35 +58,14 @@ export interface EditorEventMap {
   [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
 
-  // --- 텍스트 스타일 (페이로드 없음) ---
-
-  // --- 폰트 ---
-
-  // --- 문단 ---
-  /** 객체형과 맨값을 모두 받습니다 (`extractHeadingLevel` 참고) */
-  /** 객체형과 맨값을 모두 받습니다 (`extractAlignment` 참고) */
-
-  // --- 콘텐츠 ---
-  /** 객체형과 URL 문자열을 모두 받습니다 */
-
-  // --- 히스토리 ---
-
   // --- 편집 영역 ---
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: {
     from: EditingMode
     to: EditingMode
   }
 
-  // --- WYSIWYG 영역 ---
-
-
   // --- 내보내기 ---
   [ExportEvents.EXPORT_DOWNLOAD]: ExportDownloadData
-
-  // --- 이미지 크기 조절 ---
-  [ImageResizeEvents.IMAGE_RESIZE_START]: { image: HTMLElement }
-  [ImageResizeEvents.IMAGE_RESIZE_END]: void
-
 }
 
 /**
@@ -145,29 +123,11 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
 
-  // --- 텍스트 스타일 ---
-
-  // --- 폰트 (전부 `_CHANGED` 지만 전부 요청입니다) ---
-
-  // --- 문단 ---
-
-  // --- 콘텐츠 ---
-
-  // --- 히스토리 ---
-
   // --- 편집 영역 ---
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
 
-  // --- WYSIWYG 영역 (전부 일어난 일의 보고) ---
-
-
   // --- 내보내기 ---
   [ExportEvents.EXPORT_DOWNLOAD]: 'request',
-
-  // --- 이미지 크기 조절 ---
-  [ImageResizeEvents.IMAGE_RESIZE_START]: 'notify',
-  [ImageResizeEvents.IMAGE_RESIZE_END]: 'notify',
-
 }
 
 /** 처리자가 있어야 뜻이 있는 이벤트 */
