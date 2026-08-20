@@ -102,15 +102,12 @@ export const ImageResizeEvents = {
   IMAGE_RESIZE_END: 'IMAGE_RESIZE_END',
 } as const
 
-/**
- * 이미지 업로드 플러그인 이벤트
+/*
+ * 이미지 업로드 넷도 여기 없습니다 — `imageUpload(context)` 입니다
+ * (`features/image-upload.ts`). 알림 셋은 **아무도 안 들었고** 같은 것을
+ * 알리는 콜백이 이미 옵션에 있었습니다. 요청 하나는 **아무도 안 불렀는데**
+ * 그 뒤의 검사·변환은 멀쩡했고, UI 가 그것을 똑같이 다시 짜서 쓰고 있었습니다.
  */
-export const ImageUploadEvents = {
-  IMAGE_UPLOAD_START: 'IMAGE_UPLOAD_START',
-  IMAGE_UPLOAD_COMPLETE: 'IMAGE_UPLOAD_COMPLETE',
-  IMAGE_UPLOAD_ERROR: 'IMAGE_UPLOAD_ERROR',
-  IMAGE_UPLOAD_FROM_FILE: 'IMAGE_UPLOAD_FROM_FILE',
-} as const
 
 /**
  * 모든 이벤트 이름 결합
@@ -121,7 +118,6 @@ export const EditorEvents = {
   ...AutoSaveEvents,
   ...ExportEvents,
   ...ImageResizeEvents,
-  ...ImageUploadEvents,
 } as const
 
 /**

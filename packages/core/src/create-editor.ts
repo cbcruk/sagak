@@ -8,7 +8,7 @@ import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plug
 import { createAutocompletePlugin } from './features/autocomplete'
 import { createTableResizePlugin } from './plugins/table-resize-plugin'
 import { createImageResizePlugin } from './plugins/image-resize-plugin'
-import { createImageUploadPlugin } from './plugins/image-upload-plugin'
+import { createImageUploadPlugin } from './features/image-upload'
 import { createExportPlugin } from './plugins/export-plugin'
 import {
   createAutoSavePlugin,
