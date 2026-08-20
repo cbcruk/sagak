@@ -78,14 +78,11 @@ export const EditingAreaEvents = {
 /**
  * `WysiwygArea` 이벤트
  */
-/**
- * 자동 저장 플러그인 이벤트
+/*
+ * 자동 저장 셋도 여기 없습니다 — `autoSave(context)` 입니다
+ * (`features/auto-save.ts`). 상태 알림은 `subscribe`, 지우기는 메서드가 됐고,
+ * `AUTO_SAVE_RESTORE` 는 **아무도 안 부르던 요청**이었습니다.
  */
-export const AutoSaveEvents = {
-  AUTO_SAVE_STATUS_CHANGED: 'AUTO_SAVE_STATUS_CHANGED',
-  AUTO_SAVE_RESTORE: 'AUTO_SAVE_RESTORE',
-  AUTO_SAVE_CLEAR: 'AUTO_SAVE_CLEAR',
-} as const
 
 /**
  * 내보내기 플러그인 이벤트
@@ -115,7 +112,6 @@ export const ImageResizeEvents = {
 export const EditorEvents = {
   ...CoreEvents,
   ...EditingAreaEvents,
-  ...AutoSaveEvents,
   ...ExportEvents,
   ...ImageResizeEvents,
 } as const

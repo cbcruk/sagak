@@ -123,15 +123,13 @@ export type {
 export { createAutocompletePlugin } from './features/autocomplete'
 export { createTableResizePlugin } from './plugins/table-resize-plugin'
 export type { TableResizePluginOptions } from './plugins/table-resize-plugin'
-export {
-  createAutoSavePlugin,
-  AutoSaveEvents,
-} from './plugins/auto-save-plugin'
+export { createAutoSavePlugin, autoSave } from './features/auto-save'
 export type {
-  AutoSavePluginOptions,
+  AutoSave,
+  AutoSaveOptions,
+  AutoSaveState,
   AutoSaveStatus,
-  AutoSaveEventData,
-} from './plugins/auto-save-plugin'
+} from './features/auto-save'
 export {
   createImageResizePlugin,
   ImageResizeEvents,

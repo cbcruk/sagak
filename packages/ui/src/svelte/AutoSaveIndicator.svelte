@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Cloud, CloudOff, LoaderCircle, Check, CircleAlert } from 'lucide'
-  import { AutoSaveEvents, type AutoSaveStatus } from 'sagak-core'
+  import { autoSave, type AutoSaveStatus } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import type { IconNode } from 'lucide'
   import { icon } from '../elements/icon'
@@ -35,6 +35,13 @@
    * 아직 `status` 가 `saved` 라, 상태를 효과로 맞추려 하면 직전 렌더의 효과가
    * 뒤늦게 흘러나와 방금 켠 플래그를 도로 끕니다. 그래서 **끌어냅니다**:
    * `showDeleted = justDeleted && status === 'idle'`.
+   *
+   * ## 마지막 저장 시각은 이제 코어의 것입니다
+   *
+   * 예전에는 `timestamp` 가 `saved` 일 때만 실려 와서, 여기서 그것을 쟁여 두고
+   * 다음 상태들에 걸쳐 유지하다가 지우기를 누르면 제 손으로 `null` 로
+   * 되돌렸습니다 — 상태 하나를 두 곳에서 관리한 셈입니다. `savedAt` 이 코어
+   * 상태의 일부가 되면서 여기는 그리기만 합니다.
    */
 
   interface Props {
@@ -53,7 +60,7 @@
   }
 
   let status = $state<AutoSaveStatus>('idle')
-  let lastSaved = $state<Date | null>(null)
+  let savedAt = $state<number | null>(null)
   let justDeleted = $state(false)
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -76,8 +83,8 @@
         return {
           node: Check,
           text:
-            showTime && lastSaved
-              ? `Saved at ${formatTime(lastSaved)}`
+            showTime && savedAt
+              ? `Saved at ${formatTime(new Date(savedAt))}`
               : 'Saved',
           color: '#22c55e',
         }
@@ -103,28 +110,21 @@
       : base
   })
 
-  const hidden = $derived(status === 'idle' && !lastSaved && !showDeleted)
+  const hidden = $derived(status === 'idle' && !savedAt && !showDeleted)
 
-  $effect(() => {
-    return editor.eventBus.on(
-      AutoSaveEvents.AUTO_SAVE_STATUS_CHANGED, (data?: unknown) => {
-        const next = (data ?? {}) as {
-          status?: AutoSaveStatus
-          timestamp?: number
-        }
-        if (next.status) status = next.status
-        if (next.timestamp) lastSaved = new Date(next.timestamp)
-      }
-    )
-  })
+  $effect(() =>
+    autoSave(editor).subscribe((state) => {
+      status = state.status
+      savedAt = state.savedAt
+    })
+  )
 
   $effect(() => () => {
     if (timer) clearTimeout(timer)
   })
 
   function discard(): void {
-    editor.eventBus.emit(AutoSaveEvents.AUTO_SAVE_CLEAR)
-    lastSaved = null
+    autoSave(editor).clear()
     justDeleted = true
 
     if (timer) clearTimeout(timer)
@@ -179,7 +179,7 @@
     <span aria-hidden="true" style="{LAYER}; visibility: hidden; font-size: 12px"
       >Delete saved draft</span
     >
-    {#if lastSaved}
+    {#if savedAt}
       <button
         type="button"
         title="Deletes the saved draft so it won't be restored next time. Your current text stays as it is, and editing saves again."

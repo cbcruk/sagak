@@ -27,7 +27,7 @@ import { mountEditor, settle, type MountedEditor } from './harness'
  * 적었는데 아무도 안 듣는다면, 죽은 요청이거나 분류가 틀린 것입니다. 둘 다
  * 알아야 할 일입니다.
  *
- * ## 처음 돌렸을 때 잡힌 것
+ * ## 처음 돌렸을 때 잡힌 것 (지금은 이벤트가 아닙니다)
  *
  * `AUTO_SAVE_RESTORE` 와 `AUTO_SAVE_CLEAR` 에 처리자가 없었습니다.
  *
@@ -74,7 +74,7 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 11종 전부를 덮어야 함', async () => {
+  it('분류가 8종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다.
     //
@@ -82,10 +82,12 @@ describe('이벤트 계약', () => {
     // 19 → 15: 자동 완성 넷이 `autocomplete(editor)` 가 됐습니다.
     // 15 → 11: 이미지 업로드 넷 — 알림 셋은 같은 것을 알리는 콜백이 이미
     //          있었고, 요청 하나는 아무도 안 불렀습니다 (`imageUpload`).
+    // 11 → 8:  자동 저장 셋 (`autoSave`). 상태 알림은 `subscribe`·`report`,
+    //          지우기는 메서드, 복원은 아무도 안 부르던 요청이었습니다.
     // 이 숫자는 **줄어들 예정**입니다 — 남은 것들도 대부분 에디터 바깥 UI 와의
     // 대화라, 차례로 모듈 API 로 옮깁니다.
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(11)
+    expect(total).toBe(8)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 

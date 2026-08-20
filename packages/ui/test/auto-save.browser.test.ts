@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { autoSave } from 'sagak-core'
 import { mountEditor, settle, setHtml, type MountedEditor } from './harness'
 
 /**
@@ -157,7 +158,7 @@ describe('자동 저장', () => {
     setHtml(ed, '<p>초안</p>')
     await flushSave()
 
-    ed.context.eventBus.emit('AUTO_SAVE_CLEAR')
+    autoSave(ed.context).clear()
     await settle(2)
     expect(saved()).toBeNull()
 
@@ -175,7 +176,7 @@ describe('자동 저장', () => {
     await flushSave()
     expect(saved()).not.toBeNull()
 
-    ed.context.eventBus.emit('AUTO_SAVE_CLEAR')
+    autoSave(ed.context).clear()
     await settle(2)
 
     expect(saved()).toBeNull()
