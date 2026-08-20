@@ -1,21 +1,48 @@
-import type { Plugin, EditorContext } from '@/core'
+import type { EditorContext } from '@/core'
 
+/**
+ * 내보내기 — **모듈 API 입니다.**
+ *
+ * ## 이벤트 하나가 하던 일
+ *
+ * `EXPORT_DOWNLOAD` 는 발행처(내보내기 메뉴)도 처리자도 실재했습니다 — 죽은
+ * 배선은 아니었습니다. 다만 **메뉴 하나가 플러그인 하나에게 말을 거는 일**에
+ * 이름 문자열과 페이로드 타입이 낀 것뿐입니다. 찾기/바꾸기와 같은 모양입니다.
+ *
+ * ## 옮기면서 드러난 것 — 편집기 속살이 파일로 나가고 있었습니다
+ *
+ * 예전에는 `element.innerHTML` 을 읽었습니다. 그것은 **`prosemirror-view` 가
+ * 그린 DOM** 이지 문서가 아닙니다. 재 보면 이렇습니다 —
+ *
+ * ```
+ * 찾기 강조가 켜진 채로:
+ *   innerHTML      <p><span class="find-highlight" style="…">Hello</span> world</p>
+ *   getRawContent  <p>Hello world</p>
+ *
+ * 표가 있는 문서:
+ *   innerHTML      <div class="tableWrapper"><table style="--default-cell-min-width: …">
+ *                    <colgroup><col><col></colgroup>…
+ *   getRawContent  <table><tbody>…
+ * ```
+ *
+ * 찾기 강조는 **데코레이션**이고 `.tableWrapper`·`<colgroup>` 은 열 너비를
+ * 그리는 뷰의 것입니다. 둘 다 문서에 없는 것인데 내보낸 파일에는 있었습니다.
+ * 자동 저장이 §11-6 에서 겪은 것과 같은 실수입니다 — **문서를 읽는 자리는
+ * 모델입니다.**
+ */
+export type ExportFormat = 'html' | 'markdown' | 'text'
 
-export interface ExportPluginOptions {
-  /**
-   * Default filename for downloads (without extension)
-   * @default 'document'
-   */
+export interface ExportOptions {
+  /** 확장자를 뺀 기본 파일 이름 @default 'document' */
   defaultFilename?: string
 }
 
-// 이벤트 상수는 core/events.ts 에 모여 있습니다 (EditorEventMap 과 함께 관리)
-import { ExportEvents } from '@/core/events'
-import type { ExportFormat, ExportDownloadData } from '@/core/event-map'
-
-export { ExportEvents }
-export type { ExportFormat, ExportDownloadData }
-
+export interface Exporter {
+  /** 지금 문서를 이 형식의 글로 — 파일로 만들지는 않습니다 */
+  toText(format: ExportFormat): string
+  /** 내려받습니다 */
+  download(format: ExportFormat, filename?: string): void
+}
 
 function htmlToMarkdown(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html')
@@ -242,54 +269,56 @@ function getMimeType(format: ExportFormat): string {
   }
 }
 
-export function createExportPlugin(options: ExportPluginOptions = {}): Plugin {
+const modules = new WeakMap<EditorContext, Exporter>()
+
+/**
+ * 에디터 하나에 하나입니다.
+ *
+ * 플러그인이 아닙니다 — 붙어서 무언가를 지켜보는 일이 없고, 부를 때 지금
+ * 문서를 읽으면 끝입니다.
+ */
+export function exporter(
+  context: EditorContext,
+  options: ExportOptions = {}
+): Exporter {
+  const existing = modules.get(context)
+
+  if (existing) return existing
+
   const { defaultFilename = 'document' } = options
 
-  const unsubscribers: Array<() => void> = []
+  /**
+   * **모델에서 읽습니다.** `element.innerHTML` 이 아닙니다 — 위 주석 참고.
+   */
+  const html = (): string =>
+    context.editingAreaManager?.getCurrentArea()?.getRawContent() ?? ''
 
-  return {
-    name: 'utility:export',
+  const module: Exporter = {
+    toText(format) {
+      const source = html()
 
-    initialize(context: EditorContext) {
-      const { eventBus, element } = context
-
-      const getHtmlContent = (): string => {
-        return element?.innerHTML || ''
+      switch (format) {
+        case 'html':
+          return source
+        case 'markdown':
+          return htmlToMarkdown(source)
+        case 'text':
+          return htmlToText(source)
       }
-
-      const convertContent = (format: ExportFormat): string => {
-        const html = getHtmlContent()
-
-        switch (format) {
-          case 'html':
-            return html
-          case 'markdown':
-            return htmlToMarkdown(html)
-          case 'text':
-            return htmlToText(html)
-        }
-      }
-
-      const unsubDownload = eventBus.on(
-        ExportEvents.EXPORT_DOWNLOAD, (args?: unknown) => {
-          const data = args as ExportDownloadData | undefined
-          if (!data) return
-
-          const content = convertContent(data.format)
-          const filename = `${data.filename || defaultFilename}.${getFileExtension(data.format)}`
-          const mimeType = getMimeType(data.format)
-
-          downloadFile(content, filename, mimeType)
-        }
-      )
-      unsubscribers.push(unsubDownload)
     },
 
-    destroy() {
-      unsubscribers.forEach((unsub) => unsub())
-      unsubscribers.length = 0
+    download(format, filename) {
+      downloadFile(
+        module.toText(format),
+        `${filename || defaultFilename}.${getFileExtension(format)}`,
+        getMimeType(format)
+      )
     },
   }
+
+  modules.set(context, module)
+
+  return module
 }
 
 export { htmlToMarkdown, htmlToText }

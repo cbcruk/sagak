@@ -1,7 +1,6 @@
 import {
   CoreEvents,
   EditingAreaEvents,
-  ExportEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
@@ -33,15 +32,6 @@ export interface StyleChangedPayload {
   position?: string
 }
 
-/** 내보내기 형식 */
-export type ExportFormat = 'html' | 'markdown' | 'text'
-
-/** `EXPORT_DOWNLOAD` 페이로드 */
-export interface ExportDownloadData {
-  format: ExportFormat
-  filename?: string
-}
-
 /**
  * 이벤트 이름 → 페이로드 타입
  *
@@ -62,8 +52,6 @@ export interface EditorEventMap {
     to: EditingMode
   }
 
-  // --- 내보내기 ---
-  [ExportEvents.EXPORT_DOWNLOAD]: ExportDownloadData
 }
 
 /**
@@ -122,8 +110,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 편집 영역 ---
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
 
-  // --- 내보내기 ---
-  [ExportEvents.EXPORT_DOWNLOAD]: 'request',
 }
 
 /** 처리자가 있어야 뜻이 있는 이벤트 */

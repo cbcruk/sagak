@@ -8,7 +8,6 @@ import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plug
 import { createAutocompletePlugin } from './features/autocomplete'
 import { createImageResizePlugin } from './features/image-resize'
 import { createImageUploadPlugin } from './features/image-upload'
-import { createExportPlugin } from './plugins/export-plugin'
 import {
   createAutoSavePlugin,
   type AutoSaveOptions,
@@ -22,7 +21,6 @@ const defaultPlugins: Plugin[] = [
   createAutocompletePlugin(),
   createImageResizePlugin(),
   createImageUploadPlugin(),
-  createExportPlugin(),
 ]
 
 /**

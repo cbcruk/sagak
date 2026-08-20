@@ -73,12 +73,12 @@ export const EditingAreaEvents = {
  * `AUTO_SAVE_RESTORE` 는 **아무도 안 부르던 요청**이었습니다.
  */
 
-/**
- * 내보내기 플러그인 이벤트
+/*
+ * 내보내기도 여기 없습니다 — `exporter(context)` 입니다
+ * (`features/export.ts`). 죽은 배선은 아니었습니다: 메뉴가 발행하고
+ * 플러그인이 받았습니다. 다만 **메뉴 하나가 플러그인 하나에게 말을 거는 일**
+ * 이었을 뿐입니다.
  */
-export const ExportEvents = {
-  EXPORT_DOWNLOAD: 'EXPORT_DOWNLOAD',
-} as const
 
 /*
  * 이미지 조절 둘도 여기 없습니다. 아무도 안 들었고, 짝이 되는 콜백조차
@@ -99,7 +99,6 @@ export const ExportEvents = {
 export const EditorEvents = {
   ...CoreEvents,
   ...EditingAreaEvents,
-  ...ExportEvents,
 } as const
 
 /**

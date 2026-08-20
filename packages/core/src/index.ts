@@ -141,14 +141,5 @@ export type {
   ImageUploadOptions,
   ImageReadResult,
 } from './features/image-upload'
-export {
-  createExportPlugin,
-  ExportEvents,
-  htmlToMarkdown,
-  htmlToText,
-} from './plugins/export-plugin'
-export type {
-  ExportPluginOptions,
-  ExportFormat,
-  ExportDownloadData,
-} from './plugins/export-plugin'
+export { exporter, htmlToMarkdown, htmlToText } from './features/export'
+export type { Exporter, ExportFormat, ExportOptions } from './features/export'
