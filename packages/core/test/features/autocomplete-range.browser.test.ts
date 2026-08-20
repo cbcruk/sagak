@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { EventBus } from '@/core/event-bus'
-import { createAutocompletePlugin } from '@/plugins/autocomplete-plugin'
+import { autocomplete, createAutocompletePlugin } from '@/features/autocomplete'
+import type { AutocompleteState } from '@/features/autocomplete'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 
@@ -24,12 +24,10 @@ import type { PluginArea } from '../helpers/plugin-area'
  */
 describe('자동 완성 — 언어 범위', () => {
   let ed: PluginArea
-  let eventBus: EventBus
   let element: HTMLElement
 
   beforeEach(async () => {
     ed = mountPluginArea()
-    eventBus = ed.eventBus
     element = ed.element
     await ed.pluginManager.register(createAutocompletePlugin())
   })
@@ -51,9 +49,9 @@ describe('자동 완성 — 언어 범위', () => {
     const state = ed.area.getStateHandle().getState()!
     ed.collapse(state.doc.content.size - 1)
 
-    let shown: string[] | null = null
-    const unsub = eventBus.on('AUTOCOMPLETE_SHOW', (data: unknown) => {
-      shown = (data as { suggestions: string[] }).suggestions
+    let shown: AutocompleteState | null = null
+    const unsub = autocomplete(ed.context).subscribe((next) => {
+      shown = next
     })
 
     element.dispatchEvent(
@@ -63,7 +61,7 @@ describe('자동 완성 — 언어 범위', () => {
     await new Promise((resolve) => setTimeout(resolve, 250))
     unsub()
 
-    return shown
+    return shown === null ? null : (shown as AutocompleteState).suggestions
   }
 
   it('영어 — 그대로 동작해야 함', async () => {

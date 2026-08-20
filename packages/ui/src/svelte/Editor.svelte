@@ -50,7 +50,19 @@
     $props()
 
   let container: HTMLDivElement
-  let context = $state<EditorContext | null>(null)
+  /**
+   * **`$state.raw` 여야 합니다 — 프록시로 감싸면 안 됩니다.**
+   *
+   * `$state` 는 객체를 깊은 프록시로 감쌉니다. 그러면 아래로 내려가는
+   * `editor` 는 코어가 만든 객체와 **다른 신원**이 되고, 컨텍스트를 열쇠로
+   * 쓰는 모듈(`findReplace`·`autocomplete` 의 `WeakMap`)이 코어가 넣어 둔
+   * 자리를 못 찾습니다. 자동 완성이 실제로 그렇게 갈렸습니다 — 입력을 보는
+   * 쪽과 그리는 쪽이 서로 다른 상태를 들고 조용히 아무것도 안 했습니다.
+   *
+   * 컨텍스트는 한 번 정해지고 끝나는 **신원**이지 세밀하게 반응할 데이터가
+   * 아닙니다. 갈아 끼울 때만 다시 그리면 됩니다.
+   */
+  let context = $state.raw<EditorContext | null>(null)
 
   $effect(() => {
     const instance = createEditor({

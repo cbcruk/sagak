@@ -13,6 +13,14 @@ export type {
   FindOptions,
 } from './features/find-replace'
 
+/** 자동 완성 — 이벤트 넷이 아니라 객체 하나입니다 */
+export { autocomplete } from './features/autocomplete'
+export type {
+  Autocomplete,
+  AutocompleteState,
+  AutocompleteOptions,
+} from './features/autocomplete'
+
 /**
  * 선택이 무엇 위에 있는지 묻는 자리 — **UI 가 DOM 을 안 걷어도 됩니다.**
  *
@@ -90,7 +98,6 @@ export type {
 } from './core/command-map'
 export {
   CoreEvents,
-  AutocompleteEvents,
   EditingAreaEvents,
   EditorEvents,
 } from './core/events'
@@ -113,11 +120,7 @@ export type {
   HighlightRange,
 } from './core/types'
 
-export { createAutocompletePlugin } from './plugins/autocomplete-plugin'
-export type {
-  AutocompleteSuggestion,
-  AutocompletePluginOptions,
-} from './plugins/autocomplete-plugin'
+export { createAutocompletePlugin } from './features/autocomplete'
 export { createTableResizePlugin } from './plugins/table-resize-plugin'
 export type { TableResizePluginOptions } from './plugins/table-resize-plugin'
 export {

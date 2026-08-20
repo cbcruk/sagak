@@ -1,6 +1,5 @@
 import {
   CoreEvents,
-  AutocompleteEvents,
   EditingAreaEvents,
   AutoSaveEvents,
   ExportEvents,
@@ -56,12 +55,6 @@ export interface ExportDownloadData {
   filename?: string
 }
 
-export interface AutocompleteShowPayload {
-  suggestions: string[]
-  prefix: string
-  position: { x: number; y: number }
-}
-
 /**
  * 이벤트 이름 → 페이로드 타입
  *
@@ -90,16 +83,6 @@ export interface EditorEventMap {
   /** 객체형과 URL 문자열을 모두 받습니다 */
 
   // --- 히스토리 ---
-
-  // --- 자동완성 ---
-  [AutocompleteEvents.AUTOCOMPLETE_SHOW]: AutocompleteShowPayload
-  [AutocompleteEvents.AUTOCOMPLETE_HIDE]: void
-  [AutocompleteEvents.AUTOCOMPLETE_SELECT]: { direction: 'next' | 'prev' }
-  /**
-   * 페이로드 없이 발행하면 "현재 선택된 항목을 적용"을 뜻하고,
-   * 팝오버가 이를 받아 `{ word }`를 담아 다시 발행합니다.
-   */
-  [AutocompleteEvents.AUTOCOMPLETE_APPLY]: { word: string } | void
 
   // --- 편집 영역 ---
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: {
@@ -192,12 +175,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 콘텐츠 ---
 
   // --- 히스토리 ---
-
-  // --- 자동완성 (코어가 발행하지만 팝오버가 처리해야 뜻이 있습니다) ---
-  [AutocompleteEvents.AUTOCOMPLETE_SHOW]: 'request',
-  [AutocompleteEvents.AUTOCOMPLETE_HIDE]: 'request',
-  [AutocompleteEvents.AUTOCOMPLETE_SELECT]: 'request',
-  [AutocompleteEvents.AUTOCOMPLETE_APPLY]: 'request',
 
   // --- 편집 영역 ---
   [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',

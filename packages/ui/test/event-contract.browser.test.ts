@@ -74,15 +74,16 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 19종 전부를 덮어야 함', async () => {
+  it('분류가 15종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다.
     //
     // 25 → 19: 찾기/바꾸기 여섯이 `findReplace(editor)` 의 메서드가 됐습니다.
+    // 19 → 15: 자동 완성 넷이 `autocomplete(editor)` 가 됐습니다.
     // 이 숫자는 **줄어들 예정**입니다 — 남은 것들도 대부분 에디터 바깥 UI 와의
     // 대화라, 차례로 모듈 API 로 옮깁니다.
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(19)
+    expect(total).toBe(15)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 

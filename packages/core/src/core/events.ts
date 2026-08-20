@@ -60,19 +60,13 @@ export const CoreEvents = {
  * 함께 없어졌습니다.
  */
 
-/**
- * 자동완성 플러그인 이벤트
+/*
+ * 자동 완성 넷도 여기 없습니다 — `autocomplete(context)` 입니다
+ * (`features/autocomplete.ts`). 특히 `AUTOCOMPLETE_APPLY` 는 **한 이름이 양쪽
+ * 방향으로** 쓰이고 있었습니다: 코어가 빈 채로 쏘면 팝오버가 고른 단어를 실어
+ * 같은 이름으로 되쏘았습니다. 고른 번호의 주인을 코어로 옮기니 왕복이 없어
+ * 집니다.
  */
-export const AutocompleteEvents = {
-  /** 자동완성 제안 표시 */
-  AUTOCOMPLETE_SHOW: 'AUTOCOMPLETE_SHOW',
-  /** 자동완성 제안 숨기기 */
-  AUTOCOMPLETE_HIDE: 'AUTOCOMPLETE_HIDE',
-  /** 자동완성 제안 선택 */
-  AUTOCOMPLETE_SELECT: 'AUTOCOMPLETE_SELECT',
-  /** 자동완성 제안 적용 */
-  AUTOCOMPLETE_APPLY: 'AUTOCOMPLETE_APPLY',
-} as const
 
 /**
  * `EditingAreaManager` 이벤트
@@ -123,7 +117,6 @@ export const ImageUploadEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...AutocompleteEvents,
   ...EditingAreaEvents,
   ...AutoSaveEvents,
   ...ExportEvents,
