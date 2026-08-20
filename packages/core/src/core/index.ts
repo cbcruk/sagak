@@ -39,7 +39,6 @@ export type { EditorCoreConfig } from './editor-core'
 
 export {
   CoreEvents,
-  EditingAreaEvents,
   EditorEvents,
 } from './events'
 export type { EditorEventName, CoreEventName, PluginEventName } from './events'

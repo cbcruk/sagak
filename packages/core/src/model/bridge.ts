@@ -1,7 +1,6 @@
 import { undoDepth, redoDepth } from 'prosemirror-history'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorContext } from '@/core/types'
-import { EditingAreaEvents } from '@/core/events'
 import { logger } from '@/core/logger'
 import type { StateHandle } from './register'
 import type { Command } from './commands'
@@ -100,14 +99,13 @@ export function subscribeToModel(
 
   attach()
 
-  const unsubMode = context.eventBus.on(
-    EditingAreaEvents.EDITING_AREA_MODE_CHANGED, attach
-  )
+  /* 모드가 바뀌면 새 영역에 다시 붙습니다 — 매니저가 직접 알려 줍니다 */
+  const unsubMode = context.editingAreaManager?.onModeChange?.(attach)
 
   return () => {
     detach?.()
     detach = undefined
-    unsubMode()
+    unsubMode?.()
   }
 }
 

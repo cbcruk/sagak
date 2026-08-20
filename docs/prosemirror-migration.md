@@ -1274,3 +1274,19 @@ img.style.width = '111px' 뒤
 ```
 이벤트         4종 → 3종
 ```
+
+### 12-8. 모드 전환 — 코어 안에서 코어 안으로
+
+`EDITING_AREA_MODE_CHANGED` 는 다른 셋과 성격이 달랐습니다. 바깥 UI 와의
+대화가 아니라 **코어 내부 배선**입니다 — 매니저가 모드를 바꾸면
+`subscribeToModel` 이 새 편집 영역에 구독을 다시 붙입니다.
+
+발행처 하나, 청취자 하나, 둘 다 코어 안. 그 사이에 이름 문자열이 낄 이유가
+없어서 `editingAreaManager.onModeChange(listener)` 로 바꿨습니다.
+
+```
+이벤트         3종 → 2종
+```
+
+남은 둘은 `STYLE_CHANGED`(청취자 0)와 `EDITOR_ERROR` 입니다. 둘 다 **버스가
+남을 이유가 있는가**라는 하나의 질문으로 모입니다.

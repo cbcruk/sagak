@@ -554,58 +554,13 @@ describe('EditorCore - EditingArea Integration', () => {
       expect(context.eventBus).toBe(eventBus)
     })
 
-    it('편집 영역 이벤트를 EventBus를 통해 받을 수 있어야 함', async () => {
-      // Given: 이벤트를 추적할 배열
-      const events: string[] = []
-
-      const config: EditorCoreConfig = {
-        editingAreaContainer: container,
-      }
-
-      core = new EditorCore(config)
-
-      // When: 모드 변경 이벤트 구독
-      const eventBus = core.getEventBus()
-
-      eventBus.on('EDITING_AREA_MODE_CHANGED', () => {
-        events.push('mode_changed')
-      })
-
-      await core.run()
-
-      // When: 모드 전환
-      await core.switchMode('html')
-
-      // Then: 이벤트가 발행되어야 함
-      expect(events).toContain('mode_changed')
-    })
-
-    it('여러 모드 전환 시 이벤트가 매번 발행되어야 함', async () => {
-      // Given: 이벤트 카운터
-      let eventCount = 0
-
-      const config: EditorCoreConfig = {
-        editingAreaContainer: container,
-      }
-
-      core = new EditorCore(config)
-
-      const eventBus = core.getEventBus()
-
-      eventBus.on('EDITING_AREA_MODE_CHANGED', () => {
-        eventCount++
-      })
-
-      await core.run()
-
-      // When: 여러 번 모드 전환
-      await core.switchMode('html')
-      await core.switchMode('text')
-      await core.switchMode('wysiwyg')
-
-      // Then: 전환 횟수만큼 이벤트가 발행되어야 함
-      expect(eventCount).toBeGreaterThanOrEqual(3)
-    })
+    /*
+     * 모드 전환 알림은 **버스를 안 지납니다.**
+     *
+     * 듣는 쪽이 코어 안에 하나(`subscribeToModel`)뿐이라 매니저가 직접
+     * 알려 줍니다. 그쪽 검사는
+     * `editor/editing-area/integration.browser.test.ts` 가 봅니다.
+     */
   })
 
   describe('전체 워크플로우 (실제 사용 시나리오)', () => {

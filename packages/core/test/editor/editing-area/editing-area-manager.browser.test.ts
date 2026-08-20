@@ -185,25 +185,24 @@ describe('EditingAreaManager', () => {
     })
 
 
-    it('모드 변경 완료 이벤트를 발행해야 함', async () => {
-      // Given: EventBus와 MODE_CHANGED 핸들러가 설정된 새 매니저
-      const eventBus = new EventBus()
+    it('모드 변경을 알려야 함', async () => {
+      // Given: 모드 변경을 구독한 새 매니저
       const handler = vi.fn()
-      eventBus.on('EDITING_AREA_MODE_CHANGED', handler)
 
       manager.destroy()
 
       const config: EditingAreaManagerConfig = {
         container,
-        eventBus,
+        eventBus: new EventBus(),
       }
       manager = new EditingAreaManager(config)
+      manager.onModeChange(handler)
       await manager.initialize()
 
       // When: HTML 모드로 전환
       await manager.switchMode('html')
 
-      // Then: MODE_CHANGED 이벤트가 from/to 정보와 함께 발행됨
+      // Then: from/to 와 함께 알려집니다
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           from: 'wysiwyg',

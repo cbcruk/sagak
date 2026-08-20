@@ -1,9 +1,7 @@
 import {
   CoreEvents,
-  EditingAreaEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
-import type { EditingMode } from './types'
 
 /**
  * 서식이 적용된 뒤 발행되는 알림
@@ -45,12 +43,6 @@ export interface EditorEventMap {
   // --- 코어 ---
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
   [CoreEvents.ERROR]: EditorErrorData
-
-  // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: {
-    from: EditingMode
-    to: EditingMode
-  }
 
 }
 
@@ -106,9 +98,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
   [CoreEvents.STYLE_CHANGED]: 'notify',
   [CoreEvents.ERROR]: 'notify',
-
-  // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
 
 }
 

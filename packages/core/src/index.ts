@@ -98,7 +98,6 @@ export type {
 } from './core/command-map'
 export {
   CoreEvents,
-  EditingAreaEvents,
   EditorEvents,
 } from './core/events'
 export type {

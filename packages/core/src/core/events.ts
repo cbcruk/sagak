@@ -60,9 +60,12 @@ export const CoreEvents = {
 /**
  * `EditingAreaManager` 이벤트
  */
-export const EditingAreaEvents = {
-  EDITING_AREA_MODE_CHANGED: 'EDITING_AREA_MODE_CHANGED',
-} as const
+/*
+ * 모드 전환도 여기 없습니다 — `editingAreaManager.onModeChange()` 입니다.
+ * 듣는 쪽이 **코어 안에 하나**뿐이었습니다: `subscribeToModel` 이 새 영역에
+ * 다시 붙으려고요. 한 곳이 한 곳에게 말하는 데 이름 문자열이 낄 이유가
+ * 없습니다.
+ */
 
 /**
  * `WysiwygArea` 이벤트
@@ -98,7 +101,6 @@ export const EditingAreaEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...EditingAreaEvents,
 } as const
 
 /**

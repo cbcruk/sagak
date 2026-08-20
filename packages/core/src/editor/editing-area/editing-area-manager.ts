@@ -3,7 +3,13 @@ import type { EditingArea, EditingMode, IRContent } from './types'
 import type { WysiwygArea } from './modes/wysiwyg-area'
 import type { HtmlSourceArea } from './modes/html-source-area'
 import type { TextArea } from './modes/text-area'
-import { EditingAreaEvents, type EventBus } from '@/core'
+import { type EventBus } from '@/core'
+
+/** 모드가 어디서 어디로 바뀌었는가 */
+export interface ModeChange {
+  from: EditingMode
+  to: EditingMode
+}
 
 export interface EditingAreaManagerConfig {
   /**
@@ -50,6 +56,7 @@ export interface EditingAreaManagerConfig {
 export class EditingAreaManager {
   private eventBus?: EventBus
 
+  private modeListeners = new Set<(change: ModeChange) => void>()
   private areas: Map<EditingMode, EditingArea> = new Map()
   private currentMode: EditingMode
   /**
@@ -131,11 +138,24 @@ export class EditingAreaManager {
 
     this.currentMode = newMode
 
-    if (this.eventBus) {
-      this.eventBus.emit(EditingAreaEvents.EDITING_AREA_MODE_CHANGED, {
-        from: oldMode,
-        to: newMode,
-      })
+    for (const listener of this.modeListeners) {
+      listener({ from: oldMode, to: newMode })
+    }
+  }
+
+  /**
+   * 모드가 바뀌면 알려 줍니다.
+   *
+   * 예전에는 `EDITING_AREA_MODE_CHANGED` 를 버스에 실어 보냈습니다. 그런데
+   * 듣는 쪽은 **코어 안에 하나**뿐이었습니다 — `subscribeToModel` 이 새 영역에
+   * 다시 붙으려고요. 한 곳이 한 곳에게 말하는 데 이름 문자열이 낄 이유가
+   * 없습니다.
+   */
+  onModeChange(listener: (change: ModeChange) => void): () => void {
+    this.modeListeners.add(listener)
+
+    return () => {
+      this.modeListeners.delete(listener)
     }
   }
 
