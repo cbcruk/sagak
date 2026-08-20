@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { cdp, userEvent } from '@vitest/browser/context'
 import { TextSelection } from 'prosemirror-state'
 import { undo, redo } from 'prosemirror-history'
-import { EventBus } from '@/core/event-bus'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 
 /**
@@ -27,14 +26,11 @@ import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
 
 let container: HTMLElement
 let area: WysiwygArea
-let eventBus: EventBus
 
 beforeEach(async () => {
   container = document.createElement('div')
   document.body.appendChild(container)
-
-  eventBus = new EventBus()
-  area = new WysiwygArea({ container, eventBus })
+  area = new WysiwygArea({ container })
   area.setRawContent('<p>가나</p>')
   await area.show()
 

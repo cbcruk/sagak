@@ -1,5 +1,4 @@
 import { CommandRegistry } from '@/core/command-registry'
-import { EventBus } from '@/core/event-bus'
 import { trackComposition } from '@/core/composition'
 import type { CompositionTracker } from '@/core/composition'
 import { PluginManager } from '@/core/plugin-manager'
@@ -29,7 +28,6 @@ import { TextSelection } from 'prosemirror-state'
  * 결과의 모양이 아닙니다.
  */
 export interface PluginArea {
-  eventBus: EventBus
   context: EditorContext
   pluginManager: PluginManager
   composition: CompositionTracker
@@ -55,14 +53,11 @@ export function mountPluginArea(initial = '<p>Hello World</p>'): PluginArea {
 
   const container = document.createElement('div')
   document.body.appendChild(container)
-
-  const eventBus = new EventBus()
-  const area = new WysiwygArea({ container, eventBus })
+  const area = new WysiwygArea({ container })
   const element = area.getElement()
   const composition = trackComposition(element)
 
   const context: EditorContext = {
-    eventBus,
     composition,
     config: {},
     element,
@@ -117,7 +112,6 @@ export function mountPluginArea(initial = '<p>Hello World</p>'): PluginArea {
   load(initial)
 
   return {
-    eventBus,
     context,
     pluginManager,
     composition,

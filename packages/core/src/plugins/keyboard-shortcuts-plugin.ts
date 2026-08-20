@@ -73,12 +73,7 @@ export function createKeyboardShortcutsPlugin(
 
       for (const shortcut of all) {
         bindings[shortcut.key] = () =>
-          runCommand(
-            registry,
-            context.eventBus,
-            shortcut.run as 'bold',
-            ...([] as [])
-          )
+          runCommand(registry, shortcut.run as 'bold', ...([] as []))
       }
 
       detach = area.addPlugin(keymap(bindings))

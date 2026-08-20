@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
-import { EventBus } from '@/core/event-bus'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
 import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
@@ -193,8 +192,7 @@ describe('EditingAreaManager', () => {
 
       const config: EditingAreaManagerConfig = {
         container,
-        eventBus: new EventBus(),
-      }
+              }
       manager = new EditingAreaManager(config)
       manager.onModeChange(handler)
       await manager.initialize()
@@ -554,7 +552,7 @@ describe('EditingAreaManager', () => {
   describe('설정 (구성 옵션 적용)', () => {
     /**
      * Why: 에디터의 외관과 동작을 사용자 요구에 맞게 커스터마이징해야 함
-     * How: 설정 객체를 통해 `className`, `minHeight`, `autoResize`, `EventBus` 전달
+     * How: 설정 객체를 통해 `className`, `minHeight`, `autoResize` 전달
      */
 
     it('사용자 정의 className을 적용해야 함', async () => {

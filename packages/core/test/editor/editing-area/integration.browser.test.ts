@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EditingAreaManager } from '@/editor/editing-area/editing-area-manager'
-import { EventBus } from '@/core/event-bus'
 import type { EditingAreaManagerConfig } from '@/editor/editing-area/editing-area-manager'
 import type { EditingArea } from '@/editor/editing-area/types'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
@@ -30,12 +29,10 @@ function isWysiwygArea(area: EditingArea): area is WysiwygArea {
 describe('Editing Area 통합', () => {
   let container: HTMLDivElement
   let manager: EditingAreaManager
-  let eventBus: EventBus
 
   beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
-    eventBus = new EventBus()
   })
 
   afterEach(() => {
@@ -52,10 +49,9 @@ describe('Editing Area 통합', () => {
      */
 
     it('전체 편집 워크플로우를 처리해야 함', async () => {
-      // Given: EventBus가 설정된 매니저
+      // Given: 매니저
       const config: EditingAreaManagerConfig = {
         container,
-        eventBus,
       }
       manager = new EditingAreaManager(config)
 
@@ -146,7 +142,7 @@ describe('Editing Area 통합', () => {
       // Given: 매니저를 구독합니다
       const changes: string[] = []
 
-      manager = new EditingAreaManager({ container, eventBus })
+      manager = new EditingAreaManager({ container })
       manager.onModeChange(({ from, to }) => {
         changes.push(`${from}→${to}`)
       })
@@ -163,7 +159,7 @@ describe('Editing Area 통합', () => {
     it('구독을 끊으면 더 안 와야 함', async () => {
       const changes: string[] = []
 
-      manager = new EditingAreaManager({ container, eventBus })
+      manager = new EditingAreaManager({ container })
       const off = manager.onModeChange(({ to }) => changes.push(to))
 
       await manager.initialize()
@@ -449,7 +445,6 @@ describe('Editing Area 통합', () => {
       const config: EditingAreaManagerConfig = {
         container,
         initialMode: 'html',
-        eventBus,
         classNames: {
           wysiwyg: 'custom-wysiwyg',
           html: 'custom-html',

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PluginManager } from '@/core/plugin-manager'
-import { EventBus } from '@/core/event-bus'
 import type { Plugin, EditorContext } from '@/core/types'
 
 /**
@@ -15,8 +14,7 @@ describe('PluginManager', () => {
 
   beforeEach(() => {
     context = {
-      eventBus: new EventBus(),
-      config: {},
+            config: {},
     }
     manager = new PluginManager(context)
   })
@@ -530,29 +528,13 @@ describe('PluginManager', () => {
 
   /**
    * Why: 실제 에디터 환경에서의 복잡한 플러그인 사용 패턴 검증
-   * How: `EventBus` 통합, 의존성 체인, 리소스 정리 등 실무 사용 사례 테스트
+   * How: 의존성 체인, 리소스 정리 등 실무 사용 사례 테스트
    */
   describe('실제 시나리오 (실무 적용 사례)', () => {
-    it('EventBus 통합 플러그인을 지원해야 함', async () => {
-      // Given: EventBus를 사용하는 플러그인
-      const calls: string[] = []
-
-      const plugin: Plugin = {
-        name: 'event-plugin',
-        initialize(ctx) {
-          ctx.eventBus.on('TEST', () => {
-            calls.push('handled')
-          })
-        },
-      }
-
-      // When: 플러그인 등록 후 이벤트 발행
-      await manager.register(plugin)
-      context.eventBus.emit('TEST')
-
-      // Then: 이벤트가 처리되어야 함
-      expect(calls).toEqual(['handled'])
-    })
+    /*
+     * "EventBus 통합 플러그인" 검사가 여기 있었습니다. 버스가 없어졌으므로
+     * 플러그인이 밖과 이야기하는 길은 **자기 모듈 API** 입니다 (§12).
+     */
 
     it('의존성이 있는 플러그인 체인을 지원해야 함', async () => {
       // Given: 의존성 체인을 가진 플러그인들 (core → ui → feature)
@@ -591,28 +573,27 @@ describe('PluginManager', () => {
     })
 
     it('destroy 시 플러그인 리소스를 정리해야 함', async () => {
-      // Given: 이벤트 핸들러를 등록하고 정리하는 플러그인
-      const unsubscribes: Array<() => void> = []
+      // Given: 구독을 걸고 정리하는 플러그인
+      let listening = false
 
       const plugin: Plugin = {
         name: 'cleanup-plugin',
-        initialize(ctx) {
-          const unsub = ctx.eventBus.on('EVENT', () => {})
-          unsubscribes.push(unsub)
+        initialize() {
+          listening = true
         },
         destroy() {
-          unsubscribes.forEach((unsub) => unsub())
+          listening = false
         },
       }
 
       await manager.register(plugin)
-      expect(context.eventBus.hasHandlers('EVENT')).toBe(true)
+      expect(listening).toBe(true)
 
       // When: 플러그인 제거
       manager.remove('cleanup-plugin')
 
-      // Then: 이벤트 핸들러가 정리되어야 함
-      expect(context.eventBus.hasHandlers('EVENT')).toBe(false)
+      // Then: 정리되어야 함
+      expect(listening).toBe(false)
     })
   })
 })

@@ -2,11 +2,9 @@ import type { Node as PMNode } from 'prosemirror-model'
 import { sagakSchema } from '@/model/schema'
 import { toHtml, parseHtml, toJSON, fromJSON } from '@/model/storage'
 import type { DocumentJSON } from '@/model/storage'
-import { EventBus } from './event-bus'
 import { PluginManager } from './plugin-manager'
 import { trackComposition } from './composition'
 import type { CompositionTracker } from './composition'
-import { CoreEvents } from './events'
 import type {
   Plugin,
   EditorContext,
@@ -102,22 +100,19 @@ export interface EditorCoreConfig extends EditorConfig {
 /**
  * EditorCore
  *
- * `EventBus`, `PluginManager`, `SelectionManager`를 결합한 파사드입니다
- * 플러그인 기반 에디터 아키텍처를 위한 통합 API를 제공합니다
+ * 편집 영역·플러그인·커맨드 레지스트리를 묶는 파사드입니다.
  *
  * @example
  * ```typescript
  * const core = new EditorCore({
  *   element: document.getElementById('editor'),
- *   plugins: [BoldPlugin, ItalicPlugin]
- * });
+ *   plugins: [MyPlugin],
+ * })
  *
- * await core.run();
- * core.exec('BOLD_CLICKED');
+ * await core.run()
  * ```
  */
 export class EditorCore {
-  private eventBus: EventBus
   private pluginManager: PluginManager
   private composition?: CompositionTracker
   private editingAreaManager?: EditingAreaManager
@@ -125,7 +120,6 @@ export class EditorCore {
   private config: EditorCoreConfig
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
-  private onErrorUnsub?: () => void
   private commandRegistry: CommandRegistry
   private unregisterModelCommands?: () => void
 
@@ -141,20 +135,8 @@ export class EditorCore {
       setLogLevel(config.logLevel)
     }
 
-    this.eventBus = new EventBus()
-
-
-    if (config.onError) {
-      const { onError } = config
-      this.onErrorUnsub = this.eventBus.on(
-        CoreEvents.ERROR, (data?: unknown) => {
-          onError(data as EditorErrorData)
-        }
-      )
-    }
-
     this.context = {
-      eventBus: this.eventBus,
+      onError: config.onError,
       config: this.config,
       element: config.element,
     }
@@ -240,7 +222,7 @@ export class EditorCore {
       this.editingAreaManager = new EditingAreaManager({
         container: this.config.editingAreaContainer,
         initialMode: this.config.initialMode || 'wysiwyg',
-        eventBus: this.eventBus,
+        onError: this.config.onError,
         minHeight: this.config.minHeight,
         autoResize: this.config.autoResize,
         spellCheck: this.config.spellCheck,
@@ -272,84 +254,16 @@ export class EditorCore {
     }
   }
 
-  /**
-   * 메시지를 실행합니다 (이벤트 발행)
+  /*
+   * **`exec` · `delayedExec` · `registerBrowserEvent` · `getEventBus` 가
+   * 여기 있었습니다.**
    *
-   * @param message 메시지 이름
-   * @param args 핸들러에 전달할 인자
-   * @returns 메시지가 취소되지 않으면 `true`
+   * 넷 다 버스에 아무 이름이나 쏘는 문이었습니다. 문서의 예시가
+   * `'BOLD_CLICKED'` · `'INSERT_HTML'` 이었는데 둘 다 §11 에서 없어진
+   * 이름입니다 — **없는 세계를 가리키는 문**이었습니다.
    *
-   * @example
-   * ```typescript
-   * core.exec('BOLD_CLICKED');
-   * core.exec('INSERT_HTML', '<strong>Bold</strong>');
-   * ```
+   * 커맨드를 부르는 문은 `runCommand` 하나입니다.
    */
-  exec(message: string, ...args: unknown[]): boolean {
-    return this.eventBus.emit(message, ...args)
-  }
-
-  /**
-   * 지연 후 메시지를 실행합니다
-   *
-   * @param message 메시지 이름
-   * @param delay 밀리초 단위 지연 시간
-   * @param args 핸들러에 전달할 인자
-   *
-   * @example
-   * ```typescript
-   * core.delayedExec('SAVE', 1000);
-   * ```
-   */
-  delayedExec(message: string, delay: number, ...args: unknown[]): void {
-    setTimeout(() => {
-      this.exec(message, ...args)
-    }, delay)
-  }
-
-  /**
-   * 메시지를 트리거하는 브라우저 이벤트를 등록합니다
-   *
-   * @param element 이벤트를 연결할 요소
-   * @param eventName 브라우저 이벤트 이름 (예: `'click'`)
-   * @param message 발행할 메시지
-   * @param args 메시지와 함께 전달할 인자
-   * @returns 리스너를 제거하는 정리 함수
-   *
-   * @example
-   * ```typescript
-   * const cleanup = core.registerBrowserEvent(
-   *   button,
-   *   'click',
-   *   'BOLD_CLICKED'
-   * );
-   *
-   * // Later: cleanup();
-   * ```
-   */
-  registerBrowserEvent(
-    element: HTMLElement,
-    eventName: string,
-    message: string,
-    args: unknown[] = []
-  ): () => void {
-    const handler = (event: Event) => {
-      this.exec(message, ...args, event)
-    }
-
-    element.addEventListener(eventName, handler)
-
-    return () => {
-      element.removeEventListener(eventName, handler)
-    }
-  }
-
-  /**
-   * `EventBus` 인스턴스를 가져옵니다
-   */
-  getEventBus(): EventBus {
-    return this.eventBus
-  }
 
   /**
    * `PluginManager` 인스턴스를 가져옵니다
@@ -512,8 +426,6 @@ export class EditorCore {
    * 모든 플러그인과 이벤트 리스너를 정리합니다
    */
   destroy(): void {
-    this.onErrorUnsub?.()
-    this.onErrorUnsub = undefined
     this.unregisterModelCommands?.()
     this.unregisterModelCommands = undefined
 
@@ -524,7 +436,6 @@ export class EditorCore {
       this.editingAreaManager = undefined
     }
 
-    this.eventBus.clearAll()
 
     this.status = AppStatus.NOT_READY
   }

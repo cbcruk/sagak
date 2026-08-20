@@ -283,11 +283,14 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}): Plugin {
     name: 'utility:auto-save',
 
     initialize(context: EditorContext) {
-      const { eventBus, element } = context
+      const { element } = context
 
       session = sessionOf(context)
       session.options = options
-      session.report = createErrorReporter(eventBus, 'plugin:utility:auto-save')
+      session.report = createErrorReporter(
+        context.onError,
+        'plugin:utility:auto-save'
+      )
 
       const current = session
       const module = autoSave(context)

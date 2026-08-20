@@ -4,8 +4,6 @@ import {
   runCommand,
   type CommandContext,
 } from '@/core/command-registry'
-import { EventBus } from '@/core/event-bus'
-import { CoreEvents } from '@/core/events'
 
 /**
  * CommandRegistry 테스트
@@ -14,12 +12,10 @@ import { CoreEvents } from '@/core/events'
  * How: precedence 실행 순서, 위임(decline), 상태 조회, 레거시 어댑터를 확인
  */
 describe('CommandRegistry', () => {
-  let eventBus: EventBus
   let ctx: CommandContext
 
   beforeEach(() => {
-    eventBus = new EventBus()
-    ctx = { eventBus }
+    ctx = {}
   })
 
   afterEach(() => {
@@ -168,7 +164,7 @@ describe('CommandRegistry', () => {
         return true
       })
 
-      expect(runCommand(registry, eventBus, 'bold')).toBe(true)
+      expect(runCommand(registry, 'bold')).toBe(true)
       expect(stub.calls).toEqual(['closeHistory', 'command', 'focus'])
     })
 
@@ -183,23 +179,17 @@ describe('CommandRegistry', () => {
 
       registry.register('bold', () => false)
 
-      expect(runCommand(registry, eventBus, 'bold')).toBe(false)
+      expect(runCommand(registry, 'bold')).toBe(false)
       expect(stub.calls).toEqual(['closeHistory'])
     })
 
-    it('성공하면 무엇이 바뀌었는지 알려야 함', () => {
-      const registry = new CommandRegistry(ctx)
-      const seen: unknown[] = []
-
-      eventBus.on(CoreEvents.STYLE_CHANGED, (data) => {
-        seen.push(data)
-      })
-      registry.register('fontName', () => true)
-
-      runCommand(registry, eventBus, 'fontName', 'Georgia')
-
-      expect(seen).toEqual([{ style: 'fontName', value: 'Georgia' }])
-    })
+    /*
+     * "성공하면 무엇이 바뀌었는지 알려야 함" 이 여기 있었습니다.
+     *
+     * `STYLE_CHANGED` 를 쏘는 일이었는데 **아무도 안 듣게 됐습니다** — 마지막
+     * 청취자였던 자동 저장은 두 리사이즈가 DOM 에만 쓰던 시절에 그것으로
+     * 저장을 깨웠습니다 (§12-5). 버스와 함께 걷었습니다.
+     */
 
     /**
      * Why: 한글을 조립하는 중에 서식이 끼어들면 글자가 끊깁니다.
@@ -217,7 +207,7 @@ describe('CommandRegistry', () => {
         return true
       })
 
-      expect(runCommand(registry, eventBus, 'bold')).toBe(false)
+      expect(runCommand(registry, 'bold')).toBe(false)
       expect(ran).toBe(false)
     })
   })

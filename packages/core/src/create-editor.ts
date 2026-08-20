@@ -134,10 +134,10 @@ export interface Editor {
    */
   focus: () => void
 
-  /**
-   * Execute an event/command
+  /*
+   * `exec(event, ...args)` 가 여기 있었습니다 — 버스에 아무 이름이나 쏘는
+   * 문입니다. 커맨드를 부르는 문은 `runCommand` 하나입니다.
    */
-  exec: (event: string, ...args: unknown[]) => boolean
 
   /**
    * Tear down the editor, removing all listeners and plugins
@@ -221,7 +221,6 @@ export function createEditor(options: CreateEditorOptions): Editor {
     switchMode: (mode) => core.switchMode(mode),
     getCurrentMode: () => core.getCurrentMode(),
     focus: () => core.focus(),
-    exec: (event, ...args) => core.exec(event, ...args),
     destroy: () => core.destroy(),
   }
 

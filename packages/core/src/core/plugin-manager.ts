@@ -64,7 +64,7 @@ export class PluginManager {
   constructor(context: EditorContext) {
     this.context = context
     this.context.pluginManager = this
-    this.reportError = createErrorReporter(context.eventBus, 'plugin-manager')
+    this.reportError = createErrorReporter(context.onError, 'plugin-manager')
   }
 
   /**
