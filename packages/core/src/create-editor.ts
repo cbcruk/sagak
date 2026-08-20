@@ -6,10 +6,8 @@ import type { EditorErrorData } from './core/errors'
 
 import { createKeyboardShortcutsPlugin } from './plugins/keyboard-shortcuts-plugin'
 import { createAutocompletePlugin } from './features/autocomplete'
-import { createTableResizePlugin } from './plugins/table-resize-plugin'
-import { createImageResizePlugin } from './plugins/image-resize-plugin'
+import { createImageResizePlugin } from './features/image-resize'
 import { createImageUploadPlugin } from './features/image-upload'
-import { createExportPlugin } from './plugins/export-plugin'
 import {
   createAutoSavePlugin,
   type AutoSaveOptions,
@@ -21,10 +19,8 @@ import {
 const defaultPlugins: Plugin[] = [
   createKeyboardShortcutsPlugin(),
   createAutocompletePlugin(),
-  createTableResizePlugin(),
   createImageResizePlugin(),
   createImageUploadPlugin(),
-  createExportPlugin(),
 ]
 
 /**

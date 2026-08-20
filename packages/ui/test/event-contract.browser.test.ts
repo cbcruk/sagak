@@ -74,7 +74,7 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 8종 전부를 덮어야 함', async () => {
+  it('분류가 2종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다.
     //
@@ -84,10 +84,18 @@ describe('이벤트 계약', () => {
     //          있었고, 요청 하나는 아무도 안 불렀습니다 (`imageUpload`).
     // 11 → 8:  자동 저장 셋 (`autoSave`). 상태 알림은 `subscribe`·`report`,
     //          지우기는 메서드, 복원은 아무도 안 부르던 요청이었습니다.
+    // 8 → 6:   이미지 조절 둘. 아무도 안 들었고 짝이 되는 콜백조차 없었습니다
+    //          — 조절이 남기는 것은 이제 문서의 width·height 입니다.
+    // 6 → 4:   APP_READY(아무도 안 들음)·FOCUS_REQUESTED(아무도 안 발행).
+    //          둘 다 제품 코드에서 한쪽 끝이 비어 있었습니다.
+    // 4 → 3:   내보내기 (`exporter`). 죽은 배선은 아니었고, 메뉴 하나가
+    //          플러그인 하나에게 말을 거는 일이었습니다.
+    // 3 → 2:   모드 전환. 듣는 쪽이 코어 안에 하나뿐이라 매니저가 직접
+    //          알려 줍니다 (`onModeChange`).
     // 이 숫자는 **줄어들 예정**입니다 — 남은 것들도 대부분 에디터 바깥 UI 와의
     // 대화라, 차례로 모듈 API 로 옮깁니다.
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(8)
+    expect(total).toBe(2)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 
@@ -113,10 +121,19 @@ describe('이벤트 계약', () => {
 
     /* 임베더가 붙을 자리 — 문서에도 DOM 에도 없는 것을 실어 나릅니다 */
     const EXTENSION_POINTS = [
-      'APP_READY',
       'EDITOR_ERROR',
-      'IMAGE_RESIZE_START',
-      'IMAGE_RESIZE_END',
+      /*
+       * **여기 방금 들어왔습니다.**
+       *
+       * 마지막 청취자는 자동 저장이었습니다 — 두 리사이즈가 DOM 에만 써서
+       * 트랜잭션이 안 났고, 그래서 저장을 따로 깨워야 했기 때문입니다. 둘을
+       * 모델로 옮기니 그 이유가 없어졌습니다.
+       *
+       * "어떤 커맨드가 돌았는가" 는 모델에도 DOM 에도 없는 값이라 규칙상으로는
+       * 확장점이 맞습니다. 다만 지금 쓰는 곳이 하나도 없으므로 **남길지는
+       * 따로 판단합니다** (`docs/prosemirror-migration.md` §12-5).
+       */
+      'STYLE_CHANGED',
     ]
 
     const { eventBus } = ed.context

@@ -1,7 +1,6 @@
 import { subscribeToModel } from '@/model/bridge'
 import { logger } from '@/core/logger'
 import type { Plugin, EditorContext } from '@/core'
-import { CoreEvents } from '@/core'
 import { createErrorReporter, type ErrorReporter } from '@/core/errors'
 
 /**
@@ -319,7 +318,14 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}): Plugin {
         })
       )
 
-      unsubscribers.push(eventBus.on(CoreEvents.STYLE_CHANGED, scheduleSave))
+      /*
+       * `STYLE_CHANGED` 도 듣고 있었습니다 — **두 리사이즈 플러그인 때문**
+       * 입니다. 둘은 DOM 에만 써서 트랜잭션이 안 났고, 그래서 저장을 따로
+       * 깨워야 했습니다. 그런데 정작 저장되는 내용에는 그 변경이 없었습니다.
+       *
+       * 둘 다 모델로 옮겼으니 트랜잭션 하나면 됩니다. 커맨드는 원래부터
+       * 모델을 지납니다.
+       */
 
       if (intervalMs > 0) {
         intervalTimer = setInterval(() => {

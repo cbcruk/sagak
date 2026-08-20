@@ -1,11 +1,7 @@
 import {
   CoreEvents,
-  EditingAreaEvents,
-  ExportEvents,
-  ImageResizeEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
-import type { EditingMode } from './types'
 
 /**
  * 서식이 적용된 뒤 발행되는 알림
@@ -34,15 +30,6 @@ export interface StyleChangedPayload {
   position?: string
 }
 
-/** 내보내기 형식 */
-export type ExportFormat = 'html' | 'markdown' | 'text'
-
-/** `EXPORT_DOWNLOAD` 페이로드 */
-export interface ExportDownloadData {
-  format: ExportFormat
-  filename?: string
-}
-
 /**
  * 이벤트 이름 → 페이로드 타입
  *
@@ -54,39 +41,8 @@ export interface ExportDownloadData {
  */
 export interface EditorEventMap {
   // --- 코어 ---
-  [CoreEvents.APP_READY]: void
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
-  [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
-
-  // --- 텍스트 스타일 (페이로드 없음) ---
-
-  // --- 폰트 ---
-
-  // --- 문단 ---
-  /** 객체형과 맨값을 모두 받습니다 (`extractHeadingLevel` 참고) */
-  /** 객체형과 맨값을 모두 받습니다 (`extractAlignment` 참고) */
-
-  // --- 콘텐츠 ---
-  /** 객체형과 URL 문자열을 모두 받습니다 */
-
-  // --- 히스토리 ---
-
-  // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: {
-    from: EditingMode
-    to: EditingMode
-  }
-
-  // --- WYSIWYG 영역 ---
-
-
-  // --- 내보내기 ---
-  [ExportEvents.EXPORT_DOWNLOAD]: ExportDownloadData
-
-  // --- 이미지 크기 조절 ---
-  [ImageResizeEvents.IMAGE_RESIZE_START]: { image: HTMLElement }
-  [ImageResizeEvents.IMAGE_RESIZE_END]: void
 
 }
 
@@ -140,33 +96,8 @@ export type EventKind = 'request' | 'notify'
  */
 export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
-  [CoreEvents.APP_READY]: 'notify',
   [CoreEvents.STYLE_CHANGED]: 'notify',
-  [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
-
-  // --- 텍스트 스타일 ---
-
-  // --- 폰트 (전부 `_CHANGED` 지만 전부 요청입니다) ---
-
-  // --- 문단 ---
-
-  // --- 콘텐츠 ---
-
-  // --- 히스토리 ---
-
-  // --- 편집 영역 ---
-  [EditingAreaEvents.EDITING_AREA_MODE_CHANGED]: 'notify',
-
-  // --- WYSIWYG 영역 (전부 일어난 일의 보고) ---
-
-
-  // --- 내보내기 ---
-  [ExportEvents.EXPORT_DOWNLOAD]: 'request',
-
-  // --- 이미지 크기 조절 ---
-  [ImageResizeEvents.IMAGE_RESIZE_START]: 'notify',
-  [ImageResizeEvents.IMAGE_RESIZE_END]: 'notify',
 
 }
 

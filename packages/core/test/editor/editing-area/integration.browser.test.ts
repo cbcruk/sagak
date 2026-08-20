@@ -134,26 +134,22 @@ describe('Editing Area 통합', () => {
     })
   })
 
-  describe('EventBus 통합 (이벤트 발행)', () => {
-    /**
-     * Why: 에디터의 상태 변화를 다른 컴포넌트에 알려야 함
-     * How: 모든 라이프사이클 이벤트와 모드별 이벤트 발행 확인
-     */
-
+  describe('모드 전환 알림', () => {
     /**
      * Why: 모드가 바뀌었다는 것만 알면 됩니다.
-     * How: 예전에는 초기화·바뀌는 중·바뀜·파기 넷을 쐈고 **아무도 안 들었습니다.**
-     *      남은 하나는 `subscribeToModel` 이 구독을 다시 붙이는 데 씁니다.
+     * How: 예전에는 초기화·바뀌는 중·바뀜·파기 넷을 버스에 쐈고 **아무도 안
+     *      들었습니다.** 남은 하나는 `subscribeToModel` 이 새 영역에 구독을
+     *      다시 붙이는 데 쓰는데, 그 한 곳이 코어 안이라 **매니저가 직접**
+     *      알려 줍니다.
      */
     it('모드가 바뀌면 알려야 함', async () => {
-      // Given: 이벤트 수집을 위한 핸들러가 등록된 EventBus
-      const events: string[] = []
-
-      eventBus.on('EDITING_AREA_MODE_CHANGED', (data) => {
-        events.push(`${data.from}→${data.to}`)
-      })
+      // Given: 매니저를 구독합니다
+      const changes: string[] = []
 
       manager = new EditingAreaManager({ container, eventBus })
+      manager.onModeChange(({ from, to }) => {
+        changes.push(`${from}→${to}`)
+      })
 
       // When: 전체 라이프사이클 실행
       await manager.initialize()
@@ -161,11 +157,22 @@ describe('Editing Area 통합', () => {
       manager.destroy()
 
       // Then: 모드 변경만 알려집니다
-      expect(events).toEqual(['wysiwyg→html'])
+      expect(changes).toEqual(['wysiwyg→html'])
     })
 
+    it('구독을 끊으면 더 안 와야 함', async () => {
+      const changes: string[] = []
 
+      manager = new EditingAreaManager({ container, eventBus })
+      const off = manager.onModeChange(({ to }) => changes.push(to))
 
+      await manager.initialize()
+      await manager.switchMode('html')
+      off()
+      await manager.switchMode('text')
+
+      expect(changes).toEqual(['html'])
+    })
   })
 
   describe('선택 영역 (모델이 갖습니다)', () => {

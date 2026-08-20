@@ -17,7 +17,6 @@ import {
 import { List, ListOrdered } from 'lucide'
 import type { IconNode } from 'lucide'
 import { icon } from '../src/elements/icon'
-import { ExportEvents } from 'sagak-core'
 import { FALLBACK_FONTS } from '../src/components/font-family-select/font-family-select.shared'
 
 /**
@@ -603,36 +602,60 @@ describe('툴바', () => {
      * 여닫히는 것만 보고 있었던 셈이라, **Markdown 을 눌러도 아무 일이 안
      * 일어나는 상태**가 검사를 다 통과합니다.
      */
-    it('고른 형식이 그대로 발행되어야 함', async () => {
+    /**
+     * 예전에는 **버스에 나간 요청**을 셌습니다. 내보내기가 모듈이 되면서 그
+     * 요청이 없어졌으므로, 대신 **실제로 만들어지는 파일**을 봅니다 —
+     * 재려던 것에 한 겹 더 가까워집니다.
+     */
+    it('고른 형식이 그대로 파일이 되어야 함', async () => {
       ed = await mountEditor()
-      const sent: unknown[] = []
-      const off = ed.context.eventBus.on(
-        ExportEvents.EXPORT_DOWNLOAD, (payload?: unknown) => {
-          sent.push(payload)
-        }
-      )
 
-      /* 형식 이름은 아래 `toEqual` 에서 순서대로 확인합니다 */
-      for (const label of ['HTML', 'Markdown', 'Plain Text']) {
-        await click(button(ed.root, 'Export'))
-        const menu = dialog('Export as')
-        /* 이름과 설명이 각각 `<span>` 이라 이름 쪽만 정확히 맞춥니다 */
-        const item = [...menu.querySelectorAll('button')].find((b) =>
-          [...b.querySelectorAll('span')].some(
-            (s) => s.textContent?.trim() === label
-          )
-        )!
-        expect(item, `${label} 항목을 찾지 못했습니다`).toBeDefined()
-        await click(item)
-        await settle(6)
+      const files: { name: string; type: string; blob: Blob }[] = []
+      const realCreate = URL.createObjectURL
+      const realClick = HTMLAnchorElement.prototype.click
+      let pending: Blob | null = null
+
+      URL.createObjectURL = (blob: Blob) => {
+        pending = blob
+
+        return 'blob:test'
+      }
+      HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+        if (pending) {
+          files.push({ name: this.download, type: pending.type, blob: pending })
+        }
       }
 
-      off()
-      expect(sent, '고른 형식이 그대로 안 나갑니다').toEqual([
-        { format: 'html', filename: 'document' },
-        { format: 'markdown', filename: 'document' },
-        { format: 'text', filename: 'document' },
+      try {
+        for (const label of ['HTML', 'Markdown', 'Plain Text']) {
+          await click(button(ed.root, 'Export'))
+          const menu = dialog('Export as')
+          /* 이름과 설명이 각각 `<span>` 이라 이름 쪽만 정확히 맞춥니다 */
+          const item = [...menu.querySelectorAll('button')].find((b) =>
+            [...b.querySelectorAll('span')].some(
+              (s) => s.textContent?.trim() === label
+            )
+          )!
+          expect(item, `${label} 항목을 찾지 못했습니다`).toBeDefined()
+          await click(item)
+          await settle(6)
+        }
+      } finally {
+        URL.createObjectURL = realCreate
+        HTMLAnchorElement.prototype.click = realClick
+      }
+
+      expect(
+        files.map((f) => [f.name, f.type]),
+        '고른 형식이 그대로 안 나갑니다'
+      ).toEqual([
+        ['document.html', 'text/html'],
+        ['document.md', 'text/markdown'],
+        ['document.txt', 'text/plain'],
       ])
+
+      /* 그리고 그 안에 진짜 글이 들어 있어야 합니다 */
+      expect(await files[0].blob.text()).toContain('사각사각')
     })
 
     it('목록 메뉴로 번호/글머리 목록을 만들어야 함', async () => {

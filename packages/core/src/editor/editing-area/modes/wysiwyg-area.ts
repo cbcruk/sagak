@@ -14,6 +14,7 @@ import {
 import { history, closeHistory } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap } from 'prosemirror-commands'
+import { columnResizing } from 'prosemirror-tables'
 import {
   splitListItem,
   liftListItem,
@@ -105,6 +106,20 @@ function editingPlugins() {
 
   return [
     history(),
+    /*
+     * **열 너비는 `prosemirror-tables` 가 압니다.**
+     *
+     * 손으로 짠 리사이즈 플러그인이 260줄 있었는데, 그것은 `cell.style.width`
+     * 를 DOM 에 직접 썼습니다. 문서 모델을 안 지나므로 **저장되지 않았습니다**
+     * — 새로 고치면 너비가 사라졌고 되돌리기도 안 됐습니다. 그런데도 조절이
+     * 끝나면 저장을 예약해서, 바뀐 것이 안 담긴 내용을 저장하고 "Saved" 를
+     * 보여 줬습니다.
+     *
+     * `columnResizing` 은 `colwidth` 속성을 트랜잭션으로 씁니다 — 스키마에
+     * 원래 있던 자리입니다(`tableNodes` 가 넣어 줍니다). §11-6 에서 단축키를
+     * `prosemirror-keymap` 으로 옮긴 것과 같은 갈래입니다.
+     */
+    columnResizing({ cellMinWidth: 30 }),
     keymap({
       Enter: splitListItem(listItem),
       Tab: sinkListItem(listItem),

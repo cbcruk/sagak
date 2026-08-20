@@ -98,7 +98,6 @@ export type {
 } from './core/command-map'
 export {
   CoreEvents,
-  EditingAreaEvents,
   EditorEvents,
 } from './core/events'
 export type {
@@ -121,8 +120,6 @@ export type {
 } from './core/types'
 
 export { createAutocompletePlugin } from './features/autocomplete'
-export { createTableResizePlugin } from './plugins/table-resize-plugin'
-export type { TableResizePluginOptions } from './plugins/table-resize-plugin'
 export { createAutoSavePlugin, autoSave } from './features/auto-save'
 export type {
   AutoSave,
@@ -130,11 +127,8 @@ export type {
   AutoSaveState,
   AutoSaveStatus,
 } from './features/auto-save'
-export {
-  createImageResizePlugin,
-  ImageResizeEvents,
-} from './plugins/image-resize-plugin'
-export type { ImageResizePluginOptions } from './plugins/image-resize-plugin'
+export { createImageResizePlugin } from './features/image-resize'
+export type { ImageResizeOptions } from './features/image-resize'
 export {
   createImageUploadPlugin,
   imageUpload,
@@ -146,14 +140,5 @@ export type {
   ImageUploadOptions,
   ImageReadResult,
 } from './features/image-upload'
-export {
-  createExportPlugin,
-  ExportEvents,
-  htmlToMarkdown,
-  htmlToText,
-} from './plugins/export-plugin'
-export type {
-  ExportPluginOptions,
-  ExportFormat,
-  ExportDownloadData,
-} from './plugins/export-plugin'
+export { exporter, htmlToMarkdown, htmlToText } from './features/export'
+export type { Exporter, ExportFormat, ExportOptions } from './features/export'

@@ -620,6 +620,33 @@
   outline-offset: -2px;
 }
 
+/*
+ * 열 너비 조절 — `prosemirror-tables` 의 `columnResizing` 이 그립니다.
+ *
+ * 손으로 짠 플러그인이 하던 일인데, 그것은 너비를 DOM 에만 써서 저장이
+ * 안 됐습니다. PM 쪽은 `colwidth` 를 문서에 쓰고 `<colgroup>` 으로 그립니다.
+ * 위 `table-layout: fixed` 와 셀의 `position: relative` 는 이미 있었습니다 —
+ * 손잡이가 붙을 자리입니다.
+ */
+.modern-wysiwyg-area .tableWrapper {
+  overflow-x: auto;
+}
+
+.modern-wysiwyg-area .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  z-index: 20;
+  background-color: var(--sagak-accent);
+  pointer-events: none;
+}
+
+.modern-wysiwyg-area.resize-cursor {
+  cursor: col-resize;
+}
+
 /* Auto-save Indicator */
 [data-scope='auto-save'][data-part='indicator'] {
   padding: 4px 8px;

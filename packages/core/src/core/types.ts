@@ -131,6 +131,16 @@ export interface EditingAreaManager {
   /** 현재 활성화된 편집 영역을 가져옵니다 */
   getCurrentArea(): EditingArea | undefined
 
+  /**
+   * 모드가 바뀌면 알려 줍니다.
+   *
+   * 예전에는 `EDITING_AREA_MODE_CHANGED` 를 버스로 보냈는데, 듣는 쪽은 코어
+   * 안에 하나뿐이었습니다 (`subscribeToModel` 이 새 영역에 다시 붙습니다).
+   */
+  onModeChange?(
+    listener: (change: { from: EditingMode; to: EditingMode }) => void
+  ): () => void
+
   /** 지금 문서를 **모델로** 돌려줍니다 */
   getContent(): Promise<PMNode>
 

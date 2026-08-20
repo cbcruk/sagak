@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Download, FileText, FileCode, FileType } from 'lucide'
   import type { IconNode } from 'lucide'
-  import { ExportEvents, type ExportFormat } from 'sagak-core'
+  import { exporter, type ExportFormat } from 'sagak-core'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
 
@@ -67,7 +67,7 @@
 
   function exportAs(format: ExportFormat): void {
     menuEl.close()
-    editor.eventBus.emit(ExportEvents.EXPORT_DOWNLOAD, { format, filename })
+    exporter(editor).download(format, filename)
   }
 </script>
 

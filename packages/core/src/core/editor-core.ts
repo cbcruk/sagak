@@ -125,7 +125,6 @@ export class EditorCore {
   private config: EditorCoreConfig
   private status: AppStatusValue = AppStatus.NOT_READY
   private pendingPlugins: Plugin[] = []
-  private focusRequestUnsub?: () => void
   private onErrorUnsub?: () => void
   private commandRegistry: CommandRegistry
   private unregisterModelCommands?: () => void
@@ -153,17 +152,6 @@ export class EditorCore {
         }
       )
     }
-
-    /*
-     * 커맨드가 성공하면 편집 영역으로 포커스를 되돌립니다.
-     * 툴바 버튼을 누르면 포커스가 그 버튼에 남아, 이어지는 타이핑이
-     * 편집 영역에 닿지 않고 사라집니다.
-     */
-    this.focusRequestUnsub = this.eventBus.on(
-      CoreEvents.FOCUS_REQUESTED, () => {
-        this.focus()
-      }
-    )
 
     this.context = {
       eventBus: this.eventBus,
@@ -282,8 +270,6 @@ export class EditorCore {
         await this.registerPlugin(plugin)
       }
     }
-
-    this.eventBus.emit(CoreEvents.APP_READY)
   }
 
   /**
@@ -528,8 +514,6 @@ export class EditorCore {
   destroy(): void {
     this.onErrorUnsub?.()
     this.onErrorUnsub = undefined
-    this.focusRequestUnsub?.()
-    this.focusRequestUnsub = undefined
     this.unregisterModelCommands?.()
     this.unregisterModelCommands = undefined
 

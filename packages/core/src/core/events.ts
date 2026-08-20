@@ -3,37 +3,13 @@
  */
 export const CoreEvents = {
   /**
-   * 애플리케이션 준비 완료 - 모든 플러그인 초기화 후 발행
-   */
-  APP_READY: 'APP_READY',
-
-  /**
-   * 서식 상태 변경 - 텍스트 서식이 변경될 때 발행
-   */
-
-  /**
-   * 스타일 변경 - 모든 서식 작업 후 발행
+   * 커맨드가 하나 돌았습니다 — `{ style, value }`
+   *
+   * **지금 듣는 곳이 없습니다.** 마지막 청취자는 자동 저장이었는데, 두
+   * 리사이즈가 DOM 에만 쓰던 시절에 저장을 깨우는 용도였습니다. 둘이 모델로
+   * 가면서 트랜잭션 하나로 충분해졌습니다 (§12-5).
    */
   STYLE_CHANGED: 'STYLE_CHANGED',
-
-  /**
-   * 콘텐츠가 `undo`/`redo`를 통해 복원됨
-   */
-
-  /**
-   * 히스토리 스냅샷 캡처 요청
-   * 스타일 적용 등 즉시 스냅샷이 필요할 때 발행
-   */
-
-  /**
-   * 편집 영역으로 포커스 복귀 요청
-   *
-   * 툴바 버튼을 누르면 포커스가 그 버튼으로 옮겨갑니다. 커맨드는 저장된
-   * 선택 영역으로 동작하므로 편집 자체는 되지만, 이어서 타이핑하면 키 입력이
-   * 편집 영역에 닿지 않고 사라집니다. 커맨드가 성공한 뒤 이 이벤트로
-   * 포커스를 되돌립니다.
-   */
-  FOCUS_REQUESTED: 'FOCUS_REQUESTED',
 
   /**
    * 에디터 오류 발생 - 플러그인/코어에서 오류가 포착될 때 발행
@@ -41,6 +17,19 @@ export const CoreEvents = {
    */
   ERROR: 'EDITOR_ERROR',
 } as const
+
+/*
+ * **`APP_READY` 와 `FOCUS_REQUESTED` 가 여기 있었습니다.**
+ *
+ * 둘 다 제품 코드에서는 한쪽 끝이 비어 있었습니다 —
+ *
+ * - `APP_READY` 는 발행만 하고 **아무도 안 들었습니다.** `run()` 을 기다리거나
+ *   `onready` 를 받으면 되는 일이라 애초에 두 벌이었습니다.
+ * - `FOCUS_REQUESTED` 는 처리자만 있고 **아무도 안 발행했습니다.** 포커스
+ *   되돌리기는 `runCommand` 가 `area.focus()` 로 직접 합니다.
+ *
+ * 둘 다 자기 검사에만 나왔습니다 — 배선을 검사하는 검사입니다.
+ */
 
 /*
  * **서식 이벤트가 통째로 없어졌습니다.**
@@ -71,9 +60,12 @@ export const CoreEvents = {
 /**
  * `EditingAreaManager` 이벤트
  */
-export const EditingAreaEvents = {
-  EDITING_AREA_MODE_CHANGED: 'EDITING_AREA_MODE_CHANGED',
-} as const
+/*
+ * 모드 전환도 여기 없습니다 — `editingAreaManager.onModeChange()` 입니다.
+ * 듣는 쪽이 **코어 안에 하나**뿐이었습니다: `subscribeToModel` 이 새 영역에
+ * 다시 붙으려고요. 한 곳이 한 곳에게 말하는 데 이름 문자열이 낄 이유가
+ * 없습니다.
+ */
 
 /**
  * `WysiwygArea` 이벤트
@@ -84,20 +76,18 @@ export const EditingAreaEvents = {
  * `AUTO_SAVE_RESTORE` 는 **아무도 안 부르던 요청**이었습니다.
  */
 
-/**
- * 내보내기 플러그인 이벤트
+/*
+ * 내보내기도 여기 없습니다 — `exporter(context)` 입니다
+ * (`features/export.ts`). 죽은 배선은 아니었습니다: 메뉴가 발행하고
+ * 플러그인이 받았습니다. 다만 **메뉴 하나가 플러그인 하나에게 말을 거는 일**
+ * 이었을 뿐입니다.
  */
-export const ExportEvents = {
-  EXPORT_DOWNLOAD: 'EXPORT_DOWNLOAD',
-} as const
 
-/**
- * 이미지 크기 조절 플러그인 이벤트
+/*
+ * 이미지 조절 둘도 여기 없습니다. 아무도 안 들었고, 짝이 되는 콜백조차
+ * 없었습니다 — 확장점으로 열어 둔 것이 아니라 **아무 데도 안 닿은 배선**
+ * 이었습니다. 조절이 실제로 남기는 것은 이제 문서의 `width`·`height` 입니다.
  */
-export const ImageResizeEvents = {
-  IMAGE_RESIZE_START: 'IMAGE_RESIZE_START',
-  IMAGE_RESIZE_END: 'IMAGE_RESIZE_END',
-} as const
 
 /*
  * 이미지 업로드 넷도 여기 없습니다 — `imageUpload(context)` 입니다
@@ -111,9 +101,6 @@ export const ImageResizeEvents = {
  */
 export const EditorEvents = {
   ...CoreEvents,
-  ...EditingAreaEvents,
-  ...ExportEvents,
-  ...ImageResizeEvents,
 } as const
 
 /**
