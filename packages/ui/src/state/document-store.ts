@@ -153,8 +153,8 @@ const attached = new WeakSet<EditorContext>()
  * 목록이 함께 떠 있으면 같은 이벤트를 두 번 듣고 같은 값을 두 번 씁니다.
  * 구독을 저장소로 올리면서 한 번으로 줄었습니다.
  *
- * 해제하지 않습니다 — `EditorCore.destroy()` 가 `eventBus.clearAll()` 을
- * 부르므로 에디터와 함께 사라집니다 (신호 저장소가 하던 것과 같습니다).
+ * 해제하지 않습니다 — 구독은 편집 영역이 쥐고 있고 `EditorCore.destroy()` 가
+ * 영역을 파기하면 함께 사라집니다 (신호 저장소가 하던 것과 같습니다).
  */
 export function attachDocument(context: EditorContext): void {
   if (attached.has(context)) return

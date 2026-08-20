@@ -1,6 +1,3 @@
-export { EventBus } from './event-bus'
-export type { EventHandler, Unsubscribe } from './event-bus'
-
 export { PluginManager } from './plugin-manager'
 export type { Plugin, EditorContext, EditorConfig } from './types'
 export type { Highlighter, HighlightRange } from './types'
@@ -37,8 +34,3 @@ export {
 export { EditorCore, AppStatus } from './editor-core'
 export type { EditorCoreConfig } from './editor-core'
 
-export {
-  CoreEvents,
-  EditorEvents,
-} from './events'
-export type { EditorEventName, CoreEventName, PluginEventName } from './events'

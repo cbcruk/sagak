@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { EventBus } from '@/core/event-bus'
 import { trackComposition } from '@/core/composition'
 import type { CompositionTracker } from '@/core/composition'
 import { findReplace } from '@/features/find-replace'
@@ -22,7 +21,6 @@ import type { EditorContext, EditingAreaManager } from '@/core/types'
  * 트랜잭션입니다.
  */
 describe('찾기/바꾸기', () => {
-  let eventBus: EventBus
   let composition: CompositionTracker
   let container: HTMLDivElement
   let area: WysiwygArea
@@ -33,15 +31,12 @@ describe('찾기/바꾸기', () => {
   beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
-
-    eventBus = new EventBus()
-    area = new WysiwygArea({ container, eventBus })
+    area = new WysiwygArea({ container })
     area.setRawContent('<p>Hello World. Hello everyone. This is a test.</p>')
     element = area.getElement()
     composition = trackComposition(element)
 
     context = {
-      eventBus,
       composition,
       config: { element },
       editingAreaManager: {

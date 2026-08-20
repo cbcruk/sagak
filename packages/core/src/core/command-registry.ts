@@ -1,6 +1,4 @@
 import { logger } from './logger'
-import { CoreEvents } from './events'
-import type { EventBus } from './event-bus'
 import type { CommandArgs, CommandName } from './command-map'
 import type { CompositionTracker } from './composition'
 import type { EditingArea } from './types'
@@ -11,7 +9,6 @@ import type { EditingArea } from './types'
  * 핸들러가 현재 편집 상태에 접근할 수 있도록 필요한 서비스를 전달합니다.
  */
 export interface CommandContext {
-  eventBus: EventBus
   /** 지금 편집 영역 — 커맨드 경계가 되돌리기·포커스를 챙기는 데 씁니다 */
   editingAreaManager?: { getCurrentArea(): EditingArea | undefined }
   composition?: CompositionTracker
@@ -250,14 +247,17 @@ export class CommandRegistry {
 /**
  * 커맨드를 부르는 **하나뿐인 문**입니다.
  *
- * 커맨드 하나를 돌릴 때마다 되풀이되는 규약 넷을 여기 한 자리에 담습니다.
+ * 커맨드 하나를 돌릴 때마다 되풀이되는 규약을 여기 한 자리에 담습니다.
  *
  * | | |
  * | --- | --- |
  * | 조합 중이면 막기 | 한글을 조립하는 중에 서식이 끼어들면 글자가 끊깁니다 |
- * | `CAPTURE_SNAPSHOT` | 되돌리기가 여기서 끊깁니다 |
- * | `STYLE_CHANGED` | 무엇이 바뀌었는지 알립니다 |
- * | `FOCUS_REQUESTED` | 툴바 버튼에 남은 포커스를 편집 영역으로 |
+ * | 되돌리기 끊기 | `closeHistoryGroup()` — 한 번의 서식이 한 번의 Undo |
+ * | 포커스 되돌리기 | 툴바 버튼에 남은 포커스를 편집 영역으로 |
+ *
+ * 넷이었습니다. `STYLE_CHANGED` 를 쏘는 것이 하나 더 있었는데, **아무도 안
+ * 듣게 됐습니다** — 마지막 청취자였던 자동 저장은 두 리사이즈가 DOM 에만
+ * 쓰던 시절에 그것으로 저장을 깨웠습니다 (§12-5). 버스와 함께 걷었습니다.
  *
  * ## 가드가 여기 있는 것이 요지입니다
  *
@@ -272,7 +272,6 @@ export class CommandRegistry {
  */
 export function runCommand<K extends CommandName>(
   registry: CommandRegistry,
-  eventBus: EventBus,
   name: K,
   ...args: CommandArgs<K>
 ): boolean {
@@ -289,8 +288,6 @@ export function runCommand<K extends CommandName>(
   const result = registry.run(name, ...args)
 
   if (result) {
-    eventBus.emit(CoreEvents.STYLE_CHANGED, { style: name, value: args[0] })
-
     /*
      * 툴바 버튼을 누르면 포커스가 그 버튼에 남습니다. 커맨드는 문서 상태로
      * 도니까 먹긴 하지만, 이어지는 타이핑이 편집 영역에 안 닿습니다.

@@ -1290,3 +1290,75 @@ img.style.width = '111px' 뒤
 
 남은 둘은 `STYLE_CHANGED`(청취자 0)와 `EDITOR_ERROR` 입니다. 둘 다 **버스가
 남을 이유가 있는가**라는 하나의 질문으로 모입니다.
+
+### 12-9. 버스를 걷었습니다
+
+남은 둘은 이런 모양이었습니다.
+
+| | |
+| --- | --- |
+| `EDITOR_ERROR` | `createErrorReporter` 가 쏘고 **`EditorCore` 가 받아 `onError` 로 넘김** |
+| `STYLE_CHANGED` | `runCommand` 가 쏘고 **아무도 안 들음** |
+
+앞의 것은 **코어가 쏘고 코어가 받는 왕복**입니다. `onError` 는 처음부터
+`createEditor` 의 옵션이었으니, 버스는 그 함수를 부르러 가는 길에 놓인 우회로
+였습니다. `createErrorReporter(context.onError, source)` 로 곧장 부릅니다 —
+받는 곳이 없어도 로그는 남으므로 `onError` 를 안 준 사람에게도 그대로입니다.
+
+뒤의 것은 §12-5 에서 마지막 청취자를 잃었습니다.
+
+그래서 `EventBus` 를 지웠습니다. `EditorContext.eventBus` 자리에는
+`onError?: ErrorSink` 가 들어갑니다.
+
+#### 함께 죽은 것 — 없는 세계를 가리키던 문 넷
+
+`EditorCore` 에는 `exec(message, ...args)` · `delayedExec` ·
+`registerBrowserEvent` · `getEventBus` 가 있었고, `createEditor` 도
+`editor.exec(event, ...)` 를 내주고 있었습니다. **버스에 아무 이름이나 쏘는
+문**입니다.
+
+문서의 예시가 `'BOLD_CLICKED'` · `'INSERT_HTML'` 이었는데 둘 다 §11 에서
+없어진 이름입니다. 문이 열려 있었지만 그 너머에는 아무것도 없었습니다.
+커맨드를 부르는 문은 `runCommand` 하나입니다.
+
+#### 검사가 셋 죽었습니다 — 주제가 없어져서
+
+`event-bus.browser.test.ts`, `event-contract.browser.test.ts`, 그리고
+`editor-core.browser.test.ts` 의 "메시지 실행 / 지연 실행 / 브라우저 이벤트
+등록 / 실제 시나리오" 네 덩어리입니다.
+
+특히 `event-contract` 는 **이 정리의 도구**였습니다 — "요청인데 처리자가
+없으면 눌러도 아무 일이 없는 버튼" 을 잡으려고 만들었고, 실제로 자동 저장 두
+건을 그렇게 잡았습니다. 이벤트가 33종에서 0이 되면서 그 검사가 볼 것이
+없어졌습니다. **도구가 제 일을 끝내고 사라진 것**이라 미련 없이 지웁니다.
+
+지어낸 이름으로 버스를 검사하던 것들도 같이 갔습니다 — 플러그인이
+`'BOLD_CLICKED'` 를 듣고 `'STYLE_CHANGED'` 를 쏘고 또 다른 플러그인이 그것을
+듣는 식이었는데, 제품에는 그런 이름이 없습니다. **버스가 있는지를 버스로
+확인하던 검사**입니다.
+
+```
+이벤트         33종 → 0
+EventBus       149줄 → 없음 (events.ts · event-map.ts 도 함께)
+검사           core 674 → 638, ui 205 → 201
+```
+
+검사가 줄어든 것은 덮는 범위가 준 것이 아니라 **잴 것이 없어진 것**입니다.
+같은 기간에 크기 조절 8개, 내보내기 7개, 자동 저장 13개가 새로 생겼습니다 —
+전부 예전에는 버스를 통과해야 해서 재기 어렵던 자리입니다.
+
+### §12 를 마치며
+
+시작은 "에디터 바깥 UI 와의 대화를 빌트인으로 옮기겠다" 였습니다. 옮기고 보니
+**대화의 절반은 애초에 대화가 아니었습니다** —
+
+- 한 객체의 메서드였던 것 (찾기/바꾸기 6, 내보내기 1)
+- 한쪽 끝이 비어 있던 것 (`APP_READY` · `FOCUS_REQUESTED` · `FROM_FILE` ·
+  `AUTO_SAVE_RESTORE` · 이미지 조절 2)
+- 두 벌로 있던 확장점 (이미지 업로드 알림 3)
+- 코어 안에서 코어 안으로 (`EDITING_AREA_MODE_CHANGED` · `EDITOR_ERROR`)
+- 남이 안 쓰게 되면서 죽은 것 (`STYLE_CHANGED`)
+
+그리고 이름 뒤에 가려져 있던 동안 **세 가지가 조용히 깨져 있었습니다** —
+크기 조절이 저장되지 않았고(§12-5), 내보내기가 편집기 속살을 파일로
+내보냈고(§12-7), `onUpload` 설정이 절반만 듣고 있었습니다(§12-3).

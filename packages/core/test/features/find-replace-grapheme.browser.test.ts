@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { EventBus } from '@/core/event-bus'
 import { trackComposition } from '@/core/composition'
 import { findReplace } from '@/features/find-replace'
 import type { FindReplace } from '@/features/find-replace'
@@ -24,7 +23,6 @@ const FACEPALM = '\u{1F926}\u{1F3FC}\u{200D}\u{2642}\u{FE0F}'
 const BASE = '\u{1F926}'
 
 describe('찾기 — 문자소 클러스터', () => {
-  let eventBus: EventBus
   let find: FindReplace
   let container: HTMLDivElement
   let area: WysiwygArea
@@ -34,13 +32,10 @@ describe('찾기 — 문자소 클러스터', () => {
   beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
-
-    eventBus = new EventBus()
-    area = new WysiwygArea({ container, eventBus })
+    area = new WysiwygArea({ container })
     element = area.getElement()
 
     context = {
-      eventBus,
       composition: trackComposition(element),
       config: { element },
       editingAreaManager: {

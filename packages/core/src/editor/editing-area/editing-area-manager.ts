@@ -3,7 +3,7 @@ import type { EditingArea, EditingMode, IRContent } from './types'
 import type { WysiwygArea } from './modes/wysiwyg-area'
 import type { HtmlSourceArea } from './modes/html-source-area'
 import type { TextArea } from './modes/text-area'
-import { type EventBus } from '@/core'
+import type { ErrorSink } from '@/core/errors'
 
 /** 모드가 어디서 어디로 바뀌었는가 */
 export interface ModeChange {
@@ -22,10 +22,8 @@ export interface EditingAreaManagerConfig {
    */
   initialMode?: EditingMode
 
-  /**
-   * 이벤트 발행을 위한 `EventBus`
-   */
-  eventBus?: EventBus
+  /** 오류를 받는 곳 — 편집 영역으로 내려갑니다 */
+  onError?: ErrorSink
 
   /**
    * 각 모드에 대한 사용자 정의 클래스 이름
@@ -54,7 +52,7 @@ export interface EditingAreaManagerConfig {
 }
 
 export class EditingAreaManager {
-  private eventBus?: EventBus
+  private onError?: ErrorSink
 
   private modeListeners = new Set<(change: ModeChange) => void>()
   private areas: Map<EditingMode, EditingArea> = new Map()
@@ -72,7 +70,7 @@ export class EditingAreaManager {
   private TextAreaClass?: typeof TextArea
 
   constructor(config: EditingAreaManagerConfig) {
-    this.eventBus = config.eventBus
+    this.onError = config.onError
     this.currentMode = config.initialMode || 'wysiwyg'
 
     this.config = {
@@ -268,7 +266,7 @@ export class EditingAreaManager {
           minHeight: this.config.minHeight,
           autoResize: this.config.autoResize,
           spellCheck: this.config.spellCheck,
-          eventBus: this.eventBus,
+          onError: this.onError,
         })
 
         break

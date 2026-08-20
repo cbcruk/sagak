@@ -20,9 +20,11 @@ import {
   liftListItem,
   sinkListItem,
 } from 'prosemirror-schema-list'
-import { logger } from '@/core/logger'
-import { createErrorReporter, type ErrorReporter } from '@/core/errors'
-import type { EventBus } from '@/core'
+import {
+  createErrorReporter,
+  type ErrorReporter,
+  type ErrorSink,
+} from '@/core/errors'
 import type { Highlighter, HighlightRange } from '@/core/types'
 import { sagakSchema } from '@/model/schema'
 import { toHtml, parseHtml } from '@/model/storage'
@@ -61,10 +63,8 @@ import type { EditingArea, EditingAreaConfig, IRContent } from '../types'
  * 한 번 누를 때 두 번 되돌아갑니다. 버스가 유일한 입구입니다.
  */
 export interface WysiwygAreaConfig extends EditingAreaConfig {
-  /**
-   * 이벤트 발행을 위한 `EventBus`
-   */
-  eventBus?: EventBus
+  /** 오류를 받는 곳 — 없으면 로그만 남습니다 */
+  onError?: ErrorSink
 }
 
 /**
@@ -138,7 +138,6 @@ export class WysiwygArea implements EditingArea {
   private element: HTMLDivElement
   private container: HTMLElement
   private view: EditorView
-  private eventBus?: EventBus
   private visible: boolean = false
   private editable: boolean = true
   private spellCheck: boolean
@@ -151,12 +150,9 @@ export class WysiwygArea implements EditingArea {
 
   constructor(config: WysiwygAreaConfig) {
     this.container = config.container
-    this.eventBus = config.eventBus
     this.spellCheck = config.spellCheck !== false
     this.className = config.className || 'modern-wysiwyg-area'
-    this.reportError = this.eventBus
-      ? createErrorReporter(this.eventBus, 'wysiwyg-area')
-      : (error, message) => logger.error(message, error)
+    this.reportError = createErrorReporter(config.onError, 'wysiwyg-area')
 
     this.element = document.createElement('div')
 
@@ -580,12 +576,6 @@ export class WysiwygArea implements EditingArea {
     for (const listener of this.listeners) {
       listener(next, tr)
     }
-
-    if (!this.eventBus) {
-      return
-    }
-
-
   }
 
   private domAttributes(): Record<string, string> {

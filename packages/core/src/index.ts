@@ -62,11 +62,14 @@ export type { CreateEditorOptions, Editor } from './create-editor'
 
 export { EditorCore, AppStatus } from './core/editor-core'
 export type { EditorCoreConfig, AppStatusValue } from './core/editor-core'
-export { EventBus } from './core/event-bus'
-export type { EventHandler, Unsubscribe } from './core/event-bus'
-export type { EditorEventMap, KnownEventName, PayloadOf } from './core/event-map'
-export { EVENT_KIND } from './core/event-map'
-export type { EventKind, RequestEvent, NotifyEvent } from './core/event-map'
+/*
+ * **`EventBus` 가 여기 있었습니다.**
+ *
+ * 마지막까지 남은 둘은 `EDITOR_ERROR`(코어가 쏘고 코어가 받아 `onError` 로
+ * 넘김)와 `STYLE_CHANGED`(아무도 안 들음)였습니다. 오류는 `onError` 를 직접
+ * 부르면 되고, 나머지는 §12 에서 전부 모듈 API 가 됐습니다.
+ * (`docs/prosemirror-migration.md` §12-9)
+ */
 export { PluginManager } from './core/plugin-manager'
 export {
   createDocumentStore,
@@ -76,7 +79,7 @@ export type { DocumentStore, DocumentMeta } from './core/document-store'
 export { logger, setLogLevel, getLogLevel } from './core/logger'
 export type { LogLevel, Logger } from './core/logger'
 export { createErrorReporter } from './core/errors'
-export type { EditorErrorData, ErrorReporter } from './core/errors'
+export type { EditorErrorData, ErrorReporter, ErrorSink } from './core/errors'
 export { CommandRegistry, runCommand } from './core/command-registry'
 export type {
   CommandContext,
@@ -96,15 +99,6 @@ export type {
   StateQueryName,
   ValueQueryName,
 } from './core/command-map'
-export {
-  CoreEvents,
-  EditorEvents,
-} from './core/events'
-export type {
-  EditorEventName,
-  CoreEventName,
-  PluginEventName,
-} from './core/events'
 
 
 export type {

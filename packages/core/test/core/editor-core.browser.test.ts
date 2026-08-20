@@ -61,17 +61,14 @@ describe('EditorCore', () => {
       const core = new EditorCore({ element })
 
       // When: 각 컴포넌트 getter 호출
-      const eventBus = core.getEventBus()
       const pluginManager = core.getPluginManager()
       const composition = core.getCompositionTracker()
       const context = core.getContext()
 
       // Then: 모든 컴포넌트가 정의되어 있어야 함
-      expect(eventBus).toBeDefined()
       expect(pluginManager).toBeDefined()
       expect(composition).toBeDefined()
       expect(context).toBeDefined()
-      expect(context.eventBus).toBe(eventBus)
       expect(context.composition).toBe(composition)
     })
   })
@@ -202,336 +199,45 @@ describe('EditorCore', () => {
      */
   })
 
-  describe('메시지 실행 (느슨한 결합 유지)', () => {
-    it('메시지를 실행할 수 있어야 함', async () => {
-      // Given: 실행된 EditorCore와 이벤트 핸들러
-      const core = new EditorCore()
-      const handler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', handler)
-      await core.run()
-
-      // When: 메시지 실행
-      const result = core.exec('TEST_MESSAGE')
-
-      // Then: 핸들러가 호출되고 true 반환
-      expect(result).toBe(true)
-      expect(handler).toHaveBeenCalled()
-    })
-
-    it('메시지와 함께 인자를 전달할 수 있어야 함', async () => {
-      // Given: EditorCore와 핸들러
-      const core = new EditorCore()
-      const handler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', handler)
-      await core.run()
-
-      // When: 인자와 함께 메시지 실행
-      core.exec('TEST_MESSAGE', 'arg1', 'arg2', 123)
-
-      // Then: 핸들러가 모든 인자를 받아야 함
-      expect(handler).toHaveBeenCalledWith('arg1', 'arg2', 123)
-    })
-
-    it('메시지 취소가 가능해야 함 (BEFORE 페이즈에서 false 반환)', async () => {
-      // Given: EditorCore와 취소 핸들러
-      const core = new EditorCore()
-      const beforeHandler = vi.fn().mockReturnValue(false) // 취소
-      const onHandler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', beforeHandler)
-      core.getEventBus().on('TEST_MESSAGE', onHandler)
-
-      await core.run()
-
-      // When: 메시지 실행
-      const result = core.exec('TEST_MESSAGE')
-
-      // Then: before에서 취소되어 on 핸들러는 실행 안 됨
-      expect(result).toBe(false)
-      expect(beforeHandler).toHaveBeenCalled()
-      expect(onHandler).not.toHaveBeenCalled()
-    })
-
-    it('취소되지 않은 메시지는 모든 페이즈를 거쳐야 함', async () => {
-      // Given: EditorCore와 모든 페이즈의 핸들러
-      const core = new EditorCore()
-      const beforeHandler = vi.fn()
-      const onHandler = vi.fn()
-      const afterHandler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', beforeHandler)
-      core.getEventBus().on('TEST_MESSAGE', onHandler)
-      core.getEventBus().on('TEST_MESSAGE', afterHandler)
-
-      await core.run()
-
-      // When: 메시지 실행
-      core.exec('TEST_MESSAGE')
-
-      // Then: 모든 페이즈의 핸들러가 순서대로 실행되어야 함
-      expect(beforeHandler).toHaveBeenCalled()
-      expect(onHandler).toHaveBeenCalled()
-      expect(afterHandler).toHaveBeenCalled()
-    })
-  })
-
-  describe('지연 실행 (비동기 작업 지원)', () => {
-    it('지정된 시간 후 메시지를 실행해야 함', async () => {
-      // Given: fake timers와 EditorCore
-      vi.useFakeTimers()
-
-      const core = new EditorCore()
-      const handler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', handler)
-      await core.run()
-
-      // When: 1초 지연 후 메시지 실행
-      core.delayedExec('TEST_MESSAGE', 1000)
-
-      // Then: 즉시는 실행되지 않음
-      expect(handler).not.toHaveBeenCalled()
-
-      // When: 시간을 1초 진행
-      vi.advanceTimersByTime(1000)
-
-      // Then: 핸들러가 호출되어야 함
-      expect(handler).toHaveBeenCalled()
-
-      vi.useRealTimers()
-    })
-
-    it('지연 실행 시 인자를 전달할 수 있어야 함', async () => {
-      // Given: fake timers와 EditorCore
-      vi.useFakeTimers()
-
-      const core = new EditorCore()
-      const handler = vi.fn()
-
-      core.getEventBus().on('TEST_MESSAGE', handler)
-      await core.run()
-
-      // When: 인자와 함께 지연 실행
-      core.delayedExec('TEST_MESSAGE', 500, 'arg1', 'arg2')
-
-      // When: 시간을 500ms 진행
-      vi.advanceTimersByTime(500)
-
-      // Then: 핸들러가 인자를 받아야 함
-      expect(handler).toHaveBeenCalledWith('arg1', 'arg2')
-
-      vi.useRealTimers()
-    })
-
-    it('여러 지연 실행을 독립적으로 처리해야 함', async () => {
-      // Given: fake timers와 EditorCore
-      vi.useFakeTimers()
-
-      const core = new EditorCore()
-      const handler1 = vi.fn()
-      const handler2 = vi.fn()
-
-      core.getEventBus().on('MESSAGE_1', handler1)
-      core.getEventBus().on('MESSAGE_2', handler2)
-      await core.run()
-
-      // When: 서로 다른 시간으로 지연 실행
-      core.delayedExec('MESSAGE_1', 500)
-      core.delayedExec('MESSAGE_2', 1000)
-
-      // Then: 500ms 후 첫 번째만 실행
-      vi.advanceTimersByTime(500)
-      expect(handler1).toHaveBeenCalledTimes(1)
-      expect(handler2).not.toHaveBeenCalled()
-
-      // Then: 추가 500ms 후 두 번째도 실행
-      vi.advanceTimersByTime(500)
-      expect(handler2).toHaveBeenCalledTimes(1)
-
-      vi.useRealTimers()
-    })
-  })
-
-  describe('브라우저 이벤트 등록 (일관된 이벤트 처리)', () => {
-    it('브라우저 이벤트를 메시지로 변환할 수 있어야 함', async () => {
-      // Given: 버튼 요소와 EditorCore
-      const core = new EditorCore()
-      const handler = vi.fn()
-      const button = document.createElement('button')
-      document.body.appendChild(button)
-
-      core.getEventBus().on('BUTTON_CLICKED', handler)
-      await core.run()
-
-      // When: 브라우저 이벤트 등록
-      core.registerBrowserEvent(button, 'click', 'BUTTON_CLICKED')
-
-      // When: 버튼 클릭
-      button.click()
-
-      // Then: 메시지 핸들러가 호출되어야 함
-      expect(handler).toHaveBeenCalled()
-
-      document.body.removeChild(button)
-    })
-
-    it('브라우저 이벤트 객체를 핸들러에 전달해야 함', async () => {
-      // Given: 버튼과 EditorCore
-      const core = new EditorCore()
-      const handler = vi.fn()
-      const button = document.createElement('button')
-      document.body.appendChild(button)
-
-      core.getEventBus().on('BUTTON_CLICKED', handler)
-      await core.run()
-
-      // When: 이벤트 등록 및 클릭
-      core.registerBrowserEvent(button, 'click', 'BUTTON_CLICKED')
-      button.click()
-
-      // Then: Event 객체가 전달되어야 함
-      expect(handler).toHaveBeenCalledWith(expect.any(Event))
-
-      document.body.removeChild(button)
-    })
-
-    it('커스텀 인자와 이벤트 객체를 함께 전달할 수 있어야 함', async () => {
-      // Given: EditorCore와 버튼
-      const core = new EditorCore()
-      const handler = vi.fn()
-      const button = document.createElement('button')
-      document.body.appendChild(button)
-
-      core.getEventBus().on('BUTTON_CLICKED', handler)
-      await core.run()
-
-      // When: 커스텀 인자와 함께 이벤트 등록
-      core.registerBrowserEvent(button, 'click', 'BUTTON_CLICKED', [
-        'arg1',
-        123,
-      ])
-
-      button.click()
-
-      // Then: 커스텀 인자 + Event 순서로 전달
-      expect(handler).toHaveBeenCalledWith('arg1', 123, expect.any(Event))
-
-      document.body.removeChild(button)
-    })
-
-    it('등록 해제 함수로 이벤트 리스너를 제거할 수 있어야 함', async () => {
-      // Given: 버튼과 EditorCore
-      const core = new EditorCore()
-      const handler = vi.fn()
-      const button = document.createElement('button')
-      document.body.appendChild(button)
-
-      core.getEventBus().on('BUTTON_CLICKED', handler)
-      await core.run()
-
-      // When: 이벤트 등록
-      const cleanup = core.registerBrowserEvent(
-        button,
-        'click',
-        'BUTTON_CLICKED'
-      )
-
-      button.click()
-      expect(handler).toHaveBeenCalledTimes(1)
-
-      // When: 등록 해제
-      cleanup()
-
-      // When: 다시 클릭
-      button.click()
-
-      // Then: 핸들러가 추가로 호출되지 않아야 함
-      expect(handler).toHaveBeenCalledTimes(1)
-
-      document.body.removeChild(button)
-    })
-  })
+  /*
+   * **"메시지 실행" · "지연 실행" · "브라우저 이벤트 등록" 이 여기 있었습니다.**
+   *
+   * `core.exec('TEST_MESSAGE')` 처럼 버스에 아무 이름이나 쏘는 문을 재던
+   * 검사들입니다. 그 문이 없어졌습니다 — 커맨드를 부르는 문은 `runCommand`
+   * 하나입니다 (`docs/prosemirror-migration.md` §12-9).
+   */
 
   describe('플러그인 통합 (완전한 기능 통합)', () => {
-    it('플러그인이 이벤트를 발행하고 구독할 수 있어야 함', async () => {
-      // Given: 이벤트를 처리하는 플러그인
-      const core = new EditorCore({ element })
-
-      const testPlugin: Plugin = {
-        name: 'test-plugin',
-
-        initialize(context) {
-          // 메시지를 받아 다른 메시지 발행
-          context.eventBus.on('DO_SOMETHING', () => {
-            context.eventBus.emit('SOMETHING_DONE')
-          })
-        },
-      }
-
-      await core.registerPlugin(testPlugin)
-      await core.run()
-
-      const handler = vi.fn()
-      core.getEventBus().on('SOMETHING_DONE', handler)
-
-      // When: 메시지 실행
-      core.exec('DO_SOMETHING')
-
-      // Then: 플러그인이 발행한 메시지의 핸들러가 호출되어야 함
-      expect(handler).toHaveBeenCalled()
-    })
-
     it('플러그인이 CompositionTracker에 접근할 수 있어야 함', async () => {
-      // Given: element가 있는 EditorCore
       const core = new EditorCore({ element })
+      let seen: unknown = null
 
-      let selectionManagerFromPlugin = null
-
-      const testPlugin: Plugin = {
-        name: 'test-plugin',
-
+      await core.registerPlugin({
+        name: 'probe',
         initialize(context) {
-          // 플러그인에서 CompositionTracker 접근
-          selectionManagerFromPlugin = context.composition
+          seen = context.composition
         },
-      }
-
-      // When: 플러그인 등록 및 run() 호출
-      await core.registerPlugin(testPlugin)
+      })
       await core.run()
 
-      // Then: 플러그인이 CompositionTracker에 접근할 수 있어야 함
-      expect(selectionManagerFromPlugin).toBeDefined()
-      expect(selectionManagerFromPlugin).toBe(core.getCompositionTracker())
+      expect(seen).toBe(core.getCompositionTracker())
+      core.destroy()
     })
 
     it('플러그인이 config에 접근할 수 있어야 함', async () => {
-      // Given: 커스텀 config가 있는 EditorCore
-      const customConfig = {
-        customOption: 'test-value',
-      }
+      const core = new EditorCore({ element, logLevel: 'silent' })
+      let seen: unknown = null
 
-      const core = new EditorCore(customConfig)
-
-      let configFromPlugin = null
-
-      const testPlugin: Plugin = {
-        name: 'test-plugin',
-
+      await core.registerPlugin({
+        name: 'probe',
         initialize(context) {
-          configFromPlugin = context.config
+          seen = context.config
         },
-      }
-
-      // When: 플러그인 등록 및 run() 호출
-      await core.registerPlugin(testPlugin)
+      })
       await core.run()
 
-      // Then: 플러그인이 config에 접근할 수 있어야 함
-      expect(configFromPlugin).toBeDefined()
-      expect(configFromPlugin).toMatchObject(customConfig)
+      expect(seen).toMatchObject({ logLevel: 'silent' })
+      core.destroy()
     })
   })
 
@@ -551,21 +257,11 @@ describe('EditorCore', () => {
       expect(core.isReady()).toBe(false)
     })
 
-    it('destroy() 호출 시 EventBus의 모든 핸들러를 정리해야 함', async () => {
-      // Given: 이벤트 핸들러가 등록된 EditorCore
-      const core = new EditorCore({ element })
-      await core.run()
-
-      const eventBus = core.getEventBus()
-      eventBus.on('CUSTOM_EVENT', () => {})
-      expect(eventBus.getEvents().length).toBeGreaterThan(0)
-
-      // When: destroy() 호출
-      core.destroy()
-
-      // Then: 등록된 이벤트가 모두 제거되어야 함
-      expect(eventBus.getEvents()).toHaveLength(0)
-    })
+    /*
+     * "destroy 시 EventBus 핸들러 정리" 가 여기 있었습니다. 버스가 없으니
+     * 정리할 것도 없습니다 — 플러그인의 `destroy()` 가 자기 구독을 걷습니다
+     * (바로 아래 검사).
+     */
 
     it('destroy() 호출 시 플러그인의 destroy()가 호출되어야 함', async () => {
       // Given: destroy 메서드가 있는 플러그인
@@ -617,139 +313,16 @@ describe('EditorCore', () => {
     })
   })
 
-  describe('실제 시나리오 (전체 시스템 동작 검증)', () => {
-    it('에디터의 전체 워크플로우가 정상 동작해야 함', async () => {
-      // Given: 실제 Bold 플러그인처럼 동작하는 플러그인
-      const core = new EditorCore({ element })
-
-      const boldPlugin: Plugin = {
-        name: 'bold',
-        initialize(context) {
-          // BEFORE: IME 입력 중이면 취소
-          context.eventBus.on('BOLD_CLICKED', () => {
-            if (context.composition?.isComposing()) {
-              return false // 취소
-            }
-            return true
-          })
-
-          // ON: Bold 토글
-          context.eventBus.on('BOLD_CLICKED', () => {
-            document.execCommand('bold')
-            context.eventBus.emit('STYLE_CHANGED', { style: 'bold' })
-          })
-        },
-      }
-
-      // When: 플러그인 등록 및 실행
-      await core.registerPlugin(boldPlugin)
-      await core.run()
-
-      // Then: 스타일 변경 이벤트 추적
-      const styleHandler = vi.fn()
-      core.getEventBus().on('STYLE_CHANGED', styleHandler)
-
-      // When: Bold 명령 실행
-      const result = core.exec('BOLD_CLICKED')
-
-      // Then: 성공적으로 실행되고 이벤트가 발행되어야 함
-      expect(result).toBe(true)
-      expect(styleHandler).toHaveBeenCalledWith({ style: 'bold' })
-    })
-
-    it('여러 플러그인이 협력하여 동작해야 함', async () => {
-      // Given: 서로 연관된 여러 플러그인
-      const core = new EditorCore({ element })
-
-      // 히스토리를 기록하는 플러그인
-      const historyPlugin: Plugin = {
-        name: 'history',
-        initialize(context) {
-          const history: string[] = []
-
-          context.eventBus.on('STYLE_CHANGED', (data: any) => {
-            history.push(`style:${data.style}`)
-            context.eventBus.emit('HISTORY_UPDATED', { history })
-          })
-        },
-      }
-
-      // Bold 플러그인
-      const boldPlugin: Plugin = {
-        name: 'bold',
-        initialize(context) {
-          context.eventBus.on('BOLD_CLICKED', () => {
-            context.eventBus.emit('STYLE_CHANGED', { style: 'bold' })
-          })
-        },
-      }
-
-      await core.registerPlugin(historyPlugin)
-      await core.registerPlugin(boldPlugin)
-      await core.run()
-
-      // Then: 히스토리 업데이트 추적
-      const historyHandler = vi.fn()
-      core.getEventBus().on('HISTORY_UPDATED', historyHandler)
-
-      // When: Bold 실행
-      core.exec('BOLD_CLICKED')
-
-      // Then: 히스토리가 업데이트되어야 함
-      expect(historyHandler).toHaveBeenCalledWith({
-        history: ['style:bold'],
-      })
-    })
-
-    it('IME 입력 중에는 스타일 변경이 차단되어야 함', async () => {
-      // Given: IME 체크가 있는 플러그인
-      const core = new EditorCore({ element })
-
-      const boldPlugin: Plugin = {
-        name: 'bold',
-        initialize(context) {
-          context.eventBus.on('BOLD_CLICKED', () => {
-            // IME 입력 중이면 차단
-            if (context.composition?.isComposing()) {
-              return false
-            }
-            return true
-          })
-
-          context.eventBus.on('BOLD_CLICKED', () => {
-            document.execCommand('bold')
-          })
-        },
-      }
-
-      await core.registerPlugin(boldPlugin)
-      await core.run()
-
-      // When: IME 입력 시작 시뮬레이션
-      const composition = core.getCompositionTracker()
-      if (composition) {
-        // compositionstart 이벤트 발생
-        element.dispatchEvent(new CompositionEvent('compositionstart'))
-
-        // When: Bold 실행 시도
-        const result = core.exec('BOLD_CLICKED')
-
-        // Then: 차단되어야 함
-        expect(result).toBe(false)
-
-        // When: IME 입력 종료
-        element.dispatchEvent(
-          new CompositionEvent('compositionend', { data: '한글' })
-        )
-
-        // When: Bold 다시 실행
-        const result2 = core.exec('BOLD_CLICKED')
-
-        // Then: 정상 실행되어야 함
-        expect(result2).toBe(true)
-      }
-    })
-  })
+  /*
+   * **"실제 시나리오" 셋이 여기 있었습니다.**
+   *
+   * 플러그인이 `'BOLD_CLICKED'` 를 듣고 `'STYLE_CHANGED'` 를 쏘고 또 다른
+   * 플러그인이 그것을 듣는 식이었습니다 — 전부 **검사가 지어낸 이름**이고,
+   * 제품에는 그런 이름이 없습니다. 버스가 있는지를 버스로 확인하던 것입니다.
+   *
+   * 지금 서식은 커맨드이고 그 경계는 `command-registry.browser.test.ts` 가,
+   * 조합 중 차단도 그쪽이 봅니다.
+   */
 
   describe('엣지 케이스 및 에러 처리 (안전한 동작 보장)', () => {
     it('플러그인 없이 run()을 호출해도 정상 동작해야 함', async () => {
@@ -784,18 +357,6 @@ describe('EditorCore', () => {
       await expect(core.registerPlugin(plugin2)).rejects.toThrow(
         'Plugin "same-plugin" is already pending registration'
       )
-    })
-
-    it('존재하지 않는 메시지를 실행해도 에러가 발생하지 않아야 함', async () => {
-      // Given: EditorCore
-      const core = new EditorCore()
-      await core.run()
-
-      // When: 핸들러가 없는 메시지 실행
-      const result = core.exec('NON_EXISTENT_MESSAGE')
-
-      // Then: 에러 없이 true 반환 (취소되지 않음)
-      expect(result).toBe(true)
     })
 
     it('run()을 여러 번 호출해도 안전해야 함', async () => {

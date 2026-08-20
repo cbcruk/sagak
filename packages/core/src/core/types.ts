@@ -2,7 +2,7 @@ import type { Node as PMNode } from 'prosemirror-model'
 import type { Plugin as PMPlugin } from 'prosemirror-state'
 import type { StateHandle } from '@/model/register'
 import type { ModelListener } from '@/model/bridge'
-import type { EventBus } from './event-bus'
+import type { ErrorSink } from './errors'
 import type { CompositionTracker } from './composition'
 import type { CommandRegistry } from './command-registry'
 
@@ -163,8 +163,14 @@ export interface EditingAreaManager {
  * 모든 핵심 서비스와 설정을 포함합니다
  */
 export interface EditorContext {
-  /** 플러그인 간 통신을 위한 이벤트 버스 */
-  eventBus: EventBus
+  /**
+   * 오류를 받는 곳 — `createEditor` 의 `onError` 입니다.
+   *
+   * **여기 `eventBus` 가 있었습니다.** 마지막까지 남은 둘(`EDITOR_ERROR` ·
+   * `STYLE_CHANGED`)이 코어가 쏘고 코어가 받는 왕복이거나 아무도 안 듣는
+   * 알림이라, 버스 자체를 걷었습니다 (`docs/prosemirror-migration.md` §12-9).
+   */
+  onError?: ErrorSink
 
   /** 플러그인 매니저 인스턴스 */
   pluginManager?: PluginManager

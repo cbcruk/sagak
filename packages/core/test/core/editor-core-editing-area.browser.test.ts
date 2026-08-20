@@ -535,8 +535,8 @@ describe('EditorCore - EditingArea Integration', () => {
     })
   })
 
-  describe('EventBus 통합 (이벤트 기반 통신)', () => {
-    it('편집 영역이 EventBus를 공유해야 함', async () => {
+  describe('컨텍스트가 이어지는가', () => {
+    it('편집 영역 매니저가 컨텍스트에 붙어야 함', async () => {
       // Given: 편집 영역이 있는 설정
       const config: EditorCoreConfig = {
         editingAreaContainer: container,
@@ -547,11 +547,11 @@ describe('EditorCore - EditingArea Integration', () => {
       // When: run() 호출
       await core.run()
 
-      // Then: Context의 EventBus가 EditorCore의 EventBus와 동일해야 함
-      const eventBus = core.getEventBus()
+      // Then: 플러그인이 컨텍스트로 편집 영역에 닿을 수 있어야 합니다
       const context = core.getContext()
 
-      expect(context.eventBus).toBe(eventBus)
+      expect(context.editingAreaManager).toBeDefined()
+      expect(context.editingAreaManager?.getCurrentArea()).toBeDefined()
     })
 
     /*
@@ -798,7 +798,6 @@ describe('EditorCore - EditingArea Integration', () => {
       // Then: Context에 모든 컴포넌트가 있어야 함
       const context = core.getContext()
 
-      expect(context.eventBus).toBeDefined()
       expect(context.composition).toBeDefined()
       expect(context.editingAreaManager).toBeDefined()
       expect(context.config).toBeDefined()

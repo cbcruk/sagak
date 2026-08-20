@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
 import { CommandRegistry } from '@/core/command-registry'
-import { EventBus } from '@/core/event-bus'
 import { sagakSchema } from '@/model/schema'
 import { parseHtml, toHtml } from '@/model/storage'
 import { registerModelCommands } from '@/model/register'
@@ -41,7 +40,7 @@ function load(source: string): void {
 }
 
 beforeEach(() => {
-  registry = new CommandRegistry({ eventBus: new EventBus() })
+  registry = new CommandRegistry({})
 
   below = []
 

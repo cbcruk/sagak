@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { CommandRegistry, type CommandContext } from '@/core/command-registry'
-import { EventBus } from '@/core/event-bus'
 import { registerComputedQueries } from '@/core/commands/computed-query'
 
 /**
@@ -25,7 +24,8 @@ describe('화면 값 조회', () => {
     element.contentEditable = 'true'
     document.body.appendChild(element)
 
-    const ctx: CommandContext = { eventBus: new EventBus() }
+    const ctx: CommandContext = { element }
+
     registry = new CommandRegistry(ctx)
     registerComputedQueries(registry)
   })

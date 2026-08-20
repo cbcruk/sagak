@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'
-import { EventBus } from '@/core/event-bus'
 import { TextSelection } from 'prosemirror-state'
 import { keymap } from 'prosemirror-keymap'
 import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
@@ -240,7 +239,7 @@ describe('WysiwygArea', () => {
   describe('표시 관리 (show/hide 동작)', () => {
     /**
      * Why: 모드 전환 시 WYSIWYG 영역을 표시하거나 숨겨야 함
-     * How: `show()`/`hide()`로 display 스타일 제어, `EventBus`로 이벤트 발행
+     * How: `show()`/`hide()`로 display 스타일 제어
      */
 
     beforeEach(() => {
@@ -527,11 +526,8 @@ describe('WysiwygArea', () => {
      * How: `prosemirror-history` 를 뷰에 달고, 버스의 `UNDO`/`REDO` 로만 부릅니다
      */
 
-    let eventBus: EventBus
-
     beforeEach(() => {
-      eventBus = new EventBus()
-      wysiwygArea = new WysiwygArea({ container, eventBus })
+      wysiwygArea = new WysiwygArea({ container })
     })
 
     const type = (text: string) => {
