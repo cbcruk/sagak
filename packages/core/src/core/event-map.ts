@@ -53,9 +53,7 @@ export interface ExportDownloadData {
  */
 export interface EditorEventMap {
   // --- 코어 ---
-  [CoreEvents.APP_READY]: void
   [CoreEvents.STYLE_CHANGED]: StyleChangedPayload
-  [CoreEvents.FOCUS_REQUESTED]: void
   [CoreEvents.ERROR]: EditorErrorData
 
   // --- 편집 영역 ---
@@ -118,9 +116,7 @@ export type EventKind = 'request' | 'notify'
  */
 export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   // --- 코어 ---
-  [CoreEvents.APP_READY]: 'notify',
   [CoreEvents.STYLE_CHANGED]: 'notify',
-  [CoreEvents.FOCUS_REQUESTED]: 'request',
   [CoreEvents.ERROR]: 'notify',
 
   // --- 편집 영역 ---

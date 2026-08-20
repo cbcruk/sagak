@@ -74,7 +74,7 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 6종 전부를 덮어야 함', async () => {
+  it('분류가 4종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다.
     //
@@ -86,10 +86,12 @@ describe('이벤트 계약', () => {
     //          지우기는 메서드, 복원은 아무도 안 부르던 요청이었습니다.
     // 8 → 6:   이미지 조절 둘. 아무도 안 들었고 짝이 되는 콜백조차 없었습니다
     //          — 조절이 남기는 것은 이제 문서의 width·height 입니다.
+    // 6 → 4:   APP_READY(아무도 안 들음)·FOCUS_REQUESTED(아무도 안 발행).
+    //          둘 다 제품 코드에서 한쪽 끝이 비어 있었습니다.
     // 이 숫자는 **줄어들 예정**입니다 — 남은 것들도 대부분 에디터 바깥 UI 와의
     // 대화라, 차례로 모듈 API 로 옮깁니다.
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(6)
+    expect(total).toBe(4)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 
@@ -115,7 +117,6 @@ describe('이벤트 계약', () => {
 
     /* 임베더가 붙을 자리 — 문서에도 DOM 에도 없는 것을 실어 나릅니다 */
     const EXTENSION_POINTS = [
-      'APP_READY',
       'EDITOR_ERROR',
       /*
        * **여기 방금 들어왔습니다.**

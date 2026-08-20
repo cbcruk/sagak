@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EditorCore, AppStatus } from '@/core/editor-core'
-import { CoreEvents } from '@/core/events'
 import type { Plugin } from '@/core/types'
 
 describe('EditorCore', () => {
@@ -19,28 +18,13 @@ describe('EditorCore', () => {
     document.body.removeChild(element)
   })
 
-  describe('FOCUS_REQUESTED', () => {
-    it('이벤트를 받으면 편집 영역에 포커스해야 함', async () => {
-      const core = new EditorCore({ element })
-      const focusSpy = vi.spyOn(core, 'focus')
-
-      core.getEventBus().emit(CoreEvents.FOCUS_REQUESTED)
-
-      expect(focusSpy).toHaveBeenCalledTimes(1)
-      core.destroy()
-    })
-
-    it('destroy 뒤에는 더 이상 포커스하지 않아야 함', () => {
-      const core = new EditorCore({ element })
-      const eventBus = core.getEventBus()
-      const focusSpy = vi.spyOn(core, 'focus')
-
-      core.destroy()
-      eventBus.emit(CoreEvents.FOCUS_REQUESTED)
-
-      expect(focusSpy).not.toHaveBeenCalled()
-    })
-  })
+  /*
+   * `FOCUS_REQUESTED` 검사 둘이 여기 있었습니다.
+   *
+   * **아무도 발행하지 않는 이벤트였습니다.** 포커스 되돌리기는 `runCommand` 가
+   * `area.focus()` 로 직접 하고, 그쪽은 `command-registry` 검사가 봅니다.
+   * 여기 있던 것은 배선이 이어져 있는지만 보는 검사였습니다.
+   */
 
   describe('초기화 (유연한 설정 지원)', () => {
     it('설정 없이 인스턴스를 생성할 수 있어야 함', () => {
@@ -211,19 +195,11 @@ describe('EditorCore', () => {
       expect(core.isReady()).toBe(true)
     })
 
-    it('run() 호출 시 APP_READY 이벤트를 발행해야 함', async () => {
-      // Given: EditorCore와 이벤트 핸들러
-      const core = new EditorCore()
-      const handler = vi.fn()
-
-      core.getEventBus().on(CoreEvents.APP_READY, handler)
-
-      // When: run() 호출
-      await core.run()
-
-      // Then: APP_READY 이벤트가 발행되어야 함
-      expect(handler).toHaveBeenCalled()
-    })
+    /*
+     * `APP_READY` 검사가 여기 있었습니다. **아무도 안 듣던 알림**이라
+     * 걷었습니다 — 준비됐다는 것은 `run()` 이 끝나는 것으로 압니다.
+     * 바로 위 검사가 그것을 봅니다.
+     */
   })
 
   describe('메시지 실행 (느슨한 결합 유지)', () => {
