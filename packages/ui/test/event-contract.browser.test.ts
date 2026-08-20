@@ -74,16 +74,18 @@ describe('이벤트 계약', () => {
     expect(unhandled, `처리자 없는 요청: ${unhandled.join(', ')}`).toEqual([])
   })
 
-  it('분류가 15종 전부를 덮어야 함', async () => {
+  it('분류가 11종 전부를 덮어야 함', async () => {
     // `EVENT_KIND` 는 `Record<KnownEventName, …>` 라 컴파일러가 이미 막지만,
     // 실제로 몇 종인지 눈에 보이게 남겨 둡니다.
     //
     // 25 → 19: 찾기/바꾸기 여섯이 `findReplace(editor)` 의 메서드가 됐습니다.
     // 19 → 15: 자동 완성 넷이 `autocomplete(editor)` 가 됐습니다.
+    // 15 → 11: 이미지 업로드 넷 — 알림 셋은 같은 것을 알리는 콜백이 이미
+    //          있었고, 요청 하나는 아무도 안 불렀습니다 (`imageUpload`).
     // 이 숫자는 **줄어들 예정**입니다 — 남은 것들도 대부분 에디터 바깥 UI 와의
     // 대화라, 차례로 모듈 API 로 옮깁니다.
     const total = Object.keys(EVENT_KIND).length
-    expect(total).toBe(15)
+    expect(total).toBe(11)
     expect(byKind('request').length + byKind('notify').length).toBe(total)
   })
 
@@ -94,8 +96,11 @@ describe('이벤트 계약', () => {
    * How: 앱을 통째로 띄우고 `notify` 전부의 처리자를 셉니다.
    *
    * 다만 **처리자가 없어도 되는 알림**이 있습니다 — 모델이나 DOM 에서 얻을 수
-   * 없는 것을 실어 나르는 확장점입니다. 붙여넣기 가로채기, 이미지 업로드
-   * 진행이 그렇습니다. 그것들은 여기 예외로 적어 둡니다.
+   * 없는 것을 실어 나르는 확장점입니다. 그것들은 여기 예외로 적어 둡니다.
+   *
+   * 이미지 업로드 셋이 여기 있었는데, 세어 보니 **같은 것을 알리는 콜백이
+   * 옵션에 이미 있었습니다.** 확장점이 두 벌이면 한 벌은 안 쓰입니다 —
+   * 이벤트 쪽이 그랬습니다. 콜백만 남겼습니다.
    */
   it('아무도 안 듣는 알림은 확장점뿐이어야 함', async () => {
     ed = await mountEditor(undefined, {
@@ -110,9 +115,6 @@ describe('이벤트 계약', () => {
       'EDITOR_ERROR',
       'IMAGE_RESIZE_START',
       'IMAGE_RESIZE_END',
-      'IMAGE_UPLOAD_START',
-      'IMAGE_UPLOAD_COMPLETE',
-      'IMAGE_UPLOAD_ERROR',
     ]
 
     const { eventBus } = ed.context

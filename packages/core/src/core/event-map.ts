@@ -4,7 +4,6 @@ import {
   AutoSaveEvents,
   ExportEvents,
   ImageResizeEvents,
-  ImageUploadEvents,
 } from './events'
 import type { EditorErrorData } from './errors'
 import type { EditingMode } from './types'
@@ -104,11 +103,6 @@ export interface EditorEventMap {
   [ImageResizeEvents.IMAGE_RESIZE_START]: { image: HTMLElement }
   [ImageResizeEvents.IMAGE_RESIZE_END]: void
 
-  // --- 이미지 업로드 ---
-  [ImageUploadEvents.IMAGE_UPLOAD_START]: { file: File }
-  [ImageUploadEvents.IMAGE_UPLOAD_COMPLETE]: { url: string }
-  [ImageUploadEvents.IMAGE_UPLOAD_ERROR]: { error: Error }
-  [ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE]: { file: File }
 }
 
 /**
@@ -193,11 +187,6 @@ export const EVENT_KIND: Record<KnownEventName, EventKind> = {
   [ImageResizeEvents.IMAGE_RESIZE_START]: 'notify',
   [ImageResizeEvents.IMAGE_RESIZE_END]: 'notify',
 
-  // --- 이미지 업로드 ---
-  [ImageUploadEvents.IMAGE_UPLOAD_START]: 'notify',
-  [ImageUploadEvents.IMAGE_UPLOAD_COMPLETE]: 'notify',
-  [ImageUploadEvents.IMAGE_UPLOAD_ERROR]: 'notify',
-  [ImageUploadEvents.IMAGE_UPLOAD_FROM_FILE]: 'request',
 }
 
 /** 처리자가 있어야 뜻이 있는 이벤트 */

@@ -1,13 +1,9 @@
 <script lang="ts">
   import { Image as ImageIcon, Link as LinkIcon, Upload } from 'lucide'
-  import { imageOf } from 'sagak-core'
+  import { imageOf, imageUpload, ALLOWED_IMAGE_TYPES } from 'sagak-core'
   import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
-  import {
-    ALLOWED_TYPES,
-    MAX_FILE_SIZE,
-  } from '../components/image-dialog/image-dialog.shared'
 
   /**
    * 이미지 다이얼로그 — **Svelte 로 방향을 바꾼 이유를 확인하는 자리**입니다.
@@ -144,46 +140,44 @@
   }
 
   /**
-   * 파일 갈래는 **Preact 판의 로직을 그대로** 옮겼습니다.
+   * 파일을 **코어에게 읽힙니다.**
    *
-   * 이 갈래에는 검사가 없습니다 — `FileReader` 와 `DataTransfer` 를 흉내 내야
-   * 하는데, 그렇게 만든 검사는 브라우저가 아니라 흉내를 검사하게 됩니다
-   * (`test/image-dialog.browser.test.tsx` 에 적어 뒀습니다). 검사가 없는 만큼
-   * **고치지 않고 옮기는 것**이 유일한 안전장치입니다.
+   * 예전에는 여기가 형식 검사·크기 검사·`FileReader` 를 직접 했습니다.
+   * 코어에도 똑같은 것이 있었지만 `IMAGE_UPLOAD_FROM_FILE` 이벤트 뒤에
+   * 숨어 있었고 아무도 그것을 부르지 않았습니다 — 문을 못 찾으니 옆에 문을
+   * 하나 더 뚫은 셈입니다.
+   *
+   * 이제 한 벌입니다. `onUpload` 를 준 사람은 다이얼로그에서 고른 파일도
+   * 자기 서버로 갑니다 — 예전에는 끌어다 놓기만 그랬습니다.
+   *
+   * 넣지는 않고 **읽기만** 합니다. 미리 보여 주고 대체문구·크기를 받은 뒤에
+   * 넣는 것이 이 다이얼로그의 일이기 때문입니다.
    */
-  function acceptFile(file: File): void {
+  async function acceptFile(file: File): Promise<void> {
     uploadError = null
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      uploadError =
-        'Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.'
-      return
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      uploadError = `File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit.`
+    const result = await imageUpload(editor).read(file)
+
+    if (!result.ok) {
+      uploadError = result.message
       return
     }
 
     selectedFile = file
-    alt = file.name.replace(/\.[^/.]+$/, '')
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      previewUrl = reader.result as string
-    }
-    reader.readAsDataURL(file)
+    alt = result.name.replace(/\.[^/.]+$/, '')
+    previewUrl = result.url
   }
 
   function onFileInput(e: Event): void {
     const file = (e.currentTarget as HTMLInputElement).files?.[0]
-    if (file) acceptFile(file)
+    if (file) void acceptFile(file)
   }
 
   function onDrop(e: DragEvent): void {
     e.preventDefault()
     e.stopPropagation()
     const file = e.dataTransfer?.files?.[0]
-    if (file && file.type.startsWith('image/')) acceptFile(file)
+    if (file && file.type.startsWith('image/')) void acceptFile(file)
   }
 </script>
 
@@ -232,7 +226,7 @@
       <input
         bind:this={fileInput}
         type="file"
-        accept={ALLOWED_TYPES.join(',')}
+        accept={ALLOWED_IMAGE_TYPES.join(',')}
         onchange={onFileInput}
         style="display: none"
       />

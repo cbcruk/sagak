@@ -139,9 +139,15 @@ export {
 export type { ImageResizePluginOptions } from './plugins/image-resize-plugin'
 export {
   createImageUploadPlugin,
-  ImageUploadEvents,
-} from './plugins/image-upload-plugin'
-export type { ImageUploadPluginOptions } from './plugins/image-upload-plugin'
+  imageUpload,
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_SIZE,
+} from './features/image-upload'
+export type {
+  ImageUpload,
+  ImageUploadOptions,
+  ImageReadResult,
+} from './features/image-upload'
 export {
   createExportPlugin,
   ExportEvents,
