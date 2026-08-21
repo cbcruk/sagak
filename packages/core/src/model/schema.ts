@@ -21,6 +21,15 @@ import { tableNodes } from 'prosemirror-tables'
 const BLOCK_ATTRS = {
   align: { default: null as string | null },
   lineHeight: { default: null as string | null },
+  /**
+   * 자간.
+   *
+   * **인라인 마크였다가 여기로 옮겨왔습니다** (§15). 줄 간격 바로 옆에 있는
+   * 툴바 컨트롤인데 마크라서, 캐럿만 두고 고르면 **아무 일도 안 일어났습니다**
+   * — 다음에 치는 글자부터 적용되는 stored mark 였기 때문입니다. 셀렉트는
+   * 멀쩡히 값을 보여 주는데 골라도 화면이 안 바뀌는 조합이었습니다.
+   */
+  letterSpacing: { default: null as string | null },
   /** `margin-left: 40px` 단위로 들어옵니다 */
   indent: { default: null as string | null },
 }
@@ -29,6 +38,7 @@ function readBlockAttrs(el: HTMLElement): Record<string, string | null> {
   return {
     align: el.style.textAlign || null,
     lineHeight: el.style.lineHeight || null,
+    letterSpacing: el.style.letterSpacing || null,
     indent: el.style.marginLeft || null,
   }
 }
@@ -37,6 +47,9 @@ function blockStyle(attrs: Record<string, unknown>): string | undefined {
   const parts: string[] = []
   if (attrs.align) parts.push(`text-align: ${String(attrs.align)}`)
   if (attrs.lineHeight) parts.push(`line-height: ${String(attrs.lineHeight)}`)
+  if (attrs.letterSpacing) {
+    parts.push(`letter-spacing: ${String(attrs.letterSpacing)}`)
+  }
   if (attrs.indent) parts.push(`margin-left: ${String(attrs.indent)}`)
   return parts.length ? parts.join('; ') : undefined
 }
@@ -250,7 +263,6 @@ const hardBreak: NodeSpec = {
 const STYLE_PROPS = {
   fontFamily: 'font-family',
   fontSize: 'font-size',
-  letterSpacing: 'letter-spacing',
   color: 'color',
   backgroundColor: 'background-color',
 } as const
@@ -261,7 +273,6 @@ function readStyles(el: HTMLElement): Record<StyleProp, string | null> {
   return {
     fontFamily: el.style.fontFamily || null,
     fontSize: el.style.fontSize || null,
-    letterSpacing: el.style.letterSpacing || null,
     color: el.style.color || null,
     backgroundColor: el.style.backgroundColor || null,
   }
@@ -404,7 +415,6 @@ const baseMarks: Record<string, MarkSpec> = {
       }),
     },
   ]),
-  letterSpacing: styleMark('letter-spacing'),
   textColor: styleMark('color', [
     {
       tag: 'font[color]',
@@ -420,7 +430,6 @@ const baseMarks: Record<string, MarkSpec> = {
 const STYLE_MARK_NAMES = [
   'fontFamily',
   'fontSize',
-  'letterSpacing',
   'textColor',
   'backgroundColor',
 ] as const

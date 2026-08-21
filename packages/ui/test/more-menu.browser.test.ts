@@ -220,10 +220,11 @@ describe('더보기 메뉴', () => {
     it.each([
       ['Line Height', 'Line Height', '2.0', 'lineHeight', '2', 'p'],
       /*
-       * 자간은 **문단이 아니라 고른 글자**에 붙습니다 — 모델에서 인라인
-       * 마크이기 때문입니다 (`docs/prosemirror-migration.md` §7-1).
+       * 자간도 **문단에** 붙습니다 — 줄 간격과 같은 자리로 옮겼습니다
+       * (`docs/prosemirror-migration.md` §15). 예전에는 인라인 마크라
+       * `<span>` 이었고, 그래서 캐럿만 두고 고르면 아무 일도 안 일어났습니다.
        */
-      ['Letter Spacing', 'Letter Spacing', '0.2', 'letterSpacing', '0.2em', 'span'],
+      ['Letter Spacing', 'Letter Spacing', '0.2', 'letterSpacing', '0.2em', 'p'],
     ])(
       '%s 를 누르면 목록이 나오고, 고르면 먹습니다',
       async (label, title, optionLabel, styleProp, expected, selector) => {
