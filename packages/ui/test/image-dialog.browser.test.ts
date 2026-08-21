@@ -166,4 +166,47 @@ describe('이미지 다이얼로그', () => {
     expect(isOpen(dlg())).toBe(false)
     expect(ed.editable.querySelector('img')).toBeNull()
   })
+
+  /**
+   * ## 상한을 넘으면 **누르기 전에** 말해 줍니다
+   *
+   * 모델이 상한 넘는 값을 안 받습니다 (`insertImage`). 그런데 적용은 닫은 다음
+   * 프레임이라, 그냥 두면 **다이얼로그가 닫히고 아무 일도 안 일어납니다** —
+   * 예전 플러그인이 그랬고 그래서 §11-2 에서 "UX 가드" 라며 비워 뒀던 것입니다.
+   */
+  it('크기가 상한을 넘으면 넣기가 막히고 이유가 보입니다', async () => {
+    ed = await mountEditor('<p>hello</p>')
+    await settle()
+    await open()
+
+    await fillInput(field('Image URL'), 'https://example.com/a.png')
+    await fillInput(field('Width'), '5000px')
+    await settle(2)
+
+    const alert = dlg().querySelector('[role="alert"]')
+    expect(alert?.textContent, '이유가 안 보입니다').toContain('1920px')
+    expect(action('Insert').disabled, '거절될 값인데 누를 수 있습니다').toBe(
+      true
+    )
+
+    /* 상한 안으로 고치면 다시 열립니다 */
+    await fillInput(field('Width'), '800px')
+    await settle(2)
+
+    expect(dlg().querySelector('[role="alert"]')).toBeNull()
+    expect(action('Insert').disabled).toBe(false)
+  })
+
+  it('퍼센트는 상한과 무관합니다', async () => {
+    ed = await mountEditor('<p>hello</p>')
+    await settle()
+    await open()
+
+    await fillInput(field('Image URL'), 'https://example.com/a.png')
+    await fillInput(field('Width'), '100%')
+    await settle(2)
+
+    expect(dlg().querySelector('[role="alert"]')).toBeNull()
+    expect(action('Insert').disabled).toBe(false)
+  })
 })

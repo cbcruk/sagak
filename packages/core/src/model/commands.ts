@@ -15,6 +15,7 @@ import type { EditorState, Transaction } from 'prosemirror-state'
 import type { MarkType, Node as PMNode, NodeType } from 'prosemirror-model'
 import { sagakSchema } from './schema'
 import { linkRangeAt } from './selection'
+import { logger } from '@/core/logger'
 
 /**
  * 툴바가 부르는 일들을 **`EditorState` 위에서** 하는 커맨드로 옮깁니다.
@@ -286,6 +287,60 @@ export function isImageUrl(input: string): boolean {
   }
 }
 
+/**
+ * 이미지 크기 상한.
+ *
+ * §11-2 에서 이미지 플러그인과 함께 없어졌다가 돌아온 것입니다. 그때 "보안이
+ * 아니라 UX 가드" 라고 적어 두고 비워 뒀는데, 다시 보니 **가드가 있던 자리도
+ * 틀렸습니다** — 선언된 크기만 봤으므로 붙여넣기·끌어다 놓기로 들어오는
+ * 사진(폭이 안 적혀 있습니다)은 그냥 통과했습니다. 600px 영역에 2000px 사진이
+ * 그대로 그려집니다.
+ *
+ * 그래서 둘로 나눴습니다 (§10 의 규칙 그대로) —
+ *
+ * - **생김새는 스타일시트**: `max-width: 100%` 가 화면을 지킵니다. 선언이
+ *   있든 없든 편집 영역을 안 넘습니다.
+ * - **문서는 모델**: 여기가 막는 것은 화면이 아니라 **문서에 말이 안 되는
+ *   값이 들어가는 것**입니다. 표의 100×50 과 같은 자리입니다.
+ *
+ * 퍼센트(`'50%'`)는 상한과 무관합니다 — 부모에 대한 비율이라 절대 크기가
+ * 아닙니다.
+ */
+export const MAX_IMAGE_WIDTH = 1920
+export const MAX_IMAGE_HEIGHT = 1080
+
+/** `'200'` · `'200px'` 는 픽셀, 그 밖(`'50%'` · `'auto'`)은 `null` */
+function pixels(value: string | null | undefined): number | null {
+  if (!value) return null
+
+  const match = /^(\d+(?:\.\d+)?)(px)?$/.exec(value.trim())
+
+  return match ? Number(match[1]) : null
+}
+
+function withinImageBounds(attrs: Partial<ImageAttrs>): boolean {
+  const width = pixels(attrs.width)
+  const height = pixels(attrs.height)
+
+  if (width !== null && (width <= 0 || width > MAX_IMAGE_WIDTH)) {
+    logger.warn(
+      `Image blocked: width ${width}px exceeds maximum ${MAX_IMAGE_WIDTH}px`
+    )
+
+    return false
+  }
+
+  if (height !== null && (height <= 0 || height > MAX_IMAGE_HEIGHT)) {
+    logger.warn(
+      `Image blocked: height ${height}px exceeds maximum ${MAX_IMAGE_HEIGHT}px`
+    )
+
+    return false
+  }
+
+  return true
+}
+
 export interface ImageAttrs {
   src: string
   alt?: string | null
@@ -336,6 +391,7 @@ export function updateImage(attrs: Partial<ImageAttrs>): Command {
     const found = imageAt(state)
 
     if (!found) return false
+    if (!withinImageBounds(attrs)) return false
 
     if (dispatch) {
       dispatch(
@@ -460,6 +516,7 @@ export const removeLink: Command = (state, dispatch) => {
 export function insertImage(attrs: ImageAttrs): Command {
   return (state, dispatch) => {
     if (!isImageUrl(attrs.src)) return false
+    if (!withinImageBounds(attrs)) return false
 
     if (dispatch) {
       dispatch(

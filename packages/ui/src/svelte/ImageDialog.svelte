@@ -1,6 +1,12 @@
 <script lang="ts">
   import { Image as ImageIcon, Link as LinkIcon, Upload } from 'lucide'
-  import { imageOf, imageUpload, ALLOWED_IMAGE_TYPES } from 'sagak-core'
+  import {
+    imageOf,
+    imageUpload,
+    ALLOWED_IMAGE_TYPES,
+    MAX_IMAGE_WIDTH,
+    MAX_IMAGE_HEIGHT,
+  } from 'sagak-core'
   import { exec } from '../state/exec'
   import type { EditorContext } from 'sagak-core'
   import { icon } from '../elements/icon'
@@ -55,6 +61,32 @@
   const canSubmit = $derived(
     mode === 'url' ? src.trim().length > 0 : previewUrl !== null
   )
+
+  /**
+   * 크기 상한을 넘었는가 — **누르기 전에** 말해 줍니다.
+   *
+   * 모델이 상한을 넘는 값을 안 받습니다 (`insertImage`). 그런데 적용은 닫은
+   * 다음 프레임에 일어나므로, 그냥 두면 **다이얼로그가 닫히고 아무 일도 안
+   * 일어납니다** — 예전 플러그인이 그랬고, 그래서 §11-2 에서 "UX 가드" 라며
+   * 비워 뒀던 것입니다. 거절할 값이면 애초에 못 누르게 합니다.
+   *
+   * 퍼센트(`50%`)는 상한과 무관합니다 — 절대 크기가 아닙니다.
+   */
+  const sizeError = $derived.by((): string | null => {
+    const over = (value: string, max: number, what: string): string | null => {
+      const px = /^(\d+(?:\.\d+)?)(px)?$/.exec(value.trim())
+
+      if (!px) return null
+
+      const n = Number(px[1])
+
+      if (n <= 0) return `${what} must be greater than 0.`
+
+      return n > max ? `${what} exceeds the ${max}px limit.` : null
+    }
+
+    return over(width, MAX_IMAGE_WIDTH, 'Width') ?? over(height, MAX_IMAGE_HEIGHT, 'Height')
+  })
 
   /** 새로 넣는가 고치는가 — 파일 갈래는 늘 새로 넣습니다 */
   const command = $derived(
@@ -283,6 +315,10 @@
     </div>
   </div>
 
+  {#if sizeError}
+    <p role="alert">{sizeError}</p>
+  {/if}
+
   <div style="display: flex; gap: 8px; justify-content: flex-end">
     {#if isEditing}
       <button type="button" k="button" variant="destructive" onclick={remove}>Delete</button>
@@ -290,7 +326,12 @@
     <button type="button" k="button" variant="outline" onclick={() => dialogEl.close()}>
       Cancel
     </button>
-    <button type="button" k="button" onclick={submit} disabled={!canSubmit}>
+    <button
+      type="button"
+      k="button"
+      onclick={submit}
+      disabled={!canSubmit || !!sizeError}
+    >
       {isEditing ? 'Update' : 'Insert'}
     </button>
   </div>

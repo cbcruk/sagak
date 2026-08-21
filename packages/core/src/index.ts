@@ -53,6 +53,8 @@ export {
   blockAttr,
   setMarkValue,
   setBlockAttr,
+  MAX_IMAGE_WIDTH,
+  MAX_IMAGE_HEIGHT,
 } from './model/commands'
 export type { Command } from './model/commands'
 export { registerModelCommands, MODEL_PRECEDENCE } from './model/register'
