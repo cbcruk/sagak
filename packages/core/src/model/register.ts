@@ -173,7 +173,7 @@ const VALUE_QUERIES: Record<
   fontSizeCss: (state) => markValue(state, marks.fontSize),
   foreColor: (state) => markValue(state, marks.textColor),
   backColor: (state) => markValue(state, marks.backgroundColor),
-  letterSpacing: (state) => markValue(state, marks.letterSpacing),
+  letterSpacing: (state) => blockAttr(state, 'letterSpacing') ?? undefined,
   lineHeight: (state) => blockAttr(state, 'lineHeight') ?? undefined,
 }
 

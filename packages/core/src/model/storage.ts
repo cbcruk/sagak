@@ -28,7 +28,69 @@ export function toJSON(doc: Node): DocumentJSON {
  * 반쪽 문서로 여는 것보다 낫지만, **부르는 쪽이 그 오류를 받아 줘야** 합니다.
  */
 export function fromJSON(json: DocumentJSON, schema: Schema): Node {
-  return Node.fromJSON(schema, json)
+  return Node.fromJSON(schema, migrate(json))
+}
+
+/**
+ * 예전 저장물을 지금 스키마로 옮깁니다.
+ *
+ * **자간이 인라인 마크였다가 문단 속성이 됐습니다** (§15). 마크가 스키마에서
+ * 없어지면 그 마크가 든 문서는 `Node.fromJSON` 이 던집니다 —
+ * `There is no mark type letterSpacing in this schema`. 깨진 저장물이 아니라
+ * **우리가 깨뜨린 것**이므로 읽어 줘야 합니다.
+ *
+ * 문단의 글이 **전부 같은 자간**이면 문단 속성으로 올립니다. 그 외에는
+ * 버립니다 — 문단 일부만 다른 자간은 새 모델에 담을 자리가 없습니다. 툴바가
+ * 만들던 모양(고른 범위를 통째로 감쌈)은 대개 앞쪽에 해당합니다.
+ */
+function migrate(json: DocumentJSON): DocumentJSON {
+  const LEGACY = 'letterSpacing'
+
+  const spacingOf = (node: Record<string, unknown>): string | null => {
+    const marks = node.marks as Array<Record<string, unknown>> | undefined
+    const found = marks?.find((mark) => mark.type === LEGACY)
+
+    return found ? String((found.attrs as { value?: string })?.value ?? '') : null
+  }
+
+  const strip = (node: Record<string, unknown>): Record<string, unknown> => {
+    const marks = node.marks as Array<Record<string, unknown>> | undefined
+    const kept = marks?.filter((mark) => mark.type !== LEGACY)
+
+    return {
+      ...node,
+      ...(marks ? { marks: kept } : {}),
+      ...(Array.isArray(node.content)
+        ? { content: (node.content as Record<string, unknown>[]).map(walk) }
+        : {}),
+    }
+  }
+
+  const walk = (node: Record<string, unknown>): Record<string, unknown> => {
+    const children = node.content as Record<string, unknown>[] | undefined
+
+    /*
+     * 자식이 전부 같은 자간을 달고 있으면 그 값이 곧 이 블록의 자간입니다.
+     * 글이 없는 블록(빈 문단)은 올릴 것도 없습니다.
+     */
+    const texts = children?.filter((child) => child.type === 'text') ?? []
+    const spacings = texts.map(spacingOf)
+    const uniform =
+      texts.length > 0 &&
+      texts.length === (children?.length ?? 0) &&
+      spacings.every((value) => value && value === spacings[0])
+
+    const stripped = strip(node)
+
+    if (!uniform) return stripped
+
+    return {
+      ...stripped,
+      attrs: { ...(node.attrs as object), letterSpacing: spacings[0] },
+    }
+  }
+
+  return walk(json as Record<string, unknown>) as DocumentJSON
 }
 
 export function toHtml(doc: Node, schema: Schema, dom: Document): string {

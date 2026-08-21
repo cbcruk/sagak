@@ -167,7 +167,7 @@ export const commands = {
   fontSize: (value: string) => setMarkValue(marks.fontSize, toCssSize(value)),
   foreColor: (value: string) => setMarkValue(marks.textColor, value),
   backColor: (value: string) => setMarkValue(marks.backgroundColor, value),
-  letterSpacing: (value: string) => setMarkValue(marks.letterSpacing, value),
+  letterSpacing: (value: string) => setBlockAttr('letterSpacing', value),
 
   paragraph: setBlockType(nodes.paragraph as NodeType),
   heading,
