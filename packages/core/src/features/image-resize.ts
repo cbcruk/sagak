@@ -2,7 +2,11 @@ import { Plugin as PMPlugin, NodeSelection } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import type { Plugin, EditorContext } from '@/core'
 import { runModelCommand } from '@/model/bridge'
-import { updateImage } from '@/model/commands'
+import {
+  updateImage,
+  MAX_IMAGE_WIDTH,
+  MAX_IMAGE_HEIGHT,
+} from '@/model/commands'
 
 /**
  * 이미지 크기 조절.
@@ -38,6 +42,12 @@ export interface ImageResizeOptions {
   /** @default 20 */
   minHeight?: number
 
+  /** @default 1920 — 모델의 상한과 같습니다 */
+  maxWidth?: number
+
+  /** @default 1080 — 모델의 상한과 같습니다 */
+  maxHeight?: number
+
   /** @default 8 */
   handleSize?: number
 
@@ -47,6 +57,9 @@ export interface ImageResizeOptions {
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se'
 
+const clamp = (value: number, low: number, high: number): number =>
+  Math.min(high, Math.max(low, value))
+
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se']
 
 export function createImageResizePlugin(
@@ -55,6 +68,8 @@ export function createImageResizePlugin(
   const {
     minWidth = 20,
     minHeight = 20,
+    maxWidth = MAX_IMAGE_WIDTH,
+    maxHeight = MAX_IMAGE_HEIGHT,
     handleSize = 8,
     maintainAspectRatio = true,
   } = options
@@ -212,10 +227,18 @@ export function createImageResizePlugin(
         /* Shift 로 비율 고정을 뒤집습니다 */
         const keepRatio = maintainAspectRatio !== e.shiftKey
 
-        const width = Math.max(minWidth, startWidth + dx)
-        const height = Math.max(
+        /*
+         * **상한 안에서 끕니다.**
+         *
+         * 모델이 상한을 넘는 값을 안 받으므로(`updateImage`), 여기서 안 막으면
+         * 손을 뗄 때 트랜잭션이 조용히 거절됩니다 — 화면에는 커진 채로 보이다가
+         * 다음 렌더에 되돌아가는 꼴입니다.
+         */
+        const width = clamp(startWidth + dx, minWidth, maxWidth)
+        const height = clamp(
+          keepRatio ? width / ratio : startHeight + dy,
           minHeight,
-          keepRatio ? width / ratio : startHeight + dy
+          maxHeight
         )
 
         dragging.width = Math.round(width)

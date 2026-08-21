@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { NodeSelection } from 'prosemirror-state'
 import { columnResizingPluginKey } from 'prosemirror-tables'
 import { createImageResizePlugin } from '@/features/image-resize'
+import { MAX_IMAGE_WIDTH } from '@/model/commands'
 import { mountPluginArea } from '../helpers/plugin-area'
 import type { PluginArea } from '../helpers/plugin-area'
 
@@ -113,6 +114,22 @@ describe('크기 조절은 문서에 남습니다', () => {
 
       const width = Number(/width:\s*(\d+)px/.exec(saved)![1])
       expect(width).toBe(start + 40)
+    })
+
+    /**
+     * 모델이 상한을 넘는 값을 안 받으므로(`updateImage`), 끄는 쪽에서 안
+     * 막으면 손을 뗄 때 트랜잭션이 **조용히 거절**됩니다 — 화면에는 커진 채로
+     * 보이다가 다음 렌더에 되돌아가는 꼴입니다.
+     */
+    it('상한을 넘게 끌 수 없어야 함', () => {
+      selectImage()
+      drag(9000, 9000)
+
+      const saved = ed.area.getRawContent()
+      const width = Number(/width:\s*(\d+)px/.exec(saved)![1])
+
+      expect(width).toBe(MAX_IMAGE_WIDTH)
+      expect(saved).toContain('width:')
     })
 
     it('조절을 되돌릴 수 있어야 함', () => {
