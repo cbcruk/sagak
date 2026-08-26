@@ -79,10 +79,6 @@ type MovableHandle = FileSystemFileHandle & {
   move?: (name: string) => Promise<void>
 }
 
-interface DirectoryWithEntries extends FileSystemDirectoryHandle {
-  entries(): AsyncIterable<[string, FileSystemHandle]>
-}
-
 /**
  * 실제 파일 시스템이 못 받는 글자들입니다.
  *
@@ -131,11 +127,11 @@ function assertName(name: string): void {
   }
 }
 
-async function root(): Promise<DirectoryWithEntries> {
+async function root(): Promise<FileSystemDirectoryHandle> {
   if (!isDocumentStorageAvailable()) {
     throw new Error('This browser cannot store documents (no OPFS)')
   }
-  return (await navigator.storage.getDirectory()) as DirectoryWithEntries
+  return await navigator.storage.getDirectory()
 }
 
 /**

@@ -15,7 +15,6 @@
       "vitest/globals",
       "@vitest/browser/providers/playwright"
     ],
-    "baseUrl": ".",
     "paths": {
       "sagak-core": [
         "../../packages/core/src/index.ts"
