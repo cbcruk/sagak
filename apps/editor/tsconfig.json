@@ -15,7 +15,6 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "baseUrl": ".",
     "paths": {
       "sagak-ui": [
         "../../packages/ui/src/index.ts"

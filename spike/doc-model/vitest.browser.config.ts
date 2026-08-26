@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 
 /**
  * 2단계 — 진짜 브라우저가 필요합니다.
@@ -24,14 +25,11 @@ export default defineConfig({
     include: ['test/**/*.browser.test.ts'],
     browser: {
       enabled: true,
-      provider: 'playwright',
+      provider: playwright({
+        launchOptions: executablePath ? { executablePath } : {},
+      }),
       headless: true,
-      instances: [
-        {
-          browser: 'chromium',
-          launch: executablePath ? { executablePath } : {},
-        },
-      ],
+      instances: [{ browser: 'chromium' }],
     },
   },
 })

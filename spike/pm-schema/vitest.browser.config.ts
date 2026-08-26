@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 
 /**
  * 진짜 브라우저가 필요한 검사들.
@@ -37,19 +38,16 @@ export default defineConfig({
     include: ['test/**/*.browser.test.ts'],
     browser: {
       enabled: true,
-      provider: 'playwright',
       headless: true,
-      instances: [
-        {
-          browser: 'chromium',
-          launch: {
-            env: UTF8_LOCALE,
-            ...(process.env.CHROMIUM_PATH
-              ? { executablePath: process.env.CHROMIUM_PATH }
-              : {}),
-          },
+      provider: playwright({
+        launchOptions: {
+          env: UTF8_LOCALE,
+          ...(process.env.CHROMIUM_PATH
+            ? { executablePath: process.env.CHROMIUM_PATH }
+            : {}),
         },
-      ],
+      }),
+      instances: [{ browser: 'chromium' }],
     },
   },
 })

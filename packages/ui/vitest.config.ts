@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 /**
@@ -49,19 +50,16 @@ export default defineConfig({
     globals: true,
     browser: {
       enabled: true,
-      provider: 'playwright',
       // core 와 같은 이유 — `CHROMIUM_PATH` 로 실행 파일을 지정할 수 있습니다
-      instances: [
-        {
-          browser: 'chromium',
-          launch: {
-            env: UTF8_LOCALE,
-            ...(process.env.CHROMIUM_PATH
-              ? { executablePath: process.env.CHROMIUM_PATH }
-              : {}),
-          },
+      provider: playwright({
+        launchOptions: {
+          env: UTF8_LOCALE,
+          ...(process.env.CHROMIUM_PATH
+            ? { executablePath: process.env.CHROMIUM_PATH }
+            : {}),
         },
-      ],
+      }),
+      instances: [{ browser: 'chromium' }],
       headless: true,
     },
     include: ['test/**/*.browser.test.ts'],

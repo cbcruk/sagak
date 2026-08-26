@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { userEvent } from '@vitest/browser/context'
+import { userEvent } from 'vitest/browser'
 import { para, debugString } from '../src/doc'
 import { EditorView } from '../src/editor-view'
 import { posToDom, readCaret, writeCaret } from '../src/view'
