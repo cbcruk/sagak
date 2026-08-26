@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest'
-import { cdp } from '@vitest/browser/context'
+import { cdp } from 'vitest/browser'
 import {
   mountEditor,
   settle,

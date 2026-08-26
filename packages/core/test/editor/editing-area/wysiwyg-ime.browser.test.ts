@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { cdp, userEvent } from '@vitest/browser/context'
+import { cdp, userEvent } from 'vitest/browser'
 import { TextSelection } from 'prosemirror-state'
 import { undo, redo } from 'prosemirror-history'
 import { WysiwygArea } from '@/editor/editing-area/modes/wysiwyg-area'

@@ -11,10 +11,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": [
-      "vitest/globals",
-      "@vitest/browser/providers/playwright"
-    ],
+    "types": ["vitest/globals", "@vitest/browser-playwright"],
     "paths": {
       "sagak-core": [
         "../../packages/core/src/index.ts"

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { cdp, userEvent } from '@vitest/browser/context'
+import { cdp, userEvent } from 'vitest/browser'
 
 /**
  * **2단계의 출발점입니다.**

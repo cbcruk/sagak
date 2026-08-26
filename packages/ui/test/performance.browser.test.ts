@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { userEvent } from '@vitest/browser/context'
+import { userEvent } from 'vitest/browser'
 import {
   mountEditor,
   settle,

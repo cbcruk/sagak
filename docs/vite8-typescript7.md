@@ -33,11 +33,11 @@ peer 가 충족되지 않은 채로 돌고 있었고, 워크스페이스 안에 
 실제 breaking change 셋을 고쳤습니다. **이 셋은 6 에서도 그대로 유효합니다** —
 7 로 갈 때 다시 할 일이 아닙니다.
 
-| 무엇 | 어떻게 |
-| --- | --- |
-| `TS5102: 'baseUrl' has been removed` | tsconfig 4 곳에서 `baseUrl` 삭제. `paths` 가 이미 tsconfig 기준 상대경로라 뜻이 안 바뀝니다 |
-| `TS2430 DirectoryWithEntries` | 7 의 `lib.dom.d.ts` 가 `entries()` 를 직접 선언합니다. 그걸 채우려고 뒀던 shim 이라 걷었습니다 |
-| `TS2882` CSS 부수효과 import | `apps/editor/src/vite-env.d.ts` 신설. `*.css` 는 `vite/client` 가 선언하고, 확장자 없는 alias 인 `sagak-ui/styles` 만 따로 적었습니다 |
+| 무엇                                 | 어떻게                                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `TS5102: 'baseUrl' has been removed` | tsconfig 4 곳에서 `baseUrl` 삭제. `paths` 가 이미 tsconfig 기준 상대경로라 뜻이 안 바뀝니다                                           |
+| `TS2430 DirectoryWithEntries`        | 7 의 `lib.dom.d.ts` 가 `entries()` 를 직접 선언합니다. 그걸 채우려고 뒀던 shim 이라 걷었습니다                                        |
+| `TS2882` CSS 부수효과 import         | `apps/editor/src/vite-env.d.ts` 신설. `*.css` 는 `vite/client` 가 선언하고, 확장자 없는 alias 인 `sagak-ui/styles` 만 따로 적었습니다 |
 
 그런데 **검사 도구 둘이 7 을 하드 거부합니다.**
 
@@ -78,15 +78,50 @@ CI 는 Typecheck 과 Lint 를 필수 단계로 돌립니다. 7 로 가면 타입
 - `svelte-check` 가 TS 6 동반 설치 없이 7 을 받는 판
 - `typescript-eslint` 가 TS 7 을 지원하는 판
 
-## 남겨 둔 peer 경고 둘
+## Vitest 4 — Vite 를 한 벌로 만들려고 올렸습니다
 
-고칠 수 있었지만 이번 범위가 아니라 적어만 둡니다.
+Vite 8 로 올린 뒤에도 워크스페이스에 Vite 가 두 벌이었습니다. vitest 3 이 vite 를
+**직접 의존**해서(`^5||^6||^7`) 자기 몫으로 7.2.6 을 따로 깔았기 때문입니다.
+앱은 8, 검사는 7 로 도는 상태였습니다. vitest 4 는 vite 를 peer 로 받고
+`^8` 을 포함하므로, 올리면 한 벌로 접힙니다. 접혔습니다 — 지금 Vite 는 8.2.2
+하나입니다.
 
-- `@vitest/mocker@3.2.4` 가 vite `^5||^6||^7` 을 원합니다. vitest 3 이 vite 를
-  직접 의존해서 자기 몫으로 7.2.6 을 따로 깝니다. 그래서 워크스페이스에 Vite 가
-  아직 두 벌입니다 — 앱은 8, 검사는 7 로 돕니다. 검사는 860 개 다 통과합니다.
-  없애려면 vitest 4 로 올려야 하고, 그건 별건입니다.
-- `svelte-check@4.7.6` 이 typescript `^5.0.0 || ^6.0.0` 을 원하는데 `6.0.0-beta`
-  는 여기 안 걸립니다. prerelease 는 같은 버전에 prerelease 가 적힌 범위에만
-  걸리기 때문입니다. 표기상의 문제고 실제로는 돕니다 — svelte-check 자신의
-  게이트는 major 가 7 미만이면 통과시킵니다.
+메이저라 바뀐 것을 적어 둡니다.
+
+**browser provider 가 문자열에서 객체로.** `@vitest/browser` 가 provider 별
+패키지로 갈라져 `@vitest/browser-playwright` 를 대신 답니다.
+
+```ts
+// 전
+provider: 'playwright',
+instances: [{ browser: 'chromium', launch: { env: UTF8_LOCALE } }],
+
+// 후
+provider: playwright({ launchOptions: { env: UTF8_LOCALE } }),
+instances: [{ browser: 'chromium' }],
+```
+
+인스턴스마다 주던 `launch` 가 provider 단위 `launchOptions` 로 올라갑니다.
+UTF-8 로케일과 `CHROMIUM_PATH` 는 그대로 살아 있습니다 — 자리만 바뀌었습니다.
+설정 다섯 곳(루트, core, ui, spike 둘)이 대상이었습니다.
+
+**import 경로.** `@vitest/browser/context` → `vitest/browser`. 검사 9 개 파일.
+
+**tsconfig `types`.** `@vitest/browser/providers/playwright` 는 v4 에 없습니다.
+`@vitest/browser-playwright` 를 대신 적습니다. 여기서 한 번 헛짚었는데, 같은
+패키지의 `/context` 진입점은 `@vitest/browser/context` 를 다시 내보낼 뿐이라
+`cdp()` 의 `send` 가 안 붙습니다. `CDPSession` 을 넓히는 `declare module` 은
+패키지 **본체** 의 타입에 있습니다.
+
+`vi.mock`/`vi.doMock` 은 이 저장소에 없어서 "restoreAllMocks 가 automock 에
+더는 안 먹는다" 는 변경은 걸리지 않습니다. 스냅샷도 없습니다.
+
+spike 둘은 워크스페이스 밖이고 CI 에도 없지만, 자체 node_modules 없이 루트
+호이스팅에 기대므로 같이 옮겼습니다. 안 옮기면 그 자리에서 깨집니다.
+
+## 남겨 둔 peer 경고 하나
+
+`svelte-check@4.7.6` 이 typescript `^5.0.0 || ^6.0.0` 을 원하는데 `6.0.0-beta`
+는 여기 안 걸립니다. prerelease 는 같은 버전에 prerelease 가 적힌 범위에만
+걸리기 때문입니다. 표기상의 문제고 실제로는 돕니다 — svelte-check 자신의
+게이트는 major 가 7 미만이면 통과시킵니다.

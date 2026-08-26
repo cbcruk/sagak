@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 
 /**
  * 브라우저를 **UTF-8 로케일**로 띄웁니다.
@@ -51,24 +52,21 @@ export default defineConfig({
     },
     browser: {
       enabled: true,
-      provider: 'playwright',
       /*
        * playwright 가 기대하는 chromium 빌드와 설치된 것이 다른 환경이
        * 있습니다. 그때만 실행 파일 경로를 넘겨 주면 됩니다 —
        * `CHROMIUM_PATH=/path/to/chrome pnpm test`.
        * 안 넘기면 지금까지와 똑같이 playwright 가 알아서 찾습니다.
        */
-      instances: [
-        {
-          browser: 'chromium',
-          launch: {
-            env: UTF8_LOCALE,
-            ...(process.env.CHROMIUM_PATH
-              ? { executablePath: process.env.CHROMIUM_PATH }
-              : {}),
-          },
+      provider: playwright({
+        launchOptions: {
+          env: UTF8_LOCALE,
+          ...(process.env.CHROMIUM_PATH
+            ? { executablePath: process.env.CHROMIUM_PATH }
+            : {}),
         },
-      ],
+      }),
+      instances: [{ browser: 'chromium' }],
       headless: true,
     },
     include: ['test/**/*.browser.test.{ts,tsx}'],

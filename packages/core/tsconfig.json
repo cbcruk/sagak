@@ -14,7 +14,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "types": ["@vitest/browser/providers/playwright"],
+    "types": ["@vitest/browser-playwright"],
     "paths": {
       "@/*": ["./src/*"]
     }

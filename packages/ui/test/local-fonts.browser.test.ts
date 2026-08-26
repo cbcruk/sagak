@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, afterAll, beforeEach } from 'vitest'
 import { mount, unmount } from 'svelte'
-import { cdp } from '@vitest/browser/context'
+import { cdp } from 'vitest/browser'
 import FontProbe from './FontProbe.svelte'
 import { mountEditor, placeCaretInText, selectAll, settle } from './harness'
 import type { MountedEditor } from './harness'
